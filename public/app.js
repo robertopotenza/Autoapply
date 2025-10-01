@@ -30,6 +30,14 @@ const languages = [
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
+    // Check authentication
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        alert('Please login to access the configuration wizard');
+        window.location.href = '/login.html';
+        return;
+    }
+
     initializeForm();
     setupEventListeners();
     loadSavedState();
@@ -476,39 +484,186 @@ function loadSavedState() {
 async function submitForm() {
     saveStepData();
 
-    // Collect all form data
-    const formData = new FormData();
-
-    Object.keys(formState.data).forEach(key => {
-        formData.append(key, formState.data[key]);
-    });
-
-    // Add file uploads
-    const resumeFile = document.getElementById('resume-upload')?.files[0];
-    if (resumeFile) {
-        formData.append('resume', resumeFile);
-    }
-
-    const coverLetterFile = document.getElementById('cover-letter-file')?.files[0];
-    if (coverLetterFile) {
-        formData.append('coverLetter', coverLetterFile);
+    // Check if user is authenticated
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        alert('Please login first');
+        window.location.href = '/login.html';
+        return;
     }
 
     try {
-        const response = await fetch('/api/config', {
+        // Parse form data into structured objects
+        const data = parseFormData();
+
+        // Save each step to the API
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        // Upload files first if any
+        await uploadFiles(token);
+
+        // Save step 1 (Job Preferences)
+        await fetch('/api/wizard/step1', {
             method: 'POST',
-            body: formData
+            headers,
+            body: JSON.stringify({
+                remoteJobs: data.remoteJobs || [],
+                onsiteLocation: data.onsiteLocation || '',
+                jobTypes: data.jobTypes || [],
+                jobTitles: data.jobTitles || [],
+                seniorityLevels: data.seniorityLevels || [],
+                timeZones: data.timeZones || []
+            })
         });
 
-        if (response.ok) {
-            alert('Configuration saved successfully!');
-            localStorage.removeItem('autoApplyFormState');
-            window.location.href = '/dashboard';
-        } else {
-            alert('Error saving configuration. Please try again.');
+        // Save step 2 (Profile)
+        await fetch('/api/wizard/step2', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                fullName: data.fullName || '',
+                resumePath: data.resumePath || '',
+                coverLetterOption: data.coverLetterOption || '',
+                coverLetterPath: data.coverLetterPath || '',
+                phone: data.phone || '',
+                country: data.country || '',
+                city: data.city || '',
+                stateRegion: data.stateRegion || '',
+                postalCode: data.postalCode || ''
+            })
+        });
+
+        // Save step 3 (Eligibility)
+        await fetch('/api/wizard/step3', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify({
+                currentJobTitle: data.currentJobTitle || '',
+                availability: data.availability || '',
+                eligibleCountries: data.eligibleCountries || [],
+                visaSponsorship: data.visaSponsorship === 'yes',
+                nationality: data.nationality || [],
+                currentSalary: data.currentSalary || null,
+                expectedSalary: data.expectedSalary || null
+            })
+        });
+
+        // Save screening answers if any
+        if (hasScreeningData(data)) {
+            await fetch('/api/wizard/screening', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    experienceSummary: data.experienceSummary || '',
+                    hybridPreference: data.hybridPreference || '',
+                    travel: data.travel || '',
+                    relocation: data.relocation || '',
+                    languages: data.languages || [],
+                    dateOfBirth: data.dateOfBirth || null,
+                    gpa: data.gpa || null,
+                    isAdult: data.isAdult === 'yes',
+                    genderIdentity: data.gender || '',
+                    disabilityStatus: data.disability || '',
+                    militaryService: data.military || '',
+                    ethnicity: data.ethnicity || '',
+                    drivingLicense: data.licenses || ''
+                })
+            });
         }
+
+        alert('Configuration saved successfully!');
+        localStorage.removeItem('autoApplyFormState');
+        window.location.href = '/dashboard.html';
+
     } catch (error) {
         console.error('Submit error:', error);
         alert('Error saving configuration. Please try again.');
+    }
+}
+
+function parseFormData() {
+    const data = formState.data;
+
+    return {
+        // Step 1
+        remoteJobs: parseCommaSeparated(data['remote-countries-input']),
+        onsiteLocation: data['onsite-region'] || '',
+        jobTypes: parseCommaSeparated(data['job-types']),
+        jobTitles: parseCommaSeparated(data['job-titles']),
+        seniorityLevels: parseCommaSeparated(data['seniority-levels']),
+        timeZones: parseCommaSeparated(data['timezones-input']),
+
+        // Step 2
+        fullName: data['full-name'] || '',
+        resumePath: data.resumePath || '',
+        coverLetterOption: data['cover-letter-option'] || '',
+        coverLetterPath: data.coverLetterPath || '',
+        phone: `${data['country-code'] || ''}${data['phone'] || ''}`,
+        country: data['location-country'] || '',
+        city: data['location-city'] || '',
+        stateRegion: data['location-state'] || '',
+        postalCode: data['location-postal'] || '',
+
+        // Step 3
+        currentJobTitle: data['current-job-title'] || '',
+        availability: data['availability'] || '',
+        eligibleCountries: parseCommaSeparated(data['eligible-countries']),
+        visaSponsorship: data['visa-sponsorship'] || '',
+        nationality: parseCommaSeparated(data['nationalities']),
+        currentSalary: data['current-salary'] || null,
+        expectedSalary: data['expected-salary'] || null,
+
+        // Screening
+        experienceSummary: data['experience-summary'] || '',
+        hybridPreference: data['hybrid-preference'] || '',
+        travel: data['travel-comfortable'] || '',
+        relocation: data['relocation-open'] || '',
+        languages: parseCommaSeparated(data['languages-input']),
+        dateOfBirth: data['date-of-birth'] || null,
+        gpa: data['gpa'] || null,
+        isAdult: data['age-18'] || '',
+        gender: data['gender'] || '',
+        disability: data['disability'] || '',
+        military: data['military'] || '',
+        ethnicity: data['ethnicity'] || '',
+        licenses: data['licenses'] || ''
+    };
+}
+
+function parseCommaSeparated(value) {
+    if (!value) return [];
+    return value.split(',').map(v => v.trim()).filter(v => v);
+}
+
+function hasScreeningData(data) {
+    return data.experienceSummary || data.hybridPreference || data.travel ||
+           data.relocation || data.languages?.length > 0;
+}
+
+async function uploadFiles(token) {
+    const resumeFile = document.getElementById('resume-upload')?.files[0];
+    const coverLetterFile = document.getElementById('cover-letter-file')?.files[0];
+
+    if (resumeFile || coverLetterFile) {
+        const formData = new FormData();
+        if (resumeFile) formData.append('resume', resumeFile);
+        if (coverLetterFile) formData.append('coverLetter', coverLetterFile);
+
+        const response = await fetch('/api/upload', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`
+            },
+            body: formData
+        });
+
+        const result = await response.json();
+        if (result.success && result.data) {
+            formState.data.resumePath = result.data.resumePath;
+            formState.data.coverLetterPath = result.data.coverLetterPath;
+        }
     }
 }
