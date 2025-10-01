@@ -85,21 +85,20 @@ async function initializeDatabase() {
         const schemaPath = path.join(__dirname, '../../database/schema.sql');
         const schema = fs.readFileSync(schemaPath, 'utf8');
 
-        // Split SQL statements and execute separately
-        const statements = schema
-            .split(';')
-            .map(s => s.trim())
-            .filter(s => s.length > 0 && !s.startsWith('--'));
-
-        for (const statement of statements) {
-            if (statement) {
-                await pool.query(statement);
-            }
-        }
+        // Execute the entire schema at once
+        // PostgreSQL can handle multiple statements in a single query
+        await pool.query(schema);
 
         logger.info('Database tables initialized successfully');
     } catch (error) {
         logger.error('Error initializing database', error);
+
+        // If error is about existing tables, that's OK
+        if (error.code === '42P07') {
+            logger.info('Tables already exist, skipping initialization');
+            return;
+        }
+
         throw error;
     }
 }
