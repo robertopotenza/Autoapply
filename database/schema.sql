@@ -5,9 +5,19 @@
 CREATE TABLE IF NOT EXISTS users (
     user_id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Magic Link Tokens Table (for passwordless authentication)
+CREATE TABLE IF NOT EXISTS magic_link_tokens (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(255) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Job Preferences Table (Steps 1 & 2)
@@ -83,6 +93,9 @@ CREATE TABLE IF NOT EXISTS screening_answers (
 
 -- Create indexes for better query performance
 CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
+CREATE INDEX IF NOT EXISTS idx_magic_link_token ON magic_link_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_magic_link_email ON magic_link_tokens(email);
+CREATE INDEX IF NOT EXISTS idx_magic_link_expires ON magic_link_tokens(expires_at);
 CREATE INDEX IF NOT EXISTS idx_job_preferences_user_id ON job_preferences(user_id);
 CREATE INDEX IF NOT EXISTS idx_profile_user_id ON profile(user_id);
 CREATE INDEX IF NOT EXISTS idx_eligibility_user_id ON eligibility(user_id);

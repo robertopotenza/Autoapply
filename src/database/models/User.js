@@ -15,6 +15,15 @@ class User {
         return result.rows[0];
     }
 
+    static async createPasswordless(email) {
+        const result = await query(
+            'INSERT INTO users (email, password_hash) VALUES ($1, NULL) RETURNING user_id, email, created_at',
+            [email]
+        );
+
+        return result.rows[0];
+    }
+
     static async findByEmail(email) {
         const result = await query(
             'SELECT user_id, email, password_hash, created_at FROM users WHERE email = $1',
