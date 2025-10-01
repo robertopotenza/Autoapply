@@ -200,6 +200,16 @@ router.post('/magic-link', async (req, res) => {
             });
         }
 
+        // Check if database is configured
+        const { isDatabaseConfigured } = require('../database/db');
+        if (!isDatabaseConfigured()) {
+            return res.status(503).json({
+                success: false,
+                message: 'Database not configured. Please set up PostgreSQL credentials in environment variables.',
+                hint: 'Contact admin to configure PGHOST, PGUSER, PGPASSWORD, and PGDATABASE'
+            });
+        }
+
         // Check if user exists, create if not
         let user = await User.findByEmail(email);
 
@@ -218,8 +228,8 @@ router.post('/magic-link', async (req, res) => {
 
         // Send email
         try {
-            await emailService.sendMagicLink(email, magicLinkUrl);
-            logger.info(`Magic link sent to: ${email}`);
+            const emailResult = await emailService.sendMagicLink(email, magicLinkUrl);
+            logger.info(`Magic link sent to: ${email} via ${emailResult.mode}`);
         } catch (emailError) {
             logger.error('Error sending magic link email:', emailError);
             // Still return success to user (don't reveal email send failures)
@@ -227,17 +237,29 @@ router.post('/magic-link', async (req, res) => {
 
         res.json({
             success: true,
-            message: 'Magic link sent! Check your email to continue.',
-            // In development, return the link
-            ...(process.env.NODE_ENV !== 'production' && { magicLink: magicLinkUrl })
+            message: 'Magic link sent! Check your email (or console in dev mode) to continue.',
+            // In development, always return the link
+            ...(process.env.NODE_ENV !== 'production' && {
+                magicLink: magicLinkUrl,
+                devNote: 'In development mode, check the server console for the magic link.'
+            })
         });
 
     } catch (error) {
         logger.error('Magic link request error:', error);
+
+        // Provide more specific error messages
+        let message = 'Error sending magic link';
+        if (error.message && error.message.includes('Database not configured')) {
+            message = 'Database not configured. Please contact administrator.';
+        } else if (error.code === 'ECONNREFUSED') {
+            message = 'Cannot connect to database. Please configure database credentials.';
+        }
+
         res.status(500).json({
             success: false,
-            message: 'Error sending magic link',
-            error: error.message
+            message,
+            error: process.env.NODE_ENV !== 'production' ? error.message : undefined
         });
     }
 });

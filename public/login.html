@@ -209,22 +209,32 @@
                 const data = await response.json();
 
                 if (data.success) {
-                    successMessage.textContent = data.message;
+                    successMessage.innerHTML = data.message;
                     successMessage.style.display = 'block';
 
                     // In development, show the magic link
                     if (data.magicLink) {
-                        successMessage.innerHTML += `<br><br><a href="${data.magicLink}" style="color: #7c3aed; font-weight: 600;">Click here to login (dev mode)</a>`;
+                        successMessage.innerHTML += `<br><br><strong>Development Mode:</strong><br><a href="${data.magicLink}" style="color: #7c3aed; font-weight: 600; text-decoration: underline;">Click here to login instantly</a>`;
+                        if (data.devNote) {
+                            successMessage.innerHTML += `<br><small style="color: #6b7280; margin-top: 0.5rem; display: block;">${data.devNote}</small>`;
+                        }
                     }
 
                     document.getElementById('magic-email').value = '';
                 } else {
-                    errorMessage.textContent = data.message || 'Failed to send magic link';
+                    let errorText = data.message || 'Failed to send magic link';
+                    if (data.hint) {
+                        errorText += `<br><small style="display: block; margin-top: 0.5rem;">${data.hint}</small>`;
+                    }
+                    if (data.error && response.status >= 500) {
+                        errorText += `<br><small style="color: #9ca3af; display: block; margin-top: 0.5rem;">Technical details: ${data.error}</small>`;
+                    }
+                    errorMessage.innerHTML = errorText;
                     errorMessage.style.display = 'block';
                 }
             } catch (error) {
                 console.error('Magic link error:', error);
-                errorMessage.textContent = 'An error occurred. Please try again.';
+                errorMessage.innerHTML = 'An error occurred. Please try again.<br><small style="color: #9ca3af; margin-top: 0.5rem; display: block;">If this persists, the database may not be configured yet.</small>';
                 errorMessage.style.display = 'block';
             } finally {
                 magicLinkBtn.disabled = false;
