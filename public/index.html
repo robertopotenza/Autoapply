@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auto-Apply Configuration</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Progress Bar -->
+        <div class="progress-container">
+            <div class="progress-bar">
+                <div class="progress-step active" data-step="1">
+                    <div class="progress-circle">1</div>
+                    <span class="progress-label">Work Location</span>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step" data-step="2">
+                    <div class="progress-circle">2</div>
+                    <span class="progress-label">Seniority</span>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step" data-step="3">
+                    <div class="progress-circle">3</div>
+                    <span class="progress-label">Resume & Contact</span>
+                </div>
+                <div class="progress-line"></div>
+                <div class="progress-step" data-step="4">
+                    <div class="progress-circle">4</div>
+                    <span class="progress-label">Eligibility</span>
+                </div>
+            </div>
+            <div class="progress-text">Step <span id="current-step">1</span> of 4</div>
+        </div>
+
+        <!-- Form Container -->
+        <form id="config-form">
+            <!-- Step 1: Work Location & Jobs -->
+            <div class="form-step active" data-step="1">
+                <h2>Work Location & Job Preferences</h2>
+
+                <div class="form-group">
+                    <label>Remote Jobs <span class="optional">(Select countries)</span></label>
+                    <div class="tip">💡 Choose countries where you'd like to work remotely</div>
+                    <div class="multi-select-container">
+                        <input type="text" class="multi-select-input" placeholder="Search countries..." id="remote-countries-input">
+                        <div class="tags-container" id="remote-countries-tags"></div>
+                        <div class="dropdown-list hidden" id="remote-countries-dropdown"></div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>On-site Jobs <span class="optional">(Select region)</span></label>
+                    <select class="form-select" id="onsite-region">
+                        <option value="">Select a region</option>
+                        <option value="north-america">North America</option>
+                        <option value="europe">Europe</option>
+                        <option value="asia">Asia</option>
+                        <option value="south-america">South America</option>
+                        <option value="africa">Africa</option>
+                        <option value="oceania">Oceania</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Job Types <span class="required">*</span></label>
+                    <div class="pill-group">
+                        <button type="button" class="pill" data-value="fulltime">Full-Time</button>
+                        <button type="button" class="pill" data-value="parttime">Part-Time</button>
+                        <button type="button" class="pill" data-value="contractor">Contractor</button>
+                        <button type="button" class="pill" data-value="internship">Internship</button>
+                    </div>
+                    <input type="hidden" id="job-types" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Job Titles <span class="required">*</span> <span class="counter">0/5</span></label>
+                    <div class="tip">💡 Enter up to 5 job titles you're interested in</div>
+                    <div class="tags-input-container">
+                        <div class="tags-display" id="job-titles-tags"></div>
+                        <input type="text" class="tags-input" placeholder="Type and press Enter" id="job-titles-input" maxlength="50">
+                    </div>
+                    <input type="hidden" id="job-titles" required>
+                </div>
+            </div>
+
+            <!-- Step 2: Seniority & Time Zones -->
+            <div class="form-step" data-step="2">
+                <h2>Seniority & Time Zones</h2>
+
+                <div class="form-group">
+                    <label>Seniority Level <span class="required">*</span></label>
+                    <div class="pill-group">
+                        <button type="button" class="pill" data-value="entry">Entry Level</button>
+                        <button type="button" class="pill" data-value="associate">Associate</button>
+                        <button type="button" class="pill" data-value="mid-senior">Mid-Senior</button>
+                        <button type="button" class="pill" data-value="director">Director+</button>
+                    </div>
+                    <input type="hidden" id="seniority-levels" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Preferred Time Zones <span class="optional">(Multiple selection allowed)</span></label>
+                    <div class="multi-select-container">
+                        <input type="text" class="multi-select-input" placeholder="Search time zones..." id="timezones-input">
+                        <div class="tags-container" id="timezones-tags"></div>
+                        <div class="dropdown-list hidden" id="timezones-dropdown"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 3: Resume, Cover Letter, Contact Info -->
+            <div class="form-step" data-step="3">
+                <h2>Resume, Cover Letter & Contact Information</h2>
+
+                <div class="form-group">
+                    <label>Resume <span class="required">*</span></label>
+                    <div class="file-upload">
+                        <input type="file" id="resume-upload" accept=".pdf,.doc,.docx" hidden>
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('resume-upload').click()">
+                            <span class="upload-icon">📄</span> Upload Resume
+                        </button>
+                        <div class="file-status" id="resume-status">
+                            <span class="status-text">No file selected</span>
+                        </div>
+                    </div>
+                    <div class="tip">💡 Accepted formats: PDF, DOC, DOCX (Max 5MB)</div>
+                </div>
+
+                <div class="form-group">
+                    <label>Cover Letter <span class="required">*</span></label>
+                    <div class="pill-group">
+                        <button type="button" class="pill" data-value="auto">Auto-Generate with AI</button>
+                        <button type="button" class="pill" data-value="upload">Upload My Own</button>
+                    </div>
+                    <input type="hidden" id="cover-letter-option" required>
+                    <div class="file-upload hidden" id="cover-letter-upload-section">
+                        <input type="file" id="cover-letter-file" accept=".pdf,.doc,.docx" hidden>
+                        <button type="button" class="btn-secondary" onclick="document.getElementById('cover-letter-file').click()">
+                            <span class="upload-icon">📄</span> Upload Cover Letter
+                        </button>
+                        <div class="file-status" id="cover-letter-status">
+                            <span class="status-text">No file selected</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Full Name <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="full-name" placeholder="John Doe" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Email Address <span class="required">*</span></label>
+                    <input type="email" class="form-input" id="email" placeholder="john@example.com" required>
+                    <div class="validation-msg hidden" id="email-validation"></div>
+                </div>
+
+                <div class="form-group">
+                    <label>Phone Number <span class="required">*</span></label>
+                    <div class="phone-input-group">
+                        <select class="country-code-select" id="country-code">
+                            <option value="+1">🇺🇸 +1</option>
+                            <option value="+44">🇬🇧 +44</option>
+                            <option value="+91">🇮🇳 +91</option>
+                            <option value="+86">🇨🇳 +86</option>
+                            <option value="+81">🇯🇵 +81</option>
+                            <option value="+49">🇩🇪 +49</option>
+                            <option value="+33">🇫🇷 +33</option>
+                            <option value="+61">🇦🇺 +61</option>
+                            <option value="+55">🇧🇷 +55</option>
+                            <option value="+39">🇮🇹 +39</option>
+                        </select>
+                        <input type="tel" class="form-input phone-input" id="phone" placeholder="1234567890" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Current Location <span class="required">*</span></label>
+                    <div class="location-group">
+                        <select class="form-select" id="location-country" required>
+                            <option value="">Select Country</option>
+                            <option value="US">United States</option>
+                            <option value="UK">United Kingdom</option>
+                            <option value="CA">Canada</option>
+                            <option value="AU">Australia</option>
+                            <option value="DE">Germany</option>
+                            <option value="FR">France</option>
+                            <option value="IN">India</option>
+                            <option value="CN">China</option>
+                            <option value="JP">Japan</option>
+                            <option value="BR">Brazil</option>
+                        </select>
+                        <input type="text" class="form-input" id="location-city" placeholder="City" required>
+                        <input type="text" class="form-input" id="location-state" placeholder="State/Province">
+                        <input type="text" class="form-input" id="location-postal" placeholder="Postal Code">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Step 4: Job & Eligibility Details -->
+            <div class="form-step" data-step="4">
+                <h2>Job & Eligibility Details</h2>
+
+                <div class="form-group">
+                    <label>Current Job Title <span class="optional">(Optional)</span></label>
+                    <input type="text" class="form-input" id="current-job-title" placeholder="e.g., Senior Software Engineer">
+                </div>
+
+                <div class="form-group">
+                    <label>Availability / Notice Period <span class="required">*</span></label>
+                    <div class="pill-group">
+                        <button type="button" class="pill" data-value="immediate">Immediate</button>
+                        <button type="button" class="pill" data-value="2weeks">2 Weeks</button>
+                        <button type="button" class="pill" data-value="1month">1 Month</button>
+                        <button type="button" class="pill" data-value="3months">3+ Months</button>
+                    </div>
+                    <input type="hidden" id="availability" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Eligible Countries for Work <span class="required">*</span></label>
+                    <div class="tip">💡 Countries where you have work authorization</div>
+                    <div class="multi-select-container">
+                        <input type="text" class="multi-select-input" placeholder="Search countries..." id="eligible-countries-input">
+                        <div class="tags-container" id="eligible-countries-tags"></div>
+                        <div class="dropdown-list hidden" id="eligible-countries-dropdown"></div>
+                    </div>
+                    <input type="hidden" id="eligible-countries" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Require Visa Sponsorship? <span class="required">*</span></label>
+                    <div class="pill-group">
+                        <button type="button" class="pill" data-value="yes">Yes</button>
+                        <button type="button" class="pill" data-value="no">No</button>
+                    </div>
+                    <input type="hidden" id="visa-sponsorship" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Nationalities <span class="required">*</span> <span class="counter">0/3</span></label>
+                    <div class="tip">💡 Maximum 3 nationalities</div>
+                    <div class="multi-select-container">
+                        <input type="text" class="multi-select-input" placeholder="Search nationalities..." id="nationalities-input">
+                        <div class="tags-container" id="nationalities-tags"></div>
+                        <div class="dropdown-list hidden" id="nationalities-dropdown"></div>
+                    </div>
+                    <input type="hidden" id="nationalities" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Current Salary <span class="optional">(Optional, USD/year)</span></label>
+                    <div class="salary-input">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" class="form-input" id="current-salary" placeholder="75000" min="0" step="1000">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Expected Salary <span class="required">*</span> <span class="optional">(USD/year)</span></label>
+                    <div class="salary-input">
+                        <span class="currency-symbol">$</span>
+                        <input type="number" class="form-input" id="expected-salary" placeholder="100000" min="0" step="1000" required>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Additional Screening Questions (Collapsible) -->
+            <div class="screening-section">
+                <button type="button" class="collapsible-header" id="screening-toggle">
+                    <span>Additional Screening Questions (Optional)</span>
+                    <span class="toggle-icon">▼</span>
+                </button>
+                <div class="collapsible-content hidden" id="screening-content">
+                    <div class="form-group">
+                        <label>Experience Summary <span class="counter" id="exp-counter">0/500</span></label>
+                        <textarea class="form-textarea" id="experience-summary" placeholder="Briefly describe your professional experience..." maxlength="500"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Open to Hybrid Work?</label>
+                        <div class="pill-group">
+                            <button type="button" class="pill" data-value="remote-only">Remote Only</button>
+                            <button type="button" class="pill" data-value="hybrid">Hybrid</button>
+                            <button type="button" class="pill" data-value="either">Either</button>
+                        </div>
+                        <input type="hidden" id="hybrid-preference">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Comfortable with Travel?</label>
+                        <div class="pill-group">
+                            <button type="button" class="pill" data-value="yes">Yes</button>
+                            <button type="button" class="pill" data-value="no">No</button>
+                            <button type="button" class="pill" data-value="occasionally">Occasionally</button>
+                        </div>
+                        <input type="hidden" id="travel-comfortable">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Open to Relocation?</label>
+                        <div class="pill-group">
+                            <button type="button" class="pill" data-value="yes">Yes</button>
+                            <button type="button" class="pill" data-value="no">No</button>
+                            <button type="button" class="pill" data-value="depends">Depends on Location</button>
+                        </div>
+                        <input type="hidden" id="relocation-open">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Languages <span class="counter">0/6</span></label>
+                        <div class="tip">💡 Maximum 6 languages</div>
+                        <div class="multi-select-container">
+                            <input type="text" class="multi-select-input" placeholder="Search languages..." id="languages-input">
+                            <div class="tags-container" id="languages-tags"></div>
+                            <div class="dropdown-list hidden" id="languages-dropdown"></div>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" class="form-input" id="date-of-birth">
+                    </div>
+
+                    <div class="form-group">
+                        <label>GPA Score</label>
+                        <input type="number" class="form-input" id="gpa" placeholder="3.8" min="0" max="4.0" step="0.01">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Are you 18 years or older?</label>
+                        <div class="pill-group">
+                            <button type="button" class="pill" data-value="yes">Yes</button>
+                            <button type="button" class="pill" data-value="no">No</button>
+                        </div>
+                        <input type="hidden" id="age-18">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Gender Identity</label>
+                        <select class="form-select" id="gender">
+                            <option value="">Prefer not to say</option>
+                            <option value="male">Male</option>
+                            <option value="female">Female</option>
+                            <option value="non-binary">Non-Binary</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Do you have a disability?</label>
+                        <select class="form-select" id="disability">
+                            <option value="">Prefer not to say</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Military Service?</label>
+                        <select class="form-select" id="military">
+                            <option value="">Prefer not to say</option>
+                            <option value="yes">Yes</option>
+                            <option value="no">No</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ethnicity</label>
+                        <select class="form-select" id="ethnicity">
+                            <option value="">Prefer not to say</option>
+                            <option value="asian">Asian</option>
+                            <option value="black">Black or African American</option>
+                            <option value="hispanic">Hispanic or Latino</option>
+                            <option value="white">White</option>
+                            <option value="native">Native American or Alaska Native</option>
+                            <option value="pacific">Native Hawaiian or Pacific Islander</option>
+                            <option value="two-or-more">Two or More Races</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Driving Licenses</label>
+                        <input type="text" class="form-input" id="licenses" placeholder="e.g., Class A, Class B">
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="no-license">
+                                <span>I do not have a driver's license</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Navigation Buttons -->
+            <div class="form-navigation">
+                <button type="button" class="btn-secondary" id="prev-btn" disabled>Previous</button>
+                <button type="button" class="btn-primary" id="next-btn">Next</button>
+                <button type="submit" class="btn-primary hidden" id="submit-btn">Complete Setup</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

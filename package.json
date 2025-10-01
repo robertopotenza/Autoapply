@@ -4,8 +4,9 @@
   "description": "Automated job application system with AI-powered content generation",
   "main": "src/index.js",
   "scripts": {
-    "start": "node src/index.js",
-    "dev": "nodemon src/index.js",
+    "start": "node src/server.js",
+    "worker": "node src/index.js",
+    "dev": "nodemon src/server.js",
     "test": "jest"
   },
   "keywords": [
@@ -21,7 +22,9 @@
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.3.1",
     "openai": "^4.20.0",
-    "cron": "^3.1.6"
+    "cron": "^3.1.6",
+    "express": "^4.18.2",
+    "multer": "^1.4.5-lts.1"
   },
   "devDependencies": {
     "nodemon": "^3.0.1",
