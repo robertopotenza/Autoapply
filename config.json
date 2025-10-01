@@ -1,0 +1,47 @@
+{
+  "jobCriteria": {
+    "titles": [
+      "Software Engineer",
+      "Senior Developer",
+      "Full Stack Engineer"
+    ],
+    "keywords": [
+      "javascript",
+      "node.js",
+      "react",
+      "python"
+    ],
+    "locations": [
+      "Remote",
+      "New York, NY",
+      "San Francisco, CA"
+    ],
+    "seniority": [
+      "mid",
+      "senior"
+    ],
+    "excludeKeywords": [
+      "unpaid",
+      "intern",
+      "contract"
+    ],
+    "excludeCompanies": []
+  },
+  "profile": {
+    "resumePath": "./data/resume.pdf",
+    "name": "",
+    "email": "",
+    "phone": "",
+    "education": [],
+    "workHistory": [],
+    "skills": [],
+    "certifications": []
+  },
+  "screeningAnswers": {
+    "workAuthorization": "Yes, I am authorized to work in the US",
+    "requireSponsorship": "No",
+    "willingToRelocate": "Yes",
+    "expectedSalary": "Market rate"
+  },
+  "companies": []
+}
