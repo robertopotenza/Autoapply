@@ -1,8 +1,14 @@
+require('dotenv').config();
 const express = require('express');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs').promises;
 const logger = require('./utils/logger');
+const { initializeDatabase } = require('./database/db');
+
+// Import routes
+const authRoutes = require('./routes/auth');
+const wizardRoutes = require('./routes/wizard');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -43,157 +49,62 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../public')));
 
-// API endpoint to save configuration
-app.post('/api/config', upload.fields([
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/wizard', wizardRoutes);
+
+// File upload endpoint (authenticated)
+const { authenticateToken } = require('./middleware/auth');
+
+app.post('/api/upload', authenticateToken, upload.fields([
     { name: 'resume', maxCount: 1 },
     { name: 'coverLetter', maxCount: 1 }
 ]), async (req, res) => {
     try {
-        logger.info('Received configuration submission');
-
-        const configData = {
-            // Step 1: Work Location & Jobs
-            remoteCountries: req.body['remote-countries-input']?.split(',').filter(Boolean) || [],
-            onsiteRegion: req.body['onsite-region'] || '',
-            jobTypes: req.body['job-types']?.split(',').filter(Boolean) || [],
-            jobTitles: req.body['job-titles']?.split(',').filter(Boolean) || [],
-
-            // Step 2: Seniority & Time Zones
-            seniorityLevels: req.body['seniority-levels']?.split(',').filter(Boolean) || [],
-            timeZones: req.body['timezones-input']?.split(',').filter(Boolean) || [],
-
-            // Step 3: Resume, Cover Letter, Contact Info
-            resumePath: req.files?.resume ? req.files.resume[0].path : '',
-            coverLetterOption: req.body['cover-letter-option'] || '',
-            coverLetterPath: req.files?.coverLetter ? req.files.coverLetter[0].path : '',
-            fullName: req.body['full-name'] || '',
-            email: req.body['email'] || '',
-            phone: `${req.body['country-code'] || ''}${req.body['phone'] || ''}`,
-            location: {
-                country: req.body['location-country'] || '',
-                city: req.body['location-city'] || '',
-                state: req.body['location-state'] || '',
-                postalCode: req.body['location-postal'] || ''
-            },
-
-            // Step 4: Job & Eligibility Details
-            currentJobTitle: req.body['current-job-title'] || '',
-            availability: req.body['availability'] || '',
-            eligibleCountries: req.body['eligible-countries']?.split(',').filter(Boolean) || [],
-            visaSponsorship: req.body['visa-sponsorship'] || '',
-            nationalities: req.body['nationalities']?.split(',').filter(Boolean) || [],
-            currentSalary: req.body['current-salary'] || '',
-            expectedSalary: req.body['expected-salary'] || '',
-
-            // Additional Screening Questions
-            experienceSummary: req.body['experience-summary'] || '',
-            hybridPreference: req.body['hybrid-preference'] || '',
-            travelComfortable: req.body['travel-comfortable'] || '',
-            relocationOpen: req.body['relocation-open'] || '',
-            languages: req.body['languages-input']?.split(',').filter(Boolean) || [],
-            dateOfBirth: req.body['date-of-birth'] || '',
-            gpa: req.body['gpa'] || '',
-            age18: req.body['age-18'] || '',
-            gender: req.body['gender'] || '',
-            disability: req.body['disability'] || '',
-            military: req.body['military'] || '',
-            ethnicity: req.body['ethnicity'] || '',
-            licenses: req.body['no-license'] === 'on' ? 'None' : req.body['licenses'] || '',
-
-            createdAt: new Date().toISOString()
+        const files = {
+            resumePath: req.files?.resume ? req.files.resume[0].path : null,
+            coverLetterPath: req.files?.coverLetter ? req.files.coverLetter[0].path : null
         };
-
-        // Save to config.json
-        const configPath = path.join(process.cwd(), 'config.json');
-        const existingConfig = await loadConfig();
-
-        const updatedConfig = {
-            ...existingConfig,
-            jobCriteria: {
-                titles: configData.jobTitles,
-                keywords: [],
-                locations: [
-                    ...configData.remoteCountries.map(c => `${c} (Remote)`),
-                    configData.onsiteRegion
-                ].filter(Boolean),
-                seniority: configData.seniorityLevels,
-                excludeKeywords: existingConfig.jobCriteria?.excludeKeywords || [],
-                excludeCompanies: existingConfig.jobCriteria?.excludeCompanies || []
-            },
-            profile: {
-                resumePath: configData.resumePath,
-                name: configData.fullName,
-                email: configData.email,
-                phone: configData.phone,
-                location: configData.location,
-                currentJobTitle: configData.currentJobTitle,
-                education: existingConfig.profile?.education || [],
-                workHistory: existingConfig.profile?.workHistory || [],
-                skills: existingConfig.profile?.skills || [],
-                certifications: existingConfig.profile?.certifications || [],
-                experienceSummary: configData.experienceSummary,
-                languages: configData.languages,
-                gpa: configData.gpa
-            },
-            screeningAnswers: {
-                workAuthorization: configData.eligibleCountries.join(', '),
-                requireSponsorship: configData.visaSponsorship === 'yes' ? 'Yes' : 'No',
-                willingToRelocate: configData.relocationOpen,
-                expectedSalary: configData.expectedSalary,
-                availability: configData.availability,
-                hybridPreference: configData.hybridPreference,
-                travelComfortable: configData.travelComfortable,
-                currentSalary: configData.currentSalary,
-                nationalities: configData.nationalities,
-                dateOfBirth: configData.dateOfBirth,
-                age18: configData.age18,
-                gender: configData.gender,
-                disability: configData.disability,
-                military: configData.military,
-                ethnicity: configData.ethnicity,
-                licenses: configData.licenses
-            },
-            companies: existingConfig.companies || []
-        };
-
-        await fs.writeFile(configPath, JSON.stringify(updatedConfig, null, 2));
-
-        logger.info('Configuration saved successfully');
 
         res.json({
             success: true,
-            message: 'Configuration saved successfully'
+            data: files
         });
-
     } catch (error) {
-        logger.error('Error saving configuration:', error);
+        logger.error('File upload error:', error);
         res.status(500).json({
             success: false,
-            message: 'Error saving configuration',
+            message: 'Error uploading files',
             error: error.message
         });
     }
 });
 
-async function loadConfig() {
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
+// Initialize database and start server
+async function startServer() {
     try {
-        const configPath = path.join(process.cwd(), 'config.json');
-        const data = await fs.readFile(configPath, 'utf8');
-        return JSON.parse(data);
+        // Initialize database tables
+        await initializeDatabase();
+        logger.info('Database initialized successfully');
+
+        // Start Express server
+        app.listen(PORT, () => {
+            logger.info(`Auto-Apply Platform running on port ${PORT}`);
+            logger.info(`Landing page: http://localhost:${PORT}`);
+            logger.info(`Login: http://localhost:${PORT}/login.html`);
+            logger.info(`Signup: http://localhost:${PORT}/signup.html`);
+        });
     } catch (error) {
-        return {};
+        logger.error('Failed to start server:', error);
+        process.exit(1);
     }
 }
 
-// Serve the configuration UI
-app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
-});
-
-// Start server
-app.listen(PORT, () => {
-    logger.info(`Configuration UI server running on port ${PORT}`);
-    logger.info(`Open http://localhost:${PORT} to configure your job preferences`);
-});
+startServer();
 
 module.exports = app;

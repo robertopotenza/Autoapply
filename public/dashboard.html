@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Auto-Apply</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .dashboard-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .dashboard-header {
+            background: white;
+            border-radius: 16px;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .dashboard-header h1 {
+            color: var(--text-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .user-email {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+        }
+
+        .logout-btn {
+            float: right;
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .logout-btn:hover {
+            border-color: var(--primary-purple);
+            color: var(--primary-purple);
+        }
+
+        .completion-card {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border-radius: 16px;
+            padding: 2rem;
+            color: white;
+            margin-bottom: 2rem;
+        }
+
+        .completion-percentage {
+            font-size: 3rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .completion-bar {
+            background: rgba(255, 255, 255, 0.3);
+            border-radius: 8px;
+            height: 12px;
+            margin-top: 1rem;
+            overflow: hidden;
+        }
+
+        .completion-bar-fill {
+            background: white;
+            height: 100%;
+            transition: width 0.5s ease;
+        }
+
+        .sections-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .section-card {
+            background: white;
+            border-radius: 16px;
+            padding: 1.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .section-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 1rem;
+        }
+
+        .section-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .section-status {
+            padding: 0.25rem 0.75rem;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .status-complete {
+            background: #d1fae5;
+            color: #10b981;
+        }
+
+        .status-incomplete {
+            background: #fee2e2;
+            color: #ef4444;
+        }
+
+        .section-content {
+            color: var(--text-secondary);
+            font-size: 0.875rem;
+            margin-bottom: 1rem;
+        }
+
+        .edit-btn {
+            width: 100%;
+            padding: 0.625rem;
+            background: var(--primary-purple);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .edit-btn:hover {
+            background: var(--purple-hover);
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-top: 2rem;
+        }
+
+        .action-btn {
+            flex: 1;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+            text-decoration: none;
+            display: block;
+        }
+
+        .btn-start-applying {
+            background: var(--primary-purple);
+            color: white;
+            border: none;
+        }
+
+        .btn-start-applying:hover {
+            background: var(--purple-hover);
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(124, 58, 237, 0.4);
+        }
+
+        .btn-view-applications {
+            background: white;
+            color: var(--primary-purple);
+            border: 2px solid var(--primary-purple);
+        }
+
+        .btn-view-applications:hover {
+            background: var(--purple-light);
+        }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        <div class="dashboard-header">
+            <button class="logout-btn" onclick="logout()">Logout</button>
+            <h1>Dashboard</h1>
+            <p class="user-email" id="user-email"></p>
+        </div>
+
+        <div class="completion-card">
+            <h2>Profile Completion</h2>
+            <div class="completion-percentage" id="completion-percentage">0%</div>
+            <p>Complete your profile to start applying to jobs automatically</p>
+            <div class="completion-bar">
+                <div class="completion-bar-fill" id="completion-bar-fill" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <div class="sections-grid">
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">Work Location & Jobs</h3>
+                    <span class="section-status status-incomplete" id="status-step1">Incomplete</span>
+                </div>
+                <div class="section-content" id="content-step1">
+                    Set your preferred work locations, job types, and job titles
+                </div>
+                <button class="edit-btn" onclick="editSection('step1')">Edit</button>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">Seniority & Time Zones</h3>
+                    <span class="section-status status-incomplete" id="status-step2">Incomplete</span>
+                </div>
+                <div class="section-content" id="content-step2">
+                    Select seniority levels and preferred time zones
+                </div>
+                <button class="edit-btn" onclick="editSection('step2')">Edit</button>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">Resume & Contact</h3>
+                    <span class="section-status status-incomplete" id="status-step3">Incomplete</span>
+                </div>
+                <div class="section-content" id="content-step3">
+                    Upload your resume and provide contact information
+                </div>
+                <button class="edit-btn" onclick="editSection('step3')">Edit</button>
+            </div>
+
+            <div class="section-card">
+                <div class="section-header">
+                    <h3 class="section-title">Eligibility Details</h3>
+                    <span class="section-status status-incomplete" id="status-step4">Incomplete</span>
+                </div>
+                <div class="section-content" id="content-step4">
+                    Set work eligibility, visa requirements, and salary expectations
+                </div>
+                <button class="edit-btn" onclick="editSection('step4')">Edit</button>
+            </div>
+        </div>
+
+        <div class="action-buttons">
+            <button class="action-btn btn-start-applying" onclick="startApplying()">
+                🚀 Start Auto-Applying to Jobs
+            </button>
+            <a href="/applications.html" class="action-btn btn-view-applications">
+                📋 View Applications
+            </a>
+        </div>
+    </div>
+
+    <script>
+        // Check authentication
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            window.location.href = '/login.html';
+        }
+
+        // Display user email
+        const userEmail = localStorage.getItem('userEmail');
+        if (userEmail) {
+            document.getElementById('user-email').textContent = userEmail;
+        }
+
+        // Load dashboard data
+        async function loadDashboard() {
+            try {
+                const response = await fetch('/api/wizard/completion', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+
+                if (response.status === 401 || response.status === 403) {
+                    logout();
+                    return;
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    const { percentage, sections } = data.data;
+
+                    // Update completion percentage
+                    document.getElementById('completion-percentage').textContent = `${percentage}%`;
+                    document.getElementById('completion-bar-fill').style.width = `${percentage}%`;
+
+                    // Update section statuses
+                    updateSectionStatus('step1', sections.jobPreferences);
+                    updateSectionStatus('step2', sections.jobPreferences); // Same section in DB
+                    updateSectionStatus('step3', sections.profile);
+                    updateSectionStatus('step4', sections.eligibility);
+                }
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            }
+        }
+
+        function updateSectionStatus(step, isComplete) {
+            const statusEl = document.getElementById(`status-${step}`);
+            if (isComplete) {
+                statusEl.textContent = 'Complete';
+                statusEl.classList.remove('status-incomplete');
+                statusEl.classList.add('status-complete');
+            }
+        }
+
+        function editSection(step) {
+            // Store which step to open
+            localStorage.setItem('wizardStep', step);
+            window.location.href = '/wizard.html';
+        }
+
+        function startApplying() {
+            fetch('/api/wizard/completion', {
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.data.percentage < 100) {
+                    alert('Please complete your profile before starting auto-apply');
+                    return;
+                }
+                alert('Auto-apply feature will be activated!');
+                // TODO: Activate auto-apply
+            });
+        }
+
+        function logout() {
+            localStorage.removeItem('authToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userId');
+            window.location.href = '/login.html';
+        }
+
+        // Load dashboard on page load
+        loadDashboard();
+    </script>
+</body>
+</html>
