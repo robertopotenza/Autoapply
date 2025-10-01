@@ -1,4 +1,5 @@
 const logger = require('./logger');
+const axios = require('axios');
 
 // Email service configuration
 // For production, use services like SendGrid, Mailgun, AWS SES, or Resend
@@ -108,32 +109,24 @@ class EmailService {
         }
 
         try {
-            const response = await fetch('https://api.resend.com/emails', {
-                method: 'POST',
+            const response = await axios.post('https://api.resend.com/emails', {
+                from: process.env.EMAIL_FROM || 'Auto-Apply <onboarding@resend.dev>',
+                to: [email],
+                subject: subject,
+                html: html,
+                text: text
+            }, {
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    from: process.env.EMAIL_FROM || 'Auto-Apply <noreply@autoapply.com>',
-                    to: email,
-                    subject: subject,
-                    html: html,
-                    text: text
-                })
+                }
             });
 
-            const data = await response.json();
-
-            if (response.ok) {
-                logger.info(`Magic link email sent to ${email} via Resend`);
-                return { success: true, mode: 'resend', id: data.id };
-            } else {
-                throw new Error(`Resend error: ${data.message}`);
-            }
+            logger.info(`Magic link email sent to ${email} via Resend (ID: ${response.data.id})`);
+            return { success: true, mode: 'resend', id: response.data.id };
         } catch (error) {
-            logger.error('Error sending email via Resend:', error);
-            throw error;
+            logger.error('Error sending email via Resend:', error.response?.data || error.message);
+            throw new Error(`Resend API error: ${error.response?.data?.message || error.message}`);
         }
     }
 
@@ -145,38 +138,31 @@ class EmailService {
         }
 
         try {
-            const response = await fetch('https://api.sendgrid.com/v3/mail/send', {
-                method: 'POST',
+            const response = await axios.post('https://api.sendgrid.com/v3/mail/send', {
+                personalizations: [{
+                    to: [{ email: email }]
+                }],
+                from: {
+                    email: process.env.EMAIL_FROM || 'noreply@autoapply.com',
+                    name: 'Auto-Apply'
+                },
+                subject: subject,
+                content: [
+                    { type: 'text/plain', value: text },
+                    { type: 'text/html', value: html }
+                ]
+            }, {
                 headers: {
                     'Authorization': `Bearer ${apiKey}`,
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({
-                    personalizations: [{
-                        to: [{ email: email }]
-                    }],
-                    from: {
-                        email: process.env.EMAIL_FROM || 'noreply@autoapply.com',
-                        name: 'Auto-Apply'
-                    },
-                    subject: subject,
-                    content: [
-                        { type: 'text/plain', value: text },
-                        { type: 'text/html', value: html }
-                    ]
-                })
+                }
             });
 
-            if (response.ok) {
-                logger.info(`Magic link email sent to ${email} via SendGrid`);
-                return { success: true, mode: 'sendgrid' };
-            } else {
-                const error = await response.text();
-                throw new Error(`SendGrid error: ${error}`);
-            }
+            logger.info(`Magic link email sent to ${email} via SendGrid`);
+            return { success: true, mode: 'sendgrid' };
         } catch (error) {
-            logger.error('Error sending email via SendGrid:', error);
-            throw error;
+            logger.error('Error sending email via SendGrid:', error.response?.data || error.message);
+            throw new Error(`SendGrid API error: ${error.response?.data?.errors?.[0]?.message || error.message}`);
         }
     }
 

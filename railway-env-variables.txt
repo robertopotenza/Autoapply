@@ -1,0 +1,24 @@
+# Copy these exact values to your Auto-Apply service in Railway
+# Go to: Auto-Apply service → Variables tab → Add each one
+
+PGHOST=postgres.railway.internal
+PGPORT=5432
+PGUSER=postgres
+PGPASSWORD=eTrLmvAOSGqNpqlIrXVvyRQyuFCwxkZI
+PGDATABASE=railway
+
+# Generate a JWT secret with this command:
+# node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+JWT_SECRET=your-generated-secret-here
+
+# Optional: OpenAI API key (if already set, keep it)
+# OPENAI_API_KEY=sk-...
+
+# Optional: Set production mode
+NODE_ENV=production
+
+# Optional: Your Railway app URL
+# BASE_URL=https://your-app.up.railway.app
+
+# Email defaults to console mode (shows in logs)
+# To use real emails, set EMAIL_SERVICE=resend and add RESEND_API_KEY
