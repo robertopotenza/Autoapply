@@ -222,9 +222,19 @@ router.post('/magic-link', async (req, res) => {
         // Generate magic link token
         const magicLinkData = await MagicLink.create(email);
 
-        // Build magic link URL
-        const baseUrl = process.env.BASE_URL || `http://localhost:${process.env.PORT || 3000}`;
+        // Build magic link URL - use request host or environment variable
+        let baseUrl = process.env.BASE_URL;
+
+        if (!baseUrl) {
+            // Auto-detect from request
+            const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+            const host = req.headers['x-forwarded-host'] || req.headers.host;
+            baseUrl = `${protocol}://${host}`;
+        }
+
         const magicLinkUrl = `${baseUrl}/verify-magic-link.html?token=${magicLinkData.token}`;
+
+        logger.info(`Generated magic link URL: ${magicLinkUrl}`);
 
         // Send email
         try {
