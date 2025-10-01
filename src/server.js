@@ -88,9 +88,17 @@ app.get('/api/health', (req, res) => {
 // Initialize database and start server
 async function startServer() {
     try {
-        // Initialize database tables
-        await initializeDatabase();
-        logger.info('Database initialized successfully');
+        // Initialize database tables (if database is configured)
+        try {
+            await initializeDatabase();
+            if (require('./database/db').isDatabaseConfigured()) {
+                logger.info('Database initialized successfully');
+            }
+        } catch (dbError) {
+            logger.error('Database initialization failed:', dbError);
+            logger.warn('Server will start without database functionality');
+            logger.warn('Please configure PostgreSQL credentials in Railway environment variables');
+        }
 
         // Start Express server
         app.listen(PORT, () => {
@@ -98,6 +106,11 @@ async function startServer() {
             logger.info(`Landing page: http://localhost:${PORT}`);
             logger.info(`Login: http://localhost:${PORT}/login.html`);
             logger.info(`Signup: http://localhost:${PORT}/signup.html`);
+
+            if (!require('./database/db').isDatabaseConfigured()) {
+                logger.warn('⚠️  Database not configured - authentication features will not work');
+                logger.warn('⚠️  Set these environment variables: PGHOST, PGUSER, PGPASSWORD, PGDATABASE');
+            }
         });
     } catch (error) {
         logger.error('Failed to start server:', error);
