@@ -1,7 +1,7 @@
 const db = require('../database/db');
-const Job = require('./Job');
-const Application = require('./Application');
-const AutoApplySettings = require('./AutoApplySettings');
+const Job = require('../models/Job');
+const Application = require('../models/Application');
+const AutoApplySettings = require('../models/AutoApplySettings');
 
 class UserProfile {
   static async getCompleteProfile(userId) {
