@@ -1,0 +1,66 @@
+﻿##  Supported Platforms
+
+AGENT AI applies directly on company career portals (not just job boards like Indeed or LinkedIn).
+
+It avoids most spam postings by targeting verified, first-party job listings.
+
+Compatible with most major ATS (Applicant Tracking Systems) like Workday, Greenhouse, Taleo, iCIMS, though occasional variations in workflow may require manual handling.
+
+### Supported Platforms  How It Works
+
+#### 1. Direct Application on Career Portals
+
+Instead of just scraping job boards (like Indeed or ZipRecruiter), AGENT AI navigates directly to a company's career page or ATS portal.
+
+**Example:** If Tesla posts a role, AGENT AI goes straight to careers.tesla.com or their Workday portal, not the LinkedIn mirror posting.
+
+This ensures the application is official, first-party, and less likely to disappear or lead to spam.
+
+#### 2. Why First-Party Matters
+
+- **Verified authenticity**  applications are guaranteed to go to the real employer, not a recruiter farm or a reposted listing.
+- **Better tracking**  status updates (Applied, Interview, Offer) tend to be more accurate when tied directly to the employer's ATS.
+- **Avoids "black holes"**  many third-party job boards never pass applications forward; direct portals reduce this risk.
+
+#### 3. ATS (Applicant Tracking System) Compatibility
+
+Most companies use ATS platforms to manage applications. AGENT AI is designed to interact with the most common ones:
+
+- **Workday**  very common in large enterprises; AGENT AI autofills fields like personal info, work history, education, and uploads resumes.
+- **Greenhouse**  popular with tech companies; AGENT AI handles structured forms, equal opportunity surveys, and file uploads.
+- **Taleo (Oracle)**  widely used in manufacturing and healthcare; AGENT AI manages multi-page application flows.
+- **iCIMS**  often used by mid-to-large companies; AGENT AI navigates through different modules for resume parsing and questions.
+- **Other Systems**  Lever, BrassRing, SmartRecruiters, etc., are also partly supported, though some require manual verification.
+
+#### 4. How AGENT AI Interacts
+
+- **Form Autofill**  Uses stored profile data (name, contact, education, employment history) to populate fields.
+- **Resume Upload**  Either base or tailored resume is uploaded to the ATS.
+- **Screening Questions**  AI-generated answers are inserted (or pulled from your pre-saved responses).
+- **Consent & Surveys**  Handles EEO, diversity, and location/work authorization questions.
+- **Submission Confirmation**  Waits for a successful "Application Submitted" confirmation page before logging completion in the dashboard.
+
+#### 5. Handling Variations
+
+ATS platforms sometimes change layouts or add extra questions.
+
+AGENT AI uses a mix of:
+
+- **Pre-trained workflows** (specific sequences for Workday, Taleo, etc.)
+- **Fallback prompts** (if it sees an unexpected field, it tries to answer logically using your stored data)
+- **Error detection** (if the application stalls, it flags it for manual review rather than submitting incomplete data).
+
+#### 6. Example Flow  Workday
+
+1. AGENT AI detects a "VP Operations" posting at Company X.
+2. It opens the Workday portal link.
+3. Logs into your pre-synced applicant profile (if credentials stored securely).
+4. Uploads the tailored resume from your Railway app.
+5. Auto-fills education and employment history.
+6. Answers screening questions with AI text.
+7. Confirms submission and saves the confirmation number in the dashboard.
+
+ **The result:** You're always applying where it matters most (direct employer systems), with reduced spam and higher reliability.
+
+ **The caveat:** Not every ATS is 100% consistent; occasionally a question or step may require manual intervention.
+
