@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const db = require('../database/db');
 const UserProfile = require('../services/UserProfile');
 const AutoApplySettings = require('../models/AutoApplySettings');
 const Application = require('../models/Application');
@@ -61,6 +62,261 @@ router.get('/debug/readiness', auth, async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Error retrieving readiness information',
+      error: error.message
+    });
+  }
+});
+
+// Setup/Update profile for autoapply
+router.post('/setup-profile', auth, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const {
+      // Personal Information
+      firstName,
+      lastName,
+      phone,
+      location,
+      
+      // Job Preferences  
+      currentJobTitle,
+      jobTitles,
+      seniorityLevels,
+      jobTypes,
+      remotePreferences,
+      
+      // Eligibility & Salary
+      currentSalary,
+      expectedSalary,
+      availability,
+      visaSponsorship,
+      eligibleCountries,
+      
+      // Additional Info
+      yearsExperience,
+      skills,
+      linkedinUrl,
+      
+      // Optional fields
+      timeZones,
+      languages,
+      hybridPreference,
+      travelWillingness,
+      relocationWillingness
+    } = req.body;
+
+    // Validate required fields
+    const requiredFields = {
+      firstName,
+      lastName,
+      currentJobTitle,
+      jobTitles: Array.isArray(jobTitles) ? jobTitles : [],
+      location
+    };
+
+    const missingFields = [];
+    Object.entries(requiredFields).forEach(([key, value]) => {
+      if (!value || (Array.isArray(value) && value.length === 0)) {
+        missingFields.push(key);
+      }
+    });
+
+    if (missingFields.length > 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required fields',
+        missingFields
+      });
+    }
+
+    // Update user table with name and salary info
+    const updateUserQuery = `
+      UPDATE users 
+      SET first_name = $1, last_name = $2, target_salary = $3, updated_at = CURRENT_TIMESTAMP
+      WHERE id = $4
+    `;
+    await db.query(updateUserQuery, [
+      firstName.trim(),
+      lastName.trim(),
+      expectedSalary || currentSalary || 100000, // Default if not provided
+      userId
+    ]);
+
+    // Create or update profile
+    const upsertProfileQuery = `
+      INSERT INTO profiles (
+        user_id, current_role, current_salary, years_experience, location, linkedin_url, skills
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (user_id) DO UPDATE SET
+        current_role = EXCLUDED.current_role,
+        current_salary = EXCLUDED.current_salary,
+        years_experience = EXCLUDED.years_experience,
+        location = EXCLUDED.location,
+        linkedin_url = EXCLUDED.linkedin_url,
+        skills = EXCLUDED.skills,
+        updated_at = CURRENT_TIMESTAMP
+    `;
+    
+    await db.query(upsertProfileQuery, [
+      userId,
+      currentJobTitle.trim(),
+      currentSalary || null,
+      yearsExperience || null,
+      location.trim(),
+      linkedinUrl || null,
+      JSON.stringify(skills || [])
+    ]);
+
+    // Create default autoapply settings
+    const defaultSettings = {
+      enabled: false,
+      maxApplicationsPerDay: 5,
+      maxApplicationsPerCompany: 1,
+      preferredLocations: location ? [location] : [],
+      jobTypes: jobTypes || ['full-time'],
+      salaryMin: currentSalary || null,
+      salaryMax: expectedSalary || null,
+      seniorityLevel: Array.isArray(seniorityLevels) && seniorityLevels.length > 0 ? seniorityLevels[0] : 'Mid-level',
+      excludeCompanies: [],
+      includeCompanies: [],
+      keywords: jobTitles || [],
+      excludeKeywords: [],
+      autoGenerateCoverLetter: true,
+      screeningAnswers: {
+        availability: availability || 'Immediately',
+        visaSponsorship: visaSponsorship ? 'Yes' : 'No',
+        eligibleCountries: eligibleCountries || ['United States'],
+        languages: languages || ['English'],
+        hybridPreference: hybridPreference || 'hybrid',
+        travelWillingness: travelWillingness || 'No',
+        relocationWillingness: relocationWillingness || 'No',
+        remoteWork: remotePreferences || 'hybrid'
+      }
+    };
+
+    // Create or update autoapply settings
+    await AutoApplySettings.create(userId, defaultSettings);
+
+    // Get updated profile to verify completeness
+    const updatedProfile = await UserProfile.getCompleteProfile(userId);
+    const completeness = UserProfile.isProfileComplete(updatedProfile);
+
+    res.json({
+      success: true,
+      message: 'Profile setup completed successfully',
+      data: {
+        profileComplete: completeness.complete,
+        missingFields: completeness.missing || null,
+        profile: updatedProfile,
+        settings: defaultSettings
+      }
+    });
+
+  } catch (error) {
+    console.error('Error setting up profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error setting up profile',
+      error: error.message
+    });
+  }
+});
+
+// Quick profile completion with minimal data
+router.post('/complete-profile', auth, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    
+    // Get current user data
+    const userQuery = 'SELECT * FROM users WHERE id = $1';
+    const userResult = await db.query(userQuery, [userId]);
+    
+    if (userResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+    
+    const user = userResult.rows[0];
+    
+    // Use existing data or reasonable defaults
+    const defaultJobTitle = 'Software Engineer';
+    const defaultLocation = 'Remote';
+    const defaultSalary = user.target_salary || 100000;
+    
+    // Ensure user has first_name and last_name
+    if (!user.first_name || !user.last_name) {
+      const nameParts = (user.email.split('@')[0] || 'User').split('.');
+      const firstName = nameParts[0] || 'User';
+      const lastName = nameParts[1] || 'Name';
+      
+      const updateNameQuery = `
+        UPDATE users 
+        SET first_name = $1, last_name = $2, updated_at = CURRENT_TIMESTAMP
+        WHERE id = $3
+      `;
+      await db.query(updateNameQuery, [firstName, lastName, userId]);
+    }
+    
+    // Create or update profile with defaults
+    const upsertProfileQuery = `
+      INSERT INTO profiles (
+        user_id, current_role, current_salary, years_experience, location, skills
+      ) VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (user_id) DO UPDATE SET
+        current_role = COALESCE(EXCLUDED.current_role, profiles.current_role, $2),
+        current_salary = COALESCE(EXCLUDED.current_salary, profiles.current_salary, $3),
+        years_experience = COALESCE(EXCLUDED.years_experience, profiles.years_experience, $4),
+        location = COALESCE(EXCLUDED.location, profiles.location, $5),
+        skills = COALESCE(EXCLUDED.skills, profiles.skills, $6),
+        updated_at = CURRENT_TIMESTAMP
+    `;
+    
+    await db.query(upsertProfileQuery, [
+      userId,
+      defaultJobTitle,
+      defaultSalary,
+      3, // Default 3 years experience
+      defaultLocation,
+      JSON.stringify(['JavaScript', 'Node.js', 'React']) // Default skills
+    ]);
+    
+    // Create default autoapply settings
+    try {
+      await AutoApplySettings.create(userId, {
+        enabled: false,
+        maxApplicationsPerDay: 5,
+        preferredLocations: [defaultLocation],
+        jobTypes: ['full-time'],
+        seniorityLevel: 'Mid-level'
+      });
+    } catch (error) {
+      // Settings might already exist, that's OK
+      console.log('AutoApply settings may already exist:', error.message);
+    }
+    
+    // Verify profile is now complete
+    const updatedProfile = await UserProfile.getCompleteProfile(userId);
+    const completeness = UserProfile.isProfileComplete(updatedProfile);
+    
+    res.json({
+      success: true,
+      message: completeness.complete 
+        ? 'Profile completed successfully! You can now use AutoApply.' 
+        : 'Profile updated but still incomplete.',
+      data: {
+        profileComplete: completeness.complete,
+        missingFields: completeness.missing || null,
+        profile: updatedProfile
+      }
+    });
+    
+  } catch (error) {
+    console.error('Error completing profile:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error completing profile',
       error: error.message
     });
   }
