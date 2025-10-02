@@ -1,10 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const UserProfile = require('../services/UserProfile');
-const AutoApplySettings = require('../database/models/AutoApplySettings');
-const Application = require('../database/models/Application');
-const Job = require('../database/models/Job');
-const auth = require('../middleware/auth');
+const AutoApplySettings = require('../models/AutoApplySettings');
+const Application = require('../models/Application');
+const Job = require('../models/Job');
+const { authenticateToken: auth } = require('../middleware/auth');
 
 // Get complete user profile for autoapply
 router.get('/profile', auth, async (req, res) => {
