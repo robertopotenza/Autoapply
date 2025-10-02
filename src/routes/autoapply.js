@@ -322,6 +322,13 @@ router.post('/complete-profile', auth, async (req, res) => {
   }
 });
 
+// Serve the frontend integration script
+router.get('/integration.js', (req, res) => {
+  res.setHeader('Content-Type', 'application/javascript');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.sendFile(require('path').join(__dirname, '../../public/autoapply-integration.js'));
+});
+
 // Get application readiness status
 router.get('/readiness', auth, async (req, res) => {
   try {
