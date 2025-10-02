@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verifying Login - Auto-Apply</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        .auth-container {
+            max-width: 450px;
+            margin: 2rem auto;
+        }
+
+        .auth-header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .auth-header h1 {
+            color: white;
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .auth-card {
+            background: white;
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            text-align: center;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #7c3aed;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 2rem auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .status-icon {
+            font-size: 4rem;
+            margin: 1rem 0;
+        }
+
+        .error-message {
+            background: #fee2e2;
+            color: #ef4444;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+
+        .success-message {
+            background: #d1fae5;
+            color: #10b981;
+            padding: 1rem;
+            border-radius: 8px;
+            margin: 1rem 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-container">
+        <div class="auth-header">
+            <h1>🚀 Auto-Apply</h1>
+        </div>
+
+        <div class="auth-card">
+            <div id="verifying-state">
+                <div class="spinner"></div>
+                <h2>Verifying your login link...</h2>
+                <p style="color: #6b7280; margin-top: 1rem;">Please wait while we log you in.</p>
+            </div>
+
+            <div id="success-state" style="display: none;">
+                <div class="status-icon">✅</div>
+                <h2>Login Successful!</h2>
+                <div class="success-message">
+                    Redirecting you to your dashboard...
+                </div>
+            </div>
+
+            <div id="error-state" style="display: none;">
+                <div class="status-icon">❌</div>
+                <h2>Invalid or Expired Link</h2>
+                <div class="error-message" id="error-text">
+                    This magic link is invalid or has expired.
+                </div>
+                <a href="/login.html" class="btn-primary" style="display: inline-block; margin-top: 1.5rem; text-decoration: none;">
+                    Back to Login
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Get token from URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        if (!token) {
+            showError('No token provided');
+        } else {
+            verifyMagicLink(token);
+        }
+
+        async function verifyMagicLink(token) {
+            try {
+                const response = await fetch(`/api/auth/verify-magic-link?token=${token}`);
+                const data = await response.json();
+
+                if (data.success) {
+                    // Store token
+                    localStorage.setItem('authToken', data.data.token);
+                    localStorage.setItem('userEmail', data.data.email);
+                    localStorage.setItem('userId', data.data.userId);
+
+                    // Show success
+                    showSuccess();
+
+                    // Redirect to dashboard
+                    setTimeout(() => {
+                        window.location.href = '/dashboard.html';
+                    }, 1500);
+                } else {
+                    showError(data.message || 'Invalid or expired magic link');
+                }
+            } catch (error) {
+                console.error('Verification error:', error);
+                showError('An error occurred while verifying your link');
+            }
+        }
+
+        function showSuccess() {
+            document.getElementById('verifying-state').style.display = 'none';
+            document.getElementById('error-state').style.display = 'none';
+            document.getElementById('success-state').style.display = 'block';
+        }
+
+        function showError(message) {
+            document.getElementById('verifying-state').style.display = 'none';
+            document.getElementById('success-state').style.display = 'none';
+            document.getElementById('error-state').style.display = 'block';
+            document.getElementById('error-text').textContent = message;
+        }
+    </script>
+</body>
+</html>

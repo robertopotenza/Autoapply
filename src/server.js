@@ -1,235 +1,201 @@
-/**
- * Enhanced Auto-Apply Platform Server
- * Integrates existing Apply Autonomously features with new enhanced autoapply functionality
+﻿/**
+ * Comprehensive Apply Autonomously Server
+ * Combines enhanced autoapply features with user authentication and management
  */
 
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
-const helmet = require('helmet');
+const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Import routes
+const authRoutes = require('./routes/auth');
+const wizardRoutes = require('./routes/wizard');
+const { router: autoApplyRouter, initializeOrchestrator } = require('./routes/autoapply');
+
+// Import utilities and middleware
 const { Logger } = require('./utils/logger');
-const { initializeEnhancedAutoApply } = require('./enhanced-integration');
+const authenticateToken = require('./middleware/auth').authenticateToken;
 
 // Initialize logger
 const logger = new Logger('Server');
 
 // Create Express app
 const app = express();
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 3000;
 
-// Security middleware
-app.use(helmet({
-    contentSecurityPolicy: false, // Disable for development
-    crossOriginEmbedderPolicy: false
-}));
-
-// CORS configuration
+// Middleware
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['https://autoapply-production-1393.up.railway.app']
-        : ['http://localhost:3000', 'http://localhost:8080'],
+    origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 }));
-
-// Body parsing middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Static file serving
+// Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
 
 // Database connection
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-    max: 20,
-    idleTimeoutMillis: 30000,
-    connectionTimeoutMillis: 2000,
-});
+let pool = null;
 
-// Test database connection
-async function testDatabaseConnection() {
+async function initializeDatabase() {
     try {
-        const client = await pool.connect();
-        await client.query('SELECT NOW()');
-        client.release();
-        logger.info('Database connection successful');
-        return true;
+        if (!process.env.DATABASE_URL) {
+            logger.warn('DATABASE_URL not found, some features may be limited');
+            return null;
+        }
+
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+
+        // Test connection
+        await pool.query('SELECT NOW()');
+        logger.info(' Database connected successfully');
+        
+        return pool;
     } catch (error) {
-        logger.error('Database connection failed:', error.message);
-        return false;
+        logger.error(' Database connection failed:', error.message);
+        return null;
     }
 }
 
-// Basic middleware to attach database to requests
-app.use((req, res, next) => {
-    req.db = pool;
-    next();
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'operational',
+        timestamp: new Date().toISOString(),
+        database: !!pool,
+        environment: process.env.NODE_ENV || 'development'
+    });
 });
 
-// Health check endpoint
-app.get('/health', async (req, res) => {
-    try {
-        const dbHealthy = await testDatabaseConnection();
-        
-        res.json({
-            status: dbHealthy ? 'healthy' : 'unhealthy',
-            timestamp: new Date().toISOString(),
-            version: '2.0.0',
-            database: dbHealthy ? 'connected' : 'disconnected',
-            environment: process.env.NODE_ENV || 'development'
-        });
-    } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error.message,
-            timestamp: new Date().toISOString()
-        });
-    }
+// API Routes
+app.use('/api/auth', authRoutes);
+app.use('/api/wizard', wizardRoutes);
+app.use('/api/autoapply', autoApplyRouter);
+
+// Root endpoint
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// Dashboard endpoint
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/dashboard.html'));
+});
+
+// Wizard endpoint
+app.get('/wizard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/wizard.html'));
 });
 
 // API info endpoint
 app.get('/api', (req, res) => {
     res.json({
-        name: 'Apply Autonomously Enhanced API',
+        name: 'Apply Autonomously API',
         version: '2.0.0',
-        description: 'Advanced AI-Powered Job Application Automation Platform',
+        description: 'Enhanced autoapply platform with user authentication',
         endpoints: {
-            health: 'GET /health',
-            api_info: 'GET /api',
-            autoapply: {
-                start: 'POST /api/autoapply/start',
-                stop: 'POST /api/autoapply/stop',
-                status: 'GET /api/autoapply/status',
-                scan: 'POST /api/autoapply/scan',
-                jobs: 'GET /api/autoapply/jobs',
-                apply: 'POST /api/autoapply/apply',
-                applications: 'GET /api/autoapply/applications',
-                stats: 'GET /api/autoapply/stats',
-                config: 'GET/POST /api/autoapply/config'
-            }
+            auth: '/api/auth',
+            wizard: '/api/wizard',
+            autoapply: '/api/autoapply'
         },
-        documentation: '/README.md'
+        documentation: '/api/docs'
     });
 });
 
-// Root endpoint
-app.get('/', (req, res) => {
-    res.json({
-        message: '🚀 Apply Autonomously Enhanced Platform',
-        description: 'Advanced AI-Powered Job Application Automation',
-        version: '2.0.0',
-        status: 'operational',
-        features: [
-            'Multi-platform job scanning (Indeed, LinkedIn, Glassdoor)',
-            'AI-powered job matching with relevance scoring',
-            'Intelligent application automation with ATS detection',
-            'Magic link authentication system',
-            'Comprehensive analytics and reporting',
-            'User preference-based filtering',
-            'Review and auto application modes'
-        ],
-        links: {
-            health: '/health',
-            api: '/api',
-            documentation: '/README.md'
-        }
-    });
+// Catch-all for SPA routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
 });
-
-// Initialize enhanced autoapply features
-async function initializeServer() {
-    try {
-        logger.info('🚀 Starting Apply Autonomously Enhanced Platform');
-        
-        // Test database connection
-        const dbHealthy = await testDatabaseConnection();
-        if (!dbHealthy) {
-            throw new Error('Database connection failed');
-        }
-        
-        // Initialize enhanced autoapply features
-        await initializeEnhancedAutoApply(app);
-        
-        logger.info('✅ Enhanced autoapply features initialized');
-        
-        return true;
-    } catch (error) {
-        logger.error('❌ Server initialization failed:', error.message);
-        throw error;
-    }
-}
 
 // Error handling middleware
 app.use((error, req, res, next) => {
-    logger.error('Unhandled error:', error.message);
+    logger.error('Unhandled error:', error);
     res.status(500).json({
-        error: 'Internal server error',
-        message: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
     });
 });
 
-// 404 handler
-app.use((req, res) => {
-    res.status(404).json({
-        error: 'Not found',
-        message: `Route ${req.method} ${req.path} not found`,
-        available_endpoints: {
-            health: 'GET /health',
-            api: 'GET /api',
-            root: 'GET /'
-        }
-    });
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    
+    if (pool) {
+        await pool.end();
+        logger.info('Database connections closed');
+    }
+    
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    
+    if (pool) {
+        await pool.end();
+        logger.info('Database connections closed');
+    }
+    
+    process.exit(0);
 });
 
 // Start server
 async function startServer() {
     try {
-        // Initialize all features
-        await initializeServer();
+        // Initialize database
+        pool = await initializeDatabase();
         
-        // Start listening
+        if (pool) {
+            // Attach database to app for middleware
+            app.locals.db = pool;
+            
+            // Initialize enhanced autoapply features if available
+            try {
+                initializeOrchestrator(pool);
+                logger.info(' Enhanced autoapply features initialized');
+            } catch (error) {
+                logger.warn('Enhanced autoapply features not available:', error.message);
+            }
+        }
+        
+        // Start HTTP server
         const server = app.listen(PORT, '0.0.0.0', () => {
-            logger.info(`🎯 Server running on port ${PORT}`);
-            logger.info(`🌐 Environment: ${process.env.NODE_ENV || 'development'}`);
-            logger.info(`🔗 Health check: http://localhost:${PORT}/health`);
-            logger.info(`📚 API info: http://localhost:${PORT}/api`);
-            logger.info('✅ Apply Autonomously Enhanced Platform ready!');
+            logger.info(` Apply Autonomously server running on port ${PORT}`);
+            logger.info(` Dashboard: http://localhost:${PORT}/dashboard`);
+            logger.info(` Wizard: http://localhost:${PORT}/wizard`);
+            logger.info(` API: http://localhost:${PORT}/api`);
         });
-        
-        // Graceful shutdown
-        process.on('SIGTERM', () => {
-            logger.info('SIGTERM received, shutting down gracefully');
-            server.close(() => {
-                logger.info('Server closed');
-                pool.end(() => {
-                    logger.info('Database pool closed');
-                    process.exit(0);
-                });
-            });
+
+        // Handle server errors
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                logger.error(` Port ${PORT} is already in use`);
+            } else {
+                logger.error(' Server error:', error);
+            }
+            process.exit(1);
         });
+
+        return server;
         
     } catch (error) {
-        logger.error('Failed to start server:', error.message);
+        logger.error(' Failed to start server:', error);
         process.exit(1);
     }
 }
 
-// Handle uncaught exceptions
-process.on('uncaughtException', (error) => {
-    logger.error('Uncaught Exception:', error.message);
-    process.exit(1);
-});
-
-process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    process.exit(1);
-});
-
 // Start the server
-startServer();
+if (require.main === module) {
+    startServer().catch((error) => {
+        logger.error(' Fatal error starting server:', error);
+        process.exit(1);
+    });
+}
 
-module.exports = app;
+module.exports = { app, startServer };

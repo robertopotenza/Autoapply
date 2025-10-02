@@ -1,77 +1,164 @@
-/**
- * Logger Utility for Enhanced AutoApply Platform
- * Provides structured logging with different levels and contexts
+﻿/**
+ * Comprehensive Logger Utility for Apply Autonomously Platform
+ * Provides structured logging with different levels, contexts, and output formatting
  */
+
+const winston = require('winston');
 
 class Logger {
     constructor(context = 'App') {
         this.context = context;
         this.levels = {
-            error: 0,
-            warn: 1,
-            info: 2,
-            debug: 3
+            ERROR: 0,
+            WARN: 1,
+            INFO: 2,
+            DEBUG: 3
         };
-        this.currentLevel = this.levels[process.env.LOG_LEVEL] || this.levels.info;
+        
+        // Initialize Winston logger if available
+        this.winston = null;
+        this.initializeWinston();
     }
+    
+    initializeWinston() {
+        try {
+            this.winston = winston.createLogger({
+                level: process.env.LOG_LEVEL || 'info',
+                format: winston.format.combine(
+                    winston.format.timestamp(),
+                    winston.format.errors({ stack: true }),
+                    winston.format.json()
+                ),
+                defaultMeta: { service: 'apply-autonomously', context: this.context },
+                transports: [
+                    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+                    new winston.transports.File({ filename: 'logs/combined.log' })
+                ]
+            });
 
-    /**
-     * Format log message with timestamp and context
-     */
-    formatMessage(level, message, metadata = null) {
+            if (process.env.NODE_ENV !== 'production') {
+                this.winston.add(new winston.transports.Console({
+                    format: winston.format.simple()
+                }));
+            }
+        } catch (error) {
+            // Fallback to console logging if Winston fails
+            console.warn('Winston logger initialization failed, using console logging');
+        }
+    }
+    
+    formatMessage(level, message, ...args) {
         const timestamp = new Date().toISOString();
-        const logLevel = level.toUpperCase();
-        let formatted = `[${timestamp}] [${logLevel}] [${this.context}] ${message}`;
+        const levelStr = level.toUpperCase().padEnd(5);
+        const contextStr = `[${this.context}]`.padEnd(12);
         
-        if (metadata) {
-            formatted += ` ${JSON.stringify(metadata)}`;
+        let formattedMessage = `${timestamp} ${levelStr} ${contextStr} ${message}`;
+        
+        if (args.length > 0) {
+            const additionalData = args.map(arg => 
+                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
+            ).join(' ');
+            formattedMessage += ` ${additionalData}`;
         }
         
-        return formatted;
+        return formattedMessage;
     }
-
-    /**
-     * Log error messages
-     */
-    error(message, metadata = null) {
-        if (this.currentLevel >= this.levels.error) {
-            console.error(this.formatMessage('error', message, metadata));
+    
+    log(level, message, ...args) {
+        const formattedMessage = this.formatMessage(level, message, ...args);
+        
+        // Use Winston if available
+        if (this.winston) {
+            this.winston.log(level, message, { args, context: this.context });
+        }
+        
+        // Always log to console for immediate feedback
+        switch (level.toLowerCase()) {
+            case 'error':
+                console.error(formattedMessage);
+                break;
+            case 'warn':
+                console.warn(formattedMessage);
+                break;
+            case 'debug':
+                if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
+                    console.debug(formattedMessage);
+                }
+                break;
+            default:
+                console.log(formattedMessage);
         }
     }
-
-    /**
-     * Log warning messages
-     */
-    warn(message, metadata = null) {
-        if (this.currentLevel >= this.levels.warn) {
-            console.warn(this.formatMessage('warn', message, metadata));
-        }
+    
+    error(message, ...args) {
+        this.log('error', message, ...args);
     }
-
-    /**
-     * Log info messages
-     */
-    info(message, metadata = null) {
-        if (this.currentLevel >= this.levels.info) {
-            console.log(this.formatMessage('info', message, metadata));
-        }
+    
+    warn(message, ...args) {
+        this.log('warn', message, ...args);
     }
-
-    /**
-     * Log debug messages
-     */
-    debug(message, metadata = null) {
-        if (this.currentLevel >= this.levels.debug) {
-            console.log(this.formatMessage('debug', message, metadata));
-        }
+    
+    info(message, ...args) {
+        this.log('info', message, ...args);
     }
-
-    /**
-     * Create child logger with additional context
-     */
-    child(additionalContext) {
-        return new Logger(`${this.context}:${additionalContext}`);
+    
+    debug(message, ...args) {
+        this.log('debug', message, ...args);
+    }
+    
+    // Utility methods for structured logging
+    logJobScan(platform, jobCount, duration) {
+        this.info(`Job scan completed`, {
+            platform,
+            jobCount,
+            duration: `${duration}ms`,
+            timestamp: new Date().toISOString()
+        });
+    }
+    
+    logApplication(jobTitle, company, status) {
+        this.info(`Application ${status}`, {
+            jobTitle,
+            company,
+            status,
+            timestamp: new Date().toISOString()
+        });
+    }
+    
+    logUserAction(userId, action, details = {}) {
+        this.info(`User action: ${action}`, {
+            userId,
+            action,
+            details,
+            timestamp: new Date().toISOString()
+        });
+    }
+    
+    logAPIRequest(method, endpoint, userId, responseTime) {
+        this.debug(`API Request`, {
+            method,
+            endpoint,
+            userId,
+            responseTime: `${responseTime}ms`,
+            timestamp: new Date().toISOString()
+        });
+    }
+    
+    logError(error, context = {}) {
+        this.error(`Error occurred`, {
+            message: error.message,
+            stack: error.stack,
+            context,
+            timestamp: new Date().toISOString()
+        });
     }
 }
 
-module.exports = { Logger };
+// Create default logger instance
+const defaultLogger = new Logger('Default');
+
+// Export both class and default instance
+module.exports = {
+    Logger,
+    logger: defaultLogger
+};
