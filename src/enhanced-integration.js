@@ -29,14 +29,16 @@ async function initializeEnhancedAutoApply(app) {
         // Initialize the autoapply orchestrator
         initializeOrchestrator(pool);
         
-        // Add middleware to attach database to requests
-        app.use((req, res, next) => {
-            req.db = pool;
+        // Create a simple authentication middleware for development
+        const authenticateToken = (req, res, next) => {
+            // For now, skip authentication in development
+            // In production, this should validate JWT tokens
+            req.user = { user_id: 'demo-user-id' };
             next();
-        });
+        };
         
-        // Mount the enhanced autoapply API routes
-        app.use('/api/autoapply', autoApplyRouter);
+        // Mount the enhanced autoaply API routes with auth middleware
+        app.use('/api/autoapply', authenticateToken, autoApplyRouter);
         
         logger.info('Enhanced autoapply system initialized successfully');
         
