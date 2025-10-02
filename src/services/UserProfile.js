@@ -295,7 +295,13 @@ class UserProfile {
 
   // Check if user profile is complete enough for autoapply
   static isProfileComplete(profile) {
+    console.log('🔍 Checking profile completeness:', {
+      hasProfile: !!profile,
+      profileKeys: profile ? Object.keys(profile) : []
+    });
+    
     if (!profile) {
+      console.log('❌ Profile not found');
       return { complete: false, missing: 'Profile not found' };
     }
     
@@ -308,23 +314,30 @@ class UserProfile {
       jobTitles: profile.preferences?.job_titles
     };
     
+    console.log('🔍 Essential fields check:', essentials);
+    
     // Check essential fields
     if (!essentials.email) {
+      console.log('❌ Missing email address');
       return { complete: false, missing: 'Email address' };
     }
     
     if (!essentials.fullName || essentials.fullName.trim() === '') {
+      console.log('❌ Missing or empty full name');
       return { complete: false, missing: 'Full name' };
     }
     
     if (!essentials.currentJobTitle) {
+      console.log('❌ Missing current job title');
       return { complete: false, missing: 'Current job title' };
     }
     
     if (!essentials.jobTitles || essentials.jobTitles.length === 0) {
+      console.log('❌ Missing job preferences');
       return { complete: false, missing: 'Job preferences' };
     }
     
+    console.log('✅ Profile is complete for autoapply');
     // Profile is complete enough for autoapply
     return { complete: true };
   }
@@ -334,7 +347,7 @@ class UserProfile {
     try {
       const profile = await this.getCompleteProfile(userId);
       const completeness = this.isProfileComplete(profile);
-      const autoApplySettings = await AutoApplySettings.findByUser(userId);
+      const autoApplySettings = await AutoApplySettings.findByUserId(userId);
       
       return {
         userId: userId,

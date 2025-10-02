@@ -32,6 +32,40 @@ router.get('/profile', auth, async (req, res) => {
   }
 });
 
+// Debug: Get detailed readiness information
+router.get('/debug/readiness', auth, async (req, res) => {
+  try {
+    const userId = req.user.userId;
+    const profile = await UserProfile.getCompleteProfile(userId);
+    const completeness = UserProfile.isProfileComplete(profile);
+    const readiness = await UserProfile.getApplicationReadiness(userId);
+    
+    res.json({
+      success: true,
+      data: {
+        userId: userId,
+        profile: profile,
+        completeness: completeness,
+        readiness: readiness,
+        debug: {
+          hasProfile: !!profile,
+          profileKeys: profile ? Object.keys(profile) : [],
+          personalKeys: profile?.personal ? Object.keys(profile.personal) : [],
+          eligibilityKeys: profile?.eligibility ? Object.keys(profile.eligibility) : [],
+          preferencesKeys: profile?.preferences ? Object.keys(profile.preferences) : []
+        }
+      }
+    });
+  } catch (error) {
+    console.error('Error getting readiness debug info:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Error retrieving readiness information',
+      error: error.message
+    });
+  }
+});
+
 // Get application readiness status
 router.get('/readiness', auth, async (req, res) => {
   try {
