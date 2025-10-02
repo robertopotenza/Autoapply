@@ -9,6 +9,7 @@ const { initializeDatabase } = require('./database/db');
 // Import routes
 const authRoutes = require('./routes/auth');
 const wizardRoutes = require('./routes/wizard');
+const autoApplyRoutes = require('./routes/autoapply');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -52,6 +53,7 @@ app.use(express.static(path.join(__dirname, '../public')));
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/wizard', wizardRoutes);
+app.use('/api/autoapply', autoApplyRoutes);
 
 // File upload endpoint (authenticated)
 const { authenticateToken } = require('./middleware/auth');
