@@ -474,29 +474,32 @@
 
         // Update profile sections
         function updateProfileSections(data) {
+            // For users with 100% completion, all sections should show as complete
+            const overallComplete = data?.completeness?.complete || false;
+            
             const sections = [
                 {
                     title: 'Work Location & Jobs',
                     description: 'Set your preferred work locations, job types, and job titles',
-                    isComplete: data?.profile?.preferences?.job_titles?.length > 0,
+                    isComplete: overallComplete || (data?.profile?.preferences?.job_titles?.length > 0),
                     editAction: 'editJobPreferences'
                 },
                 {
                     title: 'Seniority & Time Zones',
                     description: 'Select seniority levels and preferred time zones',
-                    isComplete: data?.profile?.preferences?.seniority_levels?.length > 0,
+                    isComplete: overallComplete || (data?.profile?.preferences?.seniority_levels?.length > 0),
                     editAction: 'editSeniority'
                 },
                 {
                     title: 'Resume & Contact',
                     description: 'Upload your resume and provide contact information',
-                    isComplete: data?.profile?.personal?.full_name?.trim().length > 0,
+                    isComplete: overallComplete || (data?.profile?.personal?.full_name?.trim()?.length > 0),
                     editAction: 'editContact'
                 },
                 {
                     title: 'Eligibility Details',
                     description: 'Set work eligibility, visa requirements, and salary expectations',
-                    isComplete: data?.profile?.eligibility?.current_job_title?.length > 0,
+                    isComplete: overallComplete || (data?.profile?.eligibility?.current_job_title?.length > 0),
                     editAction: 'editEligibility'
                 }
             ];
@@ -550,81 +553,33 @@
             }
         }
 
-        // Edit functions - FIXED TO PREVENT "editSection is not defined" ERRORS
+        // Edit functions - Navigate to wizard with specific step
         function editJobPreferences() { 
             console.log('📝 Opening Work Location & Jobs editor...');
-            
-            const currentData = profileData?.profile || {};
-            const jobTitles = currentData.preferences?.job_titles || ['Software Engineer', 'Full Stack Developer'];
-            const workLocation = currentData.personal?.city || currentData.preferences?.onsite_location || 'New York, NY';
-            
-            showNotification(`
-                <div style="text-align: left; max-width: 500px;">
-                    <h3>✅ Work Location & Jobs - Currently Complete</h3>
-                    <div style="background: #f0f8f0; padding: 12px; border-radius: 8px; margin: 10px 0;">
-                        <p><strong>📍 Job Titles:</strong> ${jobTitles.join(', ')}</p>
-                        <p><strong>🏢 Work Location:</strong> ${workLocation}</p>
-                        <p><strong>💼 Remote Preference:</strong> ${currentData.preferences?.remote_preference || 'Remote/Hybrid'}</p>
-                    </div>
-                    <p>Your current settings are working perfectly for AutoApply!</p>
-                </div>
-            `, 'success', 10000);
+            localStorage.setItem('wizardStep', '1');
+            localStorage.setItem('editMode', 'true');
+            window.location.href = '/wizard.html';
         }
         
         function editSeniority() { 
             console.log('📝 Opening Seniority & Time Zones editor...');
-            
-            const currentData = profileData?.profile || {};
-            const seniority = currentData.preferences?.seniority_levels || ['Senior', 'Lead'];
-            
-            showNotification(`
-                <div style="text-align: left; max-width: 500px;">
-                    <h3>✅ Seniority & Time Zones - Currently Complete</h3>
-                    <div style="background: #f0f8f0; padding: 12px; border-radius: 8px; margin: 10px 0;">
-                        <p><strong>🎯 Seniority Levels:</strong> ${seniority.join(', ')}</p>
-                        <p><strong>📈 Experience:</strong> ${currentData.yearsExperience || '8+'} years</p>
-                    </div>
-                    <p>Your seniority settings are optimally configured!</p>
-                </div>
-            `, 'success', 10000);
+            localStorage.setItem('wizardStep', '2');
+            localStorage.setItem('editMode', 'true');
+            window.location.href = '/wizard.html';
         }
         
         function editContact() { 
             console.log('📝 Opening Resume & Contact editor...');
-            
-            const currentData = profileData?.profile || {};
-            const fullName = currentData.personal?.full_name || 'Roberto Potenza';
-            const location = currentData.personal?.city || 'New York, NY';
-            
-            showNotification(`
-                <div style="text-align: left; max-width: 500px;">
-                    <h3>✅ Resume & Contact - Currently Complete</h3>
-                    <div style="background: #f0f8f0; padding: 12px; border-radius: 8px; margin: 10px 0;">
-                        <p><strong>👤 Full Name:</strong> ${fullName}</p>
-                        <p><strong>📍 Location:</strong> ${location}</p>
-                        <p><strong>📄 Resume:</strong> Uploaded</p>
-                    </div>
-                    <p>Your profile is complete with these settings!</p>
-                </div>
-            `, 'success', 8000);
+            localStorage.setItem('wizardStep', '3');
+            localStorage.setItem('editMode', 'true');
+            window.location.href = '/wizard.html';
         }
         
         function editEligibility() { 
             console.log('📝 Opening Eligibility Details editor...');
-            
-            const currentData = profileData?.profile || {};
-            const currentRole = currentData.eligibility?.current_job_title || 'Senior Developer';
-            
-            showNotification(`
-                <div style="text-align: left; max-width: 500px;">
-                    <h3>✅ Eligibility Details - Currently Complete</h3>
-                    <div style="background: #f0f8f0; padding: 12px; border-radius: 8px; margin: 10px 0;">
-                        <p><strong>💼 Current Role:</strong> ${currentRole}</p>
-                        <p><strong>🏢 Work Eligibility:</strong> Authorized</p>
-                    </div>
-                    <p>Your eligibility information is complete!</p>
-                </div>
-            `, 'success', 8000);
+            localStorage.setItem('wizardStep', '4');
+            localStorage.setItem('editMode', 'true');
+            window.location.href = '/wizard.html';
         }
 
         // Legacy function name support - FIXES "editSection is not defined" ERRORS  
