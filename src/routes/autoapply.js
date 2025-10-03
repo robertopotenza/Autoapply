@@ -288,7 +288,7 @@ router.get('/analytics', auth, async (req, res) => {
 router.get('/debug/readiness', auth, async (req, res) => {
     try {
         const userId = req.user.userId || req.user.user_id;
-        logger.info(Getting profile readiness for user );
+        logger.info(`🔍 Getting profile readiness for user ${userId}`);
 
         // Get profile completion data
         const profileData = await UserProfile.getProfileCompletion(userId);

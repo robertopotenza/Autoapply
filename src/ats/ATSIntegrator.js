@@ -21,8 +21,8 @@ class ATSIntegrator {
     this.automationEnabled = !!puppeteer;
     
     if (!this.automationEnabled) {
-      logger.warn(' Browser automation disabled - Puppeteer not available');
-      logger.info(' Running in API-only mode for ATS integration');
+      logger.warn('🚫 Browser automation disabled - Puppeteer not available');
+      logger.info('💡 Running in API-only mode for ATS integration');
     }
   }
 
@@ -31,7 +31,7 @@ class ATSIntegrator {
    */
   async initialize() {
     if (!this.automationEnabled) {
-      logger.info(' ATS running in lightweight mode (no browser)');
+      logger.info('⚡ ATS running in lightweight mode (no browser)');
       return false;
     }
 
@@ -50,11 +50,11 @@ class ATSIntegrator {
           ]
         });
         
-        logger.info(' Browser automation initialized successfully');
+        logger.info('🚀 Browser automation initialized successfully');
       }
       return true;
     } catch (error) {
-      logger.error(' Failed to initialize browser automation:', error.message);
+      logger.error('❌ Failed to initialize browser automation:', error.message);
       this.automationEnabled = false;
       return false;
     }
@@ -71,7 +71,7 @@ class ATSIntegrator {
    * Apply to job using available methods
    */
   async applyToJob(jobData, profileData) {
-    logger.info( Applying to:  at );
+    logger.info(`🎯 Applying to: ${jobData.title} at ${jobData.company}`);
     
     if (this.automationEnabled && this.browser) {
       // Use browser automation if available
@@ -91,7 +91,7 @@ class ATSIntegrator {
     }
 
     if (!this.browser) {
-      logger.warn('  Browser unavailable, falling back to API method');
+      logger.warn('⚠️  Browser unavailable, falling back to API method');
       return await this.applyWithAPI(jobData, profileData);
     }
 
@@ -103,11 +103,11 @@ class ATSIntegrator {
       await page.setViewport({ width: 1366, height: 768 });
       
       // Navigate to job application page
-      logger.info( Navigating to: );
+      logger.info(`🌐 Navigating to: ${jobData.url}`);
       await page.goto(jobData.url, { waitUntil: 'networkidle0', timeout: 30000 });
       
       // ATS-specific application logic would go here
-      logger.info(' Filling application form...');
+      logger.info('📝 Filling application form...');
       
       await page.close();
       
@@ -118,7 +118,7 @@ class ATSIntegrator {
       };
       
     } catch (error) {
-      logger.error(' Browser application failed:', error.message);
+      logger.error('❌ Browser application failed:', error.message);
       return await this.applyWithAPI(jobData, profileData);
     }
   }
@@ -127,13 +127,13 @@ class ATSIntegrator {
    * API-based job application (lightweight fallback)
    */
   async applyWithAPI(jobData, profileData) {
-    logger.info(' Using API-based application method');
+    logger.info('🔌 Using API-based application method');
     
     try {
       // Simulate API-based application
       // This would integrate with job boards' APIs where available
       
-      logger.info(' Application submitted via API');
+      logger.info('✅ Application submitted via API');
       
       return {
         success: true,
@@ -144,7 +144,7 @@ class ATSIntegrator {
       };
       
     } catch (error) {
-      logger.error(' API application failed:', error.message);
+      logger.error('❌ API application failed:', error.message);
       return {
         success: false,
         method: 'api_integration',
@@ -161,7 +161,7 @@ class ATSIntegrator {
     if (this.browser) {
       await this.browser.close();
       this.browser = null;
-      logger.info(' Browser automation closed');
+      logger.info('🔒 Browser automation closed');
     }
   }
 

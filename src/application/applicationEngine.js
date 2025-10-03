@@ -1,292 +1,111 @@
-const ATSIntegrator = require('../ats/ATSIntegrator');const fs = require('fs').promises;
-
-const UserProfile = require('../services/UserProfile');const path = require('path');
-
-const Application = require('../database/models/Application');const AIContentGenerator = require('../ai/contentGenerator');
-
-const AutoApplySettings = require('../database/models/AutoApplySettings');const logger = require('../utils/logger');
-
+﻿const ATSIntegrator = require('../ats/ATSIntegrator');
+const fs = require('fs').promises;
+const UserProfile = require('../services/UserProfile');
+const path = require('path');
+const Application = require('../database/models/Application');
 const AIContentGenerator = require('../ai/contentGenerator');
+const AutoApplySettings = require('../database/models/AutoApplySettings');
+const logger = require('../utils/logger');
 
-const logger = require('../utils/logger');class ApplicationEngine {
-
+class ApplicationEngine {
   constructor() {
-
-class ApplicationEngine {    this.configPath = path.join(process.cwd(), 'config.json');
-
-  constructor() {    this.reviewPath = path.join(process.cwd(), 'data', 'review');
-
-    this.atsIntegrator = new ATSIntegrator();    this.contentGenerator = new AIContentGenerator();
-
-    this.contentGenerator = new AIContentGenerator();    this.config = null;
-
-  }  }
-
-
-
-  async processApplication(userId, jobId) {  async loadConfig() {
-
-    try {    const data = await fs.readFile(this.configPath, 'utf8');
-
-      logger.info(`Processing application for user ${userId} to job ${jobId}`);    this.config = JSON.parse(data);
-
+    this.configPath = path.join(process.cwd(), 'config.json');
+    this.atsIntegrator = new ATSIntegrator();
+    this.aiGenerator = new AIContentGenerator();
+    this.isRunning = false;
+    this.stats = {
+      applicationsSubmitted: 0,
+      errors: 0,
+      startTime: null
+    };
   }
 
-      // Check if user can apply
-
-      const canApply = await AutoApplySettings.canUserApplyToday(userId);  async prepareApplication(job) {
-
-      if (!canApply.canApply) {    await this.loadConfig();
-
-        throw new Error(canApply.reason);
-
-      }    logger.info(`Preparing application for: ${job.title} at ${job.company}`);
-
-
-
-      // Check for duplicate application    // Generate customized content
-
-      const existingApplication = await Application.checkDuplicateApplication(userId, jobId);    const coverLetter = await this.contentGenerator.generateCoverLetter(
-
-      if (existingApplication) {      job,
-
-        throw new Error('Already applied to this job');      this.config.profile
-
-      }    );
-
-
-
-      // Get job data    const screeningAnswers = await this.contentGenerator.generateScreeningAnswers(
-
-      const Job = require('../database/models/Job');      job,
-
-      const job = await Job.findById(jobId);      this.config.profile,
-
-      if (!job) {      this.config.screeningAnswers
-
-        throw new Error('Job not found');    );
-
-      }
-
-    return {
-
-      // Create application package using saved user profile      job,
-
-      const applicationPackage = await UserProfile.createApplicationPackage(userId, job);      profile: this.config.profile,
-
-            coverLetter,
-
-      // Create application record      screeningAnswers,
-
-      const application = await Application.create({      createdAt: new Date().toISOString()
-
-        user_id: userId,    };
-
-        job_id: jobId,  }
-
-        application_mode: 'auto',
-
-        resume_used: applicationPackage.applicationData.resumePath,  async submitApplication(application) {
-
-        cover_letter_used: applicationPackage.applicationData.coverLetterPath,    // In production, this would interact with the actual job application system
-
-        screening_answers_used: applicationPackage.applicationData.screeningAnswers,    // For now, we'll log and save the application
-
-        application_data: applicationPackage.applicationData
-
-      });    logger.info(`Submitting application for: ${application.job.title}`);
-
-
-
-      // Get user settings to determine if this should be auto-applied or reviewed    const submissionsPath = path.join(process.cwd(), 'data', 'submissions');
-
-      const settings = await AutoApplySettings.findByUser(userId);    await fs.mkdir(submissionsPath, { recursive: true });
-
-      
-
-      if (settings.mode === 'review') {    const filename = `${application.job.company}-${Date.now()}.json`;
-
-        // Mark for review    await fs.writeFile(
-
-        await Application.updateStatus(application.application_id, 'pending', 'Pending user review');      path.join(submissionsPath, filename),
-
-              JSON.stringify(application, null, 2)
-
-        return {    );
-
-          success: true,
-
-          mode: 'review',    logger.info('Application submitted successfully');
-
-          message: 'Application prepared for review',    return { success: true, submittedAt: new Date().toISOString() };
-
-          applicationId: application.application_id,  }
-
-          data: applicationPackage
-
-        };  async saveForReview(application) {
-
-      } else {    await fs.mkdir(this.reviewPath, { recursive: true });
-
-        // Auto-apply immediately
-
-        const result = await this.executeApplication(application.application_id, applicationPackage);    const filename = `${application.job.company}-${Date.now()}.json`;
-
-        return result;    await fs.writeFile(
-
-      }      path.join(this.reviewPath, filename),
-
-      JSON.stringify(application, null, 2)
-
-    } catch (error) {    );
-
-      logger.error('Error processing application:', error);
-
-      throw error;    logger.info('Application saved for review');
-
-    }  }
-
-  }
-
-  async getApplicationsForReview() {
-
-  async executeApplication(applicationId, applicationPackage) {    try {
-
-    try {      const files = await fs.readdir(this.reviewPath);
-
-      logger.info(`Executing application ${applicationId}`);      const applications = [];
-
-
-
-      // Update status to processing      for (const file of files) {
-
-      await Application.updateStatus(applicationId, 'processing', 'Applying to job...');        if (file.endsWith('.json')) {
-
-          const data = await fs.readFile(path.join(this.reviewPath, file), 'utf8');
-
-      // Use ATS integrator to submit application          applications.push(JSON.parse(data));
-
-      const result = await this.atsIntegrator.applyToJob(        }
-
-        applicationPackage.jobData,      }
-
-        applicationPackage.userData,
-
-        applicationPackage.applicationData      return applications;
-
-      );    } catch (error) {
-
-      return [];
-
-      if (result.success) {    }
-
-        // Mark as successfully applied  }
-
-        await Application.markAsApplied(applicationId, result.confirmationNumber);
-
-          async approveApplication(applicationId) {
-
-        logger.info(`Application ${applicationId} submitted successfully`);    const files = await fs.readdir(this.reviewPath);
-
-        return {
-
-          success: true,    for (const file of files) {
-
-          mode: 'auto',      if (file.includes(applicationId)) {
-
-          message: 'Application submitted successfully',        const data = await fs.readFile(path.join(this.reviewPath, file), 'utf8');
-
-          applicationId: applicationId,        const application = JSON.parse(data);
-
-          confirmationNumber: result.confirmationNumber
-
-        };        // Submit the approved application
-
-      } else {        await this.submitApplication(application);
-
-        // Mark as failed
-
-        await Application.markAsFailed(applicationId, result.message);        // Remove from review folder
-
-                await fs.unlink(path.join(this.reviewPath, file));
-
-        return {
-
-          success: false,        return { success: true };
-
-          message: result.message,      }
-
-          applicationId: applicationId    }
-
-        };
-
-      }    return { success: false, error: 'Application not found' };
-
-  }
-
-    } catch (error) {}
-
-      logger.error('Error executing application:', error);
-
-      module.exports = ApplicationEngine;
-
-      // Mark application as failed
-      await Application.markAsFailed(applicationId, error.message);
-      
-      throw error;
-    }
-  }
-
-  async approveApplication(userId, applicationId) {
+  async initialize() {
     try {
-      // Verify the application belongs to the user
-      const application = await Application.findById(applicationId);
-      if (!application || application.user_id !== userId) {
-        throw new Error('Application not found or access denied');
-      }
-
-      if (application.status !== 'pending') {
-        throw new Error(`Application is ${application.status}, cannot approve`);
-      }
-
-      // Recreate application package from stored data
-      const Job = require('../database/models/Job');
-      const job = await Job.findById(application.job_id);
-      const applicationPackage = await UserProfile.createApplicationPackage(userId, job);
-
-      // Execute the application
-      const result = await this.executeApplication(applicationId, applicationPackage);
-      return result;
-
+      await this.atsIntegrator.initialize();
+      logger.info(' Application Engine initialized successfully');
+      return true;
     } catch (error) {
-      logger.error('Error approving application:', error);
-      throw error;
+      logger.error(' Failed to initialize Application Engine:', error.message);
+      return false;
     }
   }
 
-  async getUserApplicationStats(userId) {
-    try {
-      const stats = await Application.getUserStats(userId);
-      const canApply = await AutoApplySettings.canUserApplyToday(userId);
-      const settings = await AutoApplySettings.findByUser(userId);
+  async startAutoApply(userId, settings = {}) {
+    if (this.isRunning) {
+      throw new Error('Auto-apply is already running');
+    }
 
+    try {
+      this.isRunning = true;
+      this.stats.startTime = new Date();
+      
+      logger.info(`🎯 Starting auto-apply for user ${userId}`);
+      
+      // Get user profile and settings
+      const userProfile = await UserProfile.getProfile(userId);
+      const autoApplySettings = await AutoApplySettings.findByUserId(userId);
+      
+      if (!userProfile || !autoApplySettings) {
+        throw new Error('User profile or auto-apply settings not found');
+      }
+
+      // Start the application process
+      await this.processApplications(userId, userProfile, autoApplySettings);
+      
       return {
-        ...stats,
-        limits: {
-          dailyLimit: settings.max_applications_per_day,
-          weeklyLimit: settings.max_applications_per_week,
-          dailyRemaining: canApply.dailyRemaining || 0,
-          weeklyRemaining: canApply.weeklyRemaining || 0
-        },
-        canApply: canApply.canApply,
-        canApplyReason: canApply.reason,
-        autoApplyEnabled: settings.is_enabled,
-        autoApplyMode: settings.mode
+        success: true,
+        message: 'Auto-apply process completed',
+        stats: this.stats
       };
+      
     } catch (error) {
-      logger.error('Error getting user application stats:', error);
+      logger.error(' Auto-apply process failed:', error.message);
       throw error;
+    } finally {
+      this.isRunning = false;
     }
+  }
+
+  async processApplications(userId, userProfile, settings) {
+    // Implementation for processing applications
+    logger.info(' Processing job applications...');
+    
+    // This would contain the actual application logic
+    // For now, returning a placeholder
+    return {
+      processed: 0,
+      submitted: 0,
+      errors: 0
+    };
+  }
+
+  async stopAutoApply() {
+    if (!this.isRunning) {
+      return { success: false, message: 'Auto-apply is not currently running' };
+    }
+
+    this.isRunning = false;
+    logger.info(' Auto-apply process stopped');
+    
+    return {
+      success: true,
+      message: 'Auto-apply process stopped',
+      stats: this.stats
+    };
+  }
+
+  getStatus() {
+    return {
+      isRunning: this.isRunning,
+      stats: this.stats,
+      atsCapabilities: this.atsIntegrator.getCapabilities()
+    };
+  }
+
+  async cleanup() {
+    await this.atsIntegrator.close();
+    logger.info(' Application Engine cleanup completed');
   }
 }
 

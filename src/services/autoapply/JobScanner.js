@@ -239,7 +239,7 @@ class JobScanner {
                     jobElements = $('.jobs-search-results__list-item');
                     break;
                 case 'glassdoor':
-                    jobElements = '.react-job-listing');
+                    jobElements = $('.react-job-listing');
                     break;
                 default:
                     jobElements = $('.job-item, .job-listing, .job-result');
