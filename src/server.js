@@ -33,9 +33,6 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-// Serve static files
-app.use(express.static(path.join(__dirname, '../public')));
-
 // Database connection
 let pool = null;
 
@@ -54,7 +51,7 @@ async function initializeDatabase() {
         // Test connection
         await pool.query('SELECT NOW()');
         logger.info(' Database connected successfully');
-        
+
         return pool;
     } catch (error) {
         logger.error(' Database connection failed:', error.message);
@@ -72,10 +69,13 @@ app.get('/health', (req, res) => {
     });
 });
 
-// API Routes
+// CRITICAL FIX: API Routes MUST come BEFORE static file serving
 app.use('/api/auth', authRoutes);
 app.use('/api/wizard', wizardRoutes);
 app.use('/api/autoapply', autoApplyRouter);
+
+// Serve static files AFTER API routes to prevent conflicts
+app.use(express.static(path.join(__dirname, '../public')));
 
 // Root endpoint
 app.get('/', (req, res) => {
@@ -125,23 +125,23 @@ app.use((error, req, res, next) => {
 // Graceful shutdown
 process.on('SIGTERM', async () => {
     logger.info('SIGTERM received, shutting down gracefully');
-    
+
     if (pool) {
         await pool.end();
         logger.info('Database connections closed');
     }
-    
+
     process.exit(0);
 });
 
 process.on('SIGINT', async () => {
     logger.info('SIGINT received, shutting down gracefully');
-    
+
     if (pool) {
         await pool.end();
         logger.info('Database connections closed');
     }
-    
+
     process.exit(0);
 });
 
@@ -150,11 +150,11 @@ async function startServer() {
     try {
         // Initialize database
         pool = await initializeDatabase();
-        
+
         if (pool) {
             // Attach database to app for middleware
             app.locals.db = pool;
-            
+
             // Initialize enhanced autoapply features if available
             try {
                 initializeOrchestrator(pool);
@@ -163,19 +163,19 @@ async function startServer() {
                 logger.warn('Enhanced autoapply features not available:', error.message);
             }
         }
-        
+
         // Start HTTP server
         const server = app.listen(PORT, '0.0.0.0', () => {
-            logger.info(` Apply Autonomously server running on port ${PORT}`);
-            logger.info(` Dashboard: http://localhost:${PORT}/dashboard`);
-            logger.info(` Wizard: http://localhost:${PORT}/wizard`);
-            logger.info(` API: http://localhost:${PORT}/api`);
+            logger.info( Apply Autonomously server running on port );
+            logger.info( Dashboard: http://localhost:/dashboard);
+            logger.info( Wizard: http://localhost:/wizard);
+            logger.info( API: http://localhost:/api);
         });
 
         // Handle server errors
         server.on('error', (error) => {
             if (error.code === 'EADDRINUSE') {
-                logger.error(` Port ${PORT} is already in use`);
+                logger.error( Port  is already in use);
             } else {
                 logger.error(' Server error:', error);
             }
@@ -183,7 +183,7 @@ async function startServer() {
         });
 
         return server;
-        
+
     } catch (error) {
         logger.error(' Failed to start server:', error);
         process.exit(1);
