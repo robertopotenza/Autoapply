@@ -755,49 +755,7 @@ function getStepNumber(stepName) {
     return stepMap[stepName] || 1;
 }
 
-// Load existing user data for edit mode
-async function loadExistingUserData() {
-    const token = localStorage.getItem('authToken');
-    if (!token) return;
-
-    try {
-        console.log('🔄 Loading existing user data for edit mode...');
-        
-        // Get all user data from the API
-        const response = await fetch('/api/wizard/data', {
-            headers: {
-                'Authorization': `Bearer ${token}`
-            }
-        });
-
-        if (response.ok) {
-            const result = await response.json();
-            console.log('📊 API Response:', result);
-            
-            if (result.success && result.data) {
-                const userData = result.data;
-                console.log('👤 User Data:', userData);
-                
-                // Populate form fields with existing data
-                populateFormFields(userData);
-                
-                // Update form state
-                formState.data = {
-                    ...formState.data,
-                    ...convertUserDataToFormState(userData)
-                };
-                
-                console.log('✅ User data loaded successfully');
-            } else {
-                console.log('ℹ️ No existing data found');
-            }
-        } else {
-            console.error('❌ API request failed:', response.status);
-        }
-    } catch (error) {
-        console.error('❌ Error loading existing user data:', error);
-    }
-}
+// Duplicate function removed - using the enhanced version at the top of the file
 
 // Populate form fields with user data
 function populateFormFields(userData) {
