@@ -50,11 +50,11 @@ async function initializeDatabase() {
 
         // Test connection
         await pool.query('SELECT NOW()');
-        logger.info(' Database connected successfully');
+        logger.info('✅ Database connected successfully');
 
         return pool;
     } catch (error) {
-        logger.error(' Database connection failed:', error.message);
+        logger.error('❌ Database connection failed:', error.message);
         return null;
     }
 }
@@ -158,26 +158,26 @@ async function startServer() {
             // Initialize enhanced autoapply features if available
             try {
                 initializeOrchestrator(pool);
-                logger.info(' Enhanced autoapply features initialized');
+                logger.info('🚀 Enhanced autoapply features initialized');
             } catch (error) {
-                logger.warn('Enhanced autoapply features not available:', error.message);
+                logger.warn('⚠️  Enhanced autoapply features not available:', error.message);
             }
         }
 
         // Start HTTP server
         const server = app.listen(PORT, '0.0.0.0', () => {
-            logger.info( Apply Autonomously server running on port );
-            logger.info( Dashboard: http://localhost:/dashboard);
-            logger.info( Wizard: http://localhost:/wizard);
-            logger.info( API: http://localhost:/api);
+            logger.info(`🎯 Apply Autonomously server running on port ${PORT}`);
+            logger.info(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
+            logger.info(`🧙‍♂️ Wizard: http://localhost:${PORT}/wizard`);
+            logger.info(`🔌 API: http://localhost:${PORT}/api`);
         });
 
         // Handle server errors
         server.on('error', (error) => {
             if (error.code === 'EADDRINUSE') {
-                logger.error( Port  is already in use);
+                logger.error(`❌ Port ${PORT} is already in use`);
             } else {
-                logger.error(' Server error:', error);
+                logger.error('❌ Server error:', error);
             }
             process.exit(1);
         });
@@ -185,7 +185,7 @@ async function startServer() {
         return server;
 
     } catch (error) {
-        logger.error(' Failed to start server:', error);
+        logger.error('❌ Failed to start server:', error);
         process.exit(1);
     }
 }
@@ -193,7 +193,7 @@ async function startServer() {
 // Start the server
 if (require.main === module) {
     startServer().catch((error) => {
-        logger.error(' Fatal error starting server:', error);
+        logger.error('❌ Fatal error starting server:', error);
         process.exit(1);
     });
 }
