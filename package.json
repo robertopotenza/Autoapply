@@ -1,7 +1,7 @@
-﻿{
-  "name": "autoapply",
-  "version": "2.0.1",
-  "description": "Automated job application platform with AI-powered resume tailoring",
+{
+  "name": "apply-autonomously-enhanced",
+  "version": "2.0.0",
+  "description": "Enhanced Auto-Apply Platform with Advanced Job Scanning, Application Automation, and User Authentication",
   "main": "src/server.js",
   "engines": {
     "node": ">=20.0.0",
@@ -11,8 +11,8 @@
     "start": "node src/server.js",
     "worker": "node src/index.js",
     "dev": "nodemon src/server.js",
-    "build": "echo 'No build step required'",
-    "test": "jest --passWithNoTests",
+    "build": "npm install",
+    "test": "jest",
     "db:init": "node scripts/init-database.js",
     "db:migrate": "node database/migrations/run.js",
     "db:seed": "node database/seed.js"
@@ -26,38 +26,27 @@
     "career"
   ],
   "dependencies": {
-    "express": "^4.19.2",
-    "pg": "^8.12.0",
-    "bcryptjs": "^2.4.3",
-    "jsonwebtoken": "^9.0.2",
-    "dotenv": "^16.4.5",
-    "cors": "^2.8.5",
-    "multer": "^2.0.0-rc.4",
-    "axios": "^1.7.7",
-    "cheerio": "^1.0.0",
-    "openai": "^4.63.0",
-    "form-data": "^4.0.0",
-    "winston": "^3.14.2",
-    "node-cron": "^3.0.3",
+    "axios": "^1.12.2",
     "bcrypt": "^5.1.1",
-    "cron": "^3.1.7",
-    "lru-cache": "^11.0.1"
-  },
-  "optionalDependencies": {
-    "puppeteer": "^24.15.1"
+    "bcryptjs": "^2.4.3",
+    "cheerio": "^1.1.2",
+    "cors": "^2.8.5",
+    "cron": "^3.1.6",
+    "dotenv": "^16.6.1",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "multer": "^1.4.5-lts.2",
+    "node-cron": "^3.0.3",
+    "openai": "^4.104.0",
+    "pg": "^8.16.3",
+    "resend": "^2.1.0",
+    "uuid": "^9.0.1",
+    "winston": "^3.18.3"
   },
   "devDependencies": {
-    "nodemon": "^3.1.7",
     "jest": "^29.7.0",
-    "supertest": "^7.1.0",
-    "rimraf": "^6.0.1"
-  },
-  "overrides": {
-    "glob": "^11.0.0",
-    "rimraf": "^6.0.1",
-    "inflight": "npm:lru-cache@^11.0.1",
-    "node-domexception": "npm:@types/dom-exceptions@^1.0.0",
-    "superagent": "^10.2.2"
+    "nodemon": "^3.1.10",
+    "supertest": "^6.3.3"
   },
   "repository": {
     "type": "git",
@@ -65,5 +54,7 @@
   },
   "author": "Roberto Potenza",
   "license": "MIT",
-  "homepage": "https://github.com/robertopotenza/Autoapply#readme"
+  "optionalDependencies": {
+    "puppeteer": "^23.11.1"
+  }
 }
