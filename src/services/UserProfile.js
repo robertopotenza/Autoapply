@@ -8,11 +8,8 @@ class UserProfile {
     try {
       // Get user and profile data from existing tables
       const userQuery = `
-        SELECT u.*, p.current_role, p.current_salary, p.years_experience, 
-               p.location, p.linkedin_url, p.skills
-        FROM users u
-        LEFT JOIN profiles p ON u.id = p.user_id
-        WHERE u.id = $1
+        SELECT * FROM user_complete_profile 
+        WHERE user_id = $1
       `;
       
       const result = await db.query(userQuery, [userId]);
