@@ -21,44 +21,8 @@ try {
 
 const { authenticateToken: auth } = require('../middleware/auth');
 const { Logger } = require('../utils/logger');
-const multer = require('multer');
-const path = require('path');
-const fs = require('fs');
 
 const logger = new Logger('AutoApplyAPI');
-
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: function (req, file, cb) {
-        const uploadDir = path.join(__dirname, '../../uploads');
-        if (!fs.existsSync(uploadDir)) {
-            fs.mkdirSync(uploadDir, { recursive: true });
-        }
-        cb(null, uploadDir);
-    },
-    filename: function (req, file, cb) {
-        // Create unique filename with timestamp
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ 
-    storage: storage,
-    limits: {
-        fileSize: 10 * 1024 * 1024 // 10MB limit
-    },
-    fileFilter: (req, file, cb) => {
-        // Allow resume and cover letter file types
-        const allowedTypes = ['.pdf', '.doc', '.docx', '.txt'];
-        const ext = path.extname(file.originalname).toLowerCase();
-        if (allowedTypes.includes(ext)) {
-            cb(null, true);
-        } else {
-            cb(new Error('Invalid file type. Only PDF, DOC, DOCX, and TXT files are allowed.'));
-        }
-    }
-});
 
 // Initialize orchestrator (will be passed from main app)
 let orchestrator = null;
@@ -73,83 +37,6 @@ function initializeOrchestrator(database) {
 }
 
 // Enhanced AutoApply Endpoints (if orchestrator available)
-
-// File upload endpoint for resumes and cover letters
-router.post('/upload', auth, upload.fields([
-    { name: 'resume', maxCount: 1 },
-    { name: 'coverLetter', maxCount: 1 }
-]), async (req, res) => {
-    try {
-        const userId = req.user.userId || req.user.user_id;
-        logger.info(`📁 File upload request from user ${userId}`);
-
-        const uploadedFiles = {};
-        
-        if (req.files) {
-            // Handle resume upload
-            if (req.files.resume) {
-                const resumeFile = req.files.resume[0];
-                uploadedFiles.resume = {
-                    filename: resumeFile.filename,
-                    originalname: resumeFile.originalname,
-                    path: resumeFile.path,
-                    size: resumeFile.size,
-                    mimetype: resumeFile.mimetype
-                };
-                logger.info(`✅ Resume uploaded: ${resumeFile.originalname}`);
-            }
-
-            // Handle cover letter upload
-            if (req.files.coverLetter) {
-                const coverLetterFile = req.files.coverLetter[0];
-                uploadedFiles.coverLetter = {
-                    filename: coverLetterFile.filename,
-                    originalname: coverLetterFile.originalname,
-                    path: coverLetterFile.path,
-                    size: coverLetterFile.size,
-                    mimetype: coverLetterFile.mimetype
-                };
-                logger.info(`✅ Cover letter uploaded: ${coverLetterFile.originalname}`);
-            }
-        }
-
-        // Store file references in user profile
-        const userProfile = new UserProfile();
-        await userProfile.updateProfile(userId, {
-            uploads: uploadedFiles,
-            lastUploadDate: new Date().toISOString()
-        });
-
-        res.json({
-            success: true,
-            message: 'Files uploaded successfully',
-            data: {
-                uploadedFiles,
-                count: Object.keys(uploadedFiles).length
-            }
-        });
-
-        logger.info(`🎉 Upload successful for user ${userId}: ${Object.keys(uploadedFiles).length} files`);
-
-    } catch (error) {
-        logger.error(`❌ Upload failed:`, error);
-        
-        // Clean up any uploaded files on error
-        if (req.files) {
-            Object.values(req.files).flat().forEach(file => {
-                if (fs.existsSync(file.path)) {
-                    fs.unlinkSync(file.path);
-                }
-            });
-        }
-
-        res.status(500).json({
-            success: false,
-            message: 'Upload failed',
-            error: error.message
-        });
-    }
-});
 
 // Start enhanced autoapply session
 router.post('/start', auth, async (req, res) => {
@@ -396,101 +283,6 @@ router.get('/analytics', auth, async (req, res) => {
     }
 });
 
-
-// Debug endpoint for profile readiness and completion data
-router.get('/debug/readiness', auth, async (req, res) => {
-    try {
-        const userId = req.user.userId || req.user.user_id;
-        logger.info(`🔍 Getting profile readiness for user ${userId}`);
-
-        // Get profile completion data
-        const profileData = await UserProfile.getProfileCompletion(userId);
-        
-        // Enhanced profile structure for frontend
-        const enhancedProfile = {
-            userId: userId,
-            completion: {
-                percentage: profileData.percentage || 0,
-                sections: {
-                    jobPreferences: profileData.sections?.jobPreferences || false,
-                    workLocation: profileData.sections?.jobPreferences || false, // Same as jobPreferences
-                    profile: profileData.sections?.profile || false,
-                    eligibility: profileData.sections?.eligibility || false
-                }
-            },
-            profileData: {
-                jobTitles: ['Software Engineer', 'Full Stack Developer', 'Senior Developer'],
-                workLocation: 'New York, NY',
-                remotePreference: 'Remote/Hybrid preferred',
-                industries: ['Technology', 'Fintech', 'Healthcare'],
-                experience: '5+ years in software development', 
-                skills: ['JavaScript', 'React', 'Node.js', 'Python'],
-                education: 'Computer Science degree',
-                salaryRange: ' - ',
-                companySize: '50-500 employees preferred',
-                workAuthorization: 'Authorized to work in US',
-                careerLevel: 'Mid to Senior level',
-                availability: 'Available to start in 2 weeks'
-            },
-            autoapplyReadiness: {
-                isReady: profileData.percentage >= 100,
-                missingFields: profileData.percentage < 100 ? ['Complete remaining profile sections'] : [],
-                nextSteps: profileData.percentage >= 100 ? ['Ready to start auto-applying!'] : ['Complete all profile sections']
-            },
-            systemStatus: {
-                enhanced_features: !!AutoApplyOrchestrator,
-                database_connected: !!db,
-                timestamp: new Date().toISOString()
-            }
-        };
-
-        res.json({
-            success: true,
-            data: enhancedProfile
-        });
-
-    } catch (error) {
-        logger.error('Error getting profile readiness:', error);
-        
-        // Fallback response with default data
-        res.json({
-            success: true,
-            data: {
-                userId: req.user.userId || req.user.user_id,
-                completion: {
-                    percentage: 100, // Default to complete for emergency override
-                    sections: {
-                        jobPreferences: true,
-                        workLocation: true,
-                        profile: true,
-                        eligibility: true
-                    }
-                },
-                profileData: {
-                    jobTitles: ['Software Engineer', 'Full Stack Developer'],
-                    workLocation: 'New York, NY',
-                    remotePreference: 'Remote/Hybrid preferred',
-                    industries: ['Technology', 'Fintech'],
-                    experience: '5+ years in software development',
-                    skills: ['JavaScript', 'React', 'Node.js'],
-                    education: 'Computer Science degree',
-                    salaryRange: ' - '
-                },
-                autoapplyReadiness: {
-                    isReady: true,
-                    missingFields: [],
-                    nextSteps: ['Ready to start auto-applying!']
-                },
-                systemStatus: {
-                    enhanced_features: !!AutoApplyOrchestrator,
-                    database_connected: !!db,
-                    timestamp: new Date().toISOString(),
-                    fallback: true
-                }
-            }
-        });
-    }
-});
 // Health check endpoint
 router.get('/health', (req, res) => {
     res.json({
@@ -506,4 +298,3 @@ module.exports = {
     router,
     initializeOrchestrator
 };
-

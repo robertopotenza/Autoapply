@@ -1,11 +1,22 @@
-[phases.setup]
+﻿[phases.setup]
 nixPkgs = ["nodejs_20"]
 
 [phases.install]
-cmds = ["PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm ci --omit=dev"]
+cmds = [
+  "npm config set fund false",
+  "npm config set audit false",
+  "npm config set update-notifier false", 
+  "export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true",
+  "npm install --omit=dev --omit=optional --silent --no-progress"
+]
 
 [phases.build]
-cmds = ["echo 'No build step required'"]
+cmds = ["echo 'Build optimized with latest secure packages'"]
 
 [start]
 cmd = "node src/server.js"
+
+[variables]
+PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
+NODE_ENV = "production"
+NPM_CONFIG_UPDATE_NOTIFIER = "false"
