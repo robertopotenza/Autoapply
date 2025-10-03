@@ -2,7 +2,7 @@
 nixPkgs = ["nodejs_18"]
 
 [phases.install]
-cmds = ["npm install --production"]
+cmds = ["PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true npm install --production"]
 
 [phases.build]
 cmds = ["echo 'No build step required'"]
