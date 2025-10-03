@@ -40,7 +40,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeForm();
     setupEventListeners();
-    loadSavedState();
+    
+    // Check if we're in edit mode (coming from dashboard)
+    const editStep = localStorage.getItem('wizardStep');
+    if (editStep) {
+        // Load existing user data first, then navigate to the specific step
+        loadExistingUserData().then(() => {
+            const stepNumber = getStepNumber(editStep);
+            if (stepNumber) {
+                formState.currentStep = stepNumber;
+                updateUI();
+            }
+        });
+        // Clear the edit step flag
+        localStorage.removeItem('wizardStep');
+    } else {
+        // Normal flow - load saved state for new users
+        loadSavedState();
+    }
 });
 
 function initializeForm() {
@@ -666,4 +683,159 @@ async function uploadFiles(token) {
             formState.data.coverLetterPath = result.data.coverLetterPath;
         }
     }
+}
+
+
+// Helper function to convert step names to numbers
+function getStepNumber(stepName) {
+    const stepMap = {
+        'step1': 1,
+        'step2': 2, 
+        'step3': 3,
+        'step4': 4
+    };
+    return stepMap[stepName] || 1;
+}
+
+// Load existing user data for edit mode
+async function loadExistingUserData() {
+    const token = localStorage.getItem('authToken');
+    if (!token) return;
+
+    try {
+        // Get all user data from the API
+        const response = await fetch('/api/wizard/data', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            if (result.success && result.data) {
+                const userData = result.data;
+                
+                // Populate form fields with existing data
+                populateFormFields(userData);
+                
+                // Update form state
+                formState.data = {
+                    ...formState.data,
+                    ...convertUserDataToFormState(userData)
+                };
+            }
+        }
+    } catch (error) {
+        console.error('Error loading existing user data:', error);
+    }
+}
+
+// Populate form fields with user data
+function populateFormFields(userData) {
+    // Step 1 - Job Preferences
+    if (userData.jobPreferences) {
+        const prefs = userData.jobPreferences;
+        
+        // Job types
+        if (prefs.job_types) {
+            const jobTypes = prefs.job_types.split(',');
+            jobTypes.forEach(type => {
+                const pill = document.querySelector(`[data-value="${type.trim()}"]`);
+                if (pill) pill.classList.add('active');
+            });
+        }
+        
+        // Job titles
+        if (prefs.job_titles) {
+            const titles = prefs.job_titles.split(',');
+            const titleInput = document.getElementById('job-titles');
+            if (titleInput) titleInput.value = prefs.job_titles;
+        }
+        
+        // Seniority levels
+        if (prefs.seniority_levels) {
+            const levels = prefs.seniority_levels.split(',');
+            levels.forEach(level => {
+                const pill = document.querySelector(`[data-value="${level.trim()}"]`);
+                if (pill) pill.classList.add('active');
+            });
+        }
+    }
+    
+    // Step 3 - Profile
+    if (userData.profile) {
+        const profile = userData.profile;
+        
+        if (profile.full_name) {
+            const nameInput = document.getElementById('full-name');
+            if (nameInput) nameInput.value = profile.full_name;
+        }
+        
+        if (profile.phone) {
+            const phoneInput = document.getElementById('phone');
+            if (phoneInput) phoneInput.value = profile.phone;
+        }
+        
+        if (profile.city) {
+            const cityInput = document.getElementById('location-city');
+            if (cityInput) cityInput.value = profile.city;
+        }
+        
+        if (profile.state_region) {
+            const stateInput = document.getElementById('location-state');
+            if (stateInput) stateInput.value = profile.state_region;
+        }
+        
+        if (profile.postal_code) {
+            const postalInput = document.getElementById('location-postal');
+            if (postalInput) postalInput.value = profile.postal_code;
+        }
+        
+        if (profile.country) {
+            const countrySelect = document.getElementById('location-country');
+            if (countrySelect) countrySelect.value = profile.country;
+        }
+    }
+    
+    // Step 4 - Eligibility
+    if (userData.eligibility) {
+        const eligibility = userData.eligibility;
+        
+        if (eligibility.current_job_title) {
+            const jobTitleInput = document.getElementById('current-job-title');
+            if (jobTitleInput) jobTitleInput.value = eligibility.current_job_title;
+        }
+        
+        if (eligibility.expected_salary) {
+            const salaryInput = document.getElementById('expected-salary');
+            if (salaryInput) salaryInput.value = eligibility.expected_salary;
+        }
+    }
+}
+
+// Convert user data to form state format
+function convertUserDataToFormState(userData) {
+    const formData = {};
+    
+    if (userData.jobPreferences) {
+        formData['job-types'] = userData.jobPreferences.job_types || '';
+        formData['job-titles'] = userData.jobPreferences.job_titles || '';
+        formData['seniority-levels'] = userData.jobPreferences.seniority_levels || '';
+    }
+    
+    if (userData.profile) {
+        formData['full-name'] = userData.profile.full_name || '';
+        formData['phone'] = userData.profile.phone || '';
+        formData['location-city'] = userData.profile.city || '';
+        formData['location-state'] = userData.profile.state_region || '';
+        formData['location-postal'] = userData.profile.postal_code || '';
+        formData['location-country'] = userData.profile.country || '';
+    }
+    
+    if (userData.eligibility) {
+        formData['current-job-title'] = userData.eligibility.current_job_title || '';
+        formData['expected-salary'] = userData.eligibility.expected_salary || '';
+    }
+    
+    return formData;
 }
