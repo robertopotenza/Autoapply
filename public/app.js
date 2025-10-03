@@ -703,6 +703,8 @@ async function loadExistingUserData() {
     if (!token) return;
 
     try {
+        console.log('🔄 Loading existing user data for edit mode...');
+        
         // Get all user data from the API
         const response = await fetch('/api/wizard/data', {
             headers: {
@@ -712,8 +714,11 @@ async function loadExistingUserData() {
 
         if (response.ok) {
             const result = await response.json();
+            console.log('📊 API Response:', result);
+            
             if (result.success && result.data) {
                 const userData = result.data;
+                console.log('👤 User Data:', userData);
                 
                 // Populate form fields with existing data
                 populateFormFields(userData);
@@ -723,94 +728,180 @@ async function loadExistingUserData() {
                     ...formState.data,
                     ...convertUserDataToFormState(userData)
                 };
+                
+                console.log('✅ User data loaded successfully');
+            } else {
+                console.log('ℹ️ No existing data found');
             }
+        } else {
+            console.error('❌ API request failed:', response.status);
         }
     } catch (error) {
-        console.error('Error loading existing user data:', error);
+        console.error('❌ Error loading existing user data:', error);
     }
 }
 
 // Populate form fields with user data
 function populateFormFields(userData) {
+    console.log('🔧 Populating form fields with data:', userData);
+    
     // Step 1 - Job Preferences
-    if (userData.jobPreferences) {
-        const prefs = userData.jobPreferences;
+    if (userData.job_preferences) {
+        const prefs = userData.job_preferences;
+        console.log('📋 Job Preferences:', prefs);
         
-        // Job types
+        // Job types - handle array format
         if (prefs.job_types) {
-            const jobTypes = prefs.job_types.split(',');
+            const jobTypes = Array.isArray(prefs.job_types) ? prefs.job_types : prefs.job_types.split(',');
             jobTypes.forEach(type => {
-                const pill = document.querySelector(`[data-value="${type.trim()}"]`);
-                if (pill) pill.classList.add('active');
+                const pill = document.querySelector(`.pill[data-value="${type.trim()}"]`);
+                if (pill) {
+                    pill.classList.add('active');
+                    console.log(`✅ Activated job type: ${type}`);
+                }
             });
         }
         
-        // Job titles
+        // Job titles - handle array format
         if (prefs.job_titles) {
-            const titles = prefs.job_titles.split(',');
-            const titleInput = document.getElementById('job-titles');
-            if (titleInput) titleInput.value = prefs.job_titles;
+            const titles = Array.isArray(prefs.job_titles) ? prefs.job_titles : prefs.job_titles.split(',');
+            // Add titles to the tags input
+            titles.forEach(title => {
+                addJobTitle(title.trim());
+            });
+            console.log(`✅ Added job titles: ${titles.join(', ')}`);
         }
         
-        // Seniority levels
+        // Seniority levels - handle array format
         if (prefs.seniority_levels) {
-            const levels = prefs.seniority_levels.split(',');
+            const levels = Array.isArray(prefs.seniority_levels) ? prefs.seniority_levels : prefs.seniority_levels.split(',');
             levels.forEach(level => {
-                const pill = document.querySelector(`[data-value="${level.trim()}"]`);
-                if (pill) pill.classList.add('active');
+                const pill = document.querySelector(`.pill[data-value="${level.trim()}"]`);
+                if (pill) {
+                    pill.classList.add('active');
+                    console.log(`✅ Activated seniority level: ${level}`);
+                }
             });
+        }
+        
+        // Remote countries
+        if (prefs.remote_jobs && Array.isArray(prefs.remote_jobs)) {
+            prefs.remote_jobs.forEach(country => {
+                const option = document.querySelector(`#remote-countries option[value="${country}"]`);
+                if (option) {
+                    option.selected = true;
+                    console.log(`✅ Selected remote country: ${country}`);
+                }
+            });
+        }
+        
+        // Onsite location
+        if (prefs.onsite_location) {
+            const onsiteSelect = document.getElementById('onsite-region');
+            if (onsiteSelect) {
+                onsiteSelect.value = prefs.onsite_location;
+                console.log(`✅ Set onsite location: ${prefs.onsite_location}`);
+            }
         }
     }
     
     // Step 3 - Profile
     if (userData.profile) {
         const profile = userData.profile;
+        console.log('👤 Profile:', profile);
         
         if (profile.full_name) {
             const nameInput = document.getElementById('full-name');
-            if (nameInput) nameInput.value = profile.full_name;
+            if (nameInput) {
+                nameInput.value = profile.full_name;
+                console.log(`✅ Set full name: ${profile.full_name}`);
+            }
         }
         
         if (profile.phone) {
             const phoneInput = document.getElementById('phone');
-            if (phoneInput) phoneInput.value = profile.phone;
+            if (phoneInput) {
+                phoneInput.value = profile.phone;
+                console.log(`✅ Set phone: ${profile.phone}`);
+            }
         }
         
         if (profile.city) {
             const cityInput = document.getElementById('location-city');
-            if (cityInput) cityInput.value = profile.city;
+            if (cityInput) {
+                cityInput.value = profile.city;
+                console.log(`✅ Set city: ${profile.city}`);
+            }
         }
         
         if (profile.state_region) {
             const stateInput = document.getElementById('location-state');
-            if (stateInput) stateInput.value = profile.state_region;
+            if (stateInput) {
+                stateInput.value = profile.state_region;
+                console.log(`✅ Set state: ${profile.state_region}`);
+            }
         }
         
         if (profile.postal_code) {
             const postalInput = document.getElementById('location-postal');
-            if (postalInput) postalInput.value = profile.postal_code;
+            if (postalInput) {
+                postalInput.value = profile.postal_code;
+                console.log(`✅ Set postal code: ${profile.postal_code}`);
+            }
         }
         
         if (profile.country) {
             const countrySelect = document.getElementById('location-country');
-            if (countrySelect) countrySelect.value = profile.country;
+            if (countrySelect) {
+                countrySelect.value = profile.country;
+                console.log(`✅ Set country: ${profile.country}`);
+            }
         }
     }
     
     // Step 4 - Eligibility
     if (userData.eligibility) {
         const eligibility = userData.eligibility;
+        console.log('🏢 Eligibility:', eligibility);
         
         if (eligibility.current_job_title) {
             const jobTitleInput = document.getElementById('current-job-title');
-            if (jobTitleInput) jobTitleInput.value = eligibility.current_job_title;
+            if (jobTitleInput) {
+                jobTitleInput.value = eligibility.current_job_title;
+                console.log(`✅ Set current job title: ${eligibility.current_job_title}`);
+            }
         }
         
         if (eligibility.expected_salary) {
             const salaryInput = document.getElementById('expected-salary');
-            if (salaryInput) salaryInput.value = eligibility.expected_salary;
+            if (salaryInput) {
+                salaryInput.value = eligibility.expected_salary;
+                console.log(`✅ Set expected salary: ${eligibility.expected_salary}`);
+            }
         }
     }
+    
+    console.log('✅ Form population completed');
+}
+
+// Helper function to add job titles to the tags input
+function addJobTitle(title) {
+    const container = document.querySelector('#job-titles').closest('.tags-input-container');
+    if (!container) return;
+    
+    const tagsContainer = container.querySelector('.tags');
+    const input = container.querySelector('input');
+    
+    // Create tag element
+    const tag = document.createElement('span');
+    tag.className = 'tag';
+    tag.innerHTML = `${title} <span class="tag-remove" onclick="removeTag(this)">×</span>`;
+    
+    // Insert before the input
+    tagsContainer.insertBefore(tag, input);
+    
+    // Update the counter
+    updateTagCounter(container);
 }
 
 // Convert user data to form state format

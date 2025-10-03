@@ -474,35 +474,47 @@
 
         // Update profile sections
         function updateProfileSections(data) {
-            // For users with 100% completion, all sections should show as complete
-            const overallComplete = data?.completeness?.complete || false;
+            console.log('🔧 Updating profile sections with data:', data);
             
+            // Check if profile is 100% complete
+            const completionPercentage = calculateCompletionPercentage(data);
+            const overallComplete = data?.completeness?.complete || completionPercentage === 100;
+            
+            console.log('📊 Completion status:', { 
+                completionPercentage, 
+                overallComplete, 
+                completenessFlag: data?.completeness?.complete 
+            });
+            
+            // For 100% complete profiles, all sections should show as complete
             const sections = [
                 {
                     title: 'Work Location & Jobs',
                     description: 'Set your preferred work locations, job types, and job titles',
-                    isComplete: overallComplete || (data?.profile?.preferences?.job_titles?.length > 0),
+                    isComplete: overallComplete,
                     editAction: 'editJobPreferences'
                 },
                 {
                     title: 'Seniority & Time Zones',
                     description: 'Select seniority levels and preferred time zones',
-                    isComplete: overallComplete || (data?.profile?.preferences?.seniority_levels?.length > 0),
+                    isComplete: overallComplete,
                     editAction: 'editSeniority'
                 },
                 {
                     title: 'Resume & Contact',
                     description: 'Upload your resume and provide contact information',
-                    isComplete: overallComplete || (data?.profile?.personal?.full_name?.trim()?.length > 0),
+                    isComplete: overallComplete,
                     editAction: 'editContact'
                 },
                 {
                     title: 'Eligibility Details',
                     description: 'Set work eligibility, visa requirements, and salary expectations',
-                    isComplete: overallComplete || (data?.profile?.eligibility?.current_job_title?.length > 0),
+                    isComplete: overallComplete,
                     editAction: 'editEligibility'
                 }
             ];
+            
+            console.log('📋 Section completion status:', sections.map(s => ({ title: s.title, isComplete: s.isComplete })));
 
             const container = document.getElementById('profile-sections');
             container.innerHTML = sections.map(section => `
