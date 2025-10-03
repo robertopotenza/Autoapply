@@ -79,19 +79,40 @@ app.use('/api/debug', debugRoutes);
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
 
-// Root endpoint
+// Root endpoint - Force serve index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
+    try {
+        const indexPath = path.join(__dirname, '../public/index.html');
+        logger.info(`Serving index.html from: ${indexPath}`);
+        res.sendFile(indexPath);
+    } catch (error) {
+        logger.error('Error serving index.html:', error);
+        res.status(500).send('Error loading application');
+    }
 });
 
 // Dashboard endpoint
 app.get('/dashboard', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/dashboard.html'));
+    try {
+        const dashboardPath = path.join(__dirname, '../public/dashboard.html');
+        logger.info(`Serving dashboard.html from: ${dashboardPath}`);
+        res.sendFile(dashboardPath);
+    } catch (error) {
+        logger.error('Error serving dashboard.html:', error);
+        res.status(500).send('Error loading dashboard');
+    }
 });
 
 // Wizard endpoint
 app.get('/wizard', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/wizard.html'));
+    try {
+        const wizardPath = path.join(__dirname, '../public/wizard.html');
+        logger.info(`Serving wizard.html from: ${wizardPath}`);
+        res.sendFile(wizardPath);
+    } catch (error) {
+        logger.error('Error serving wizard.html:', error);
+        res.status(500).send('Error loading wizard');
+    }
 });
 
 // API info endpoint
@@ -109,9 +130,16 @@ app.get('/api', (req, res) => {
     });
 });
 
-// Catch-all for SPA routing
+// Catch-all for SPA routing - Force serve index.html for all unmatched routes
 app.get('*', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public/index.html'));
+    try {
+        const indexPath = path.join(__dirname, '../public/index.html');
+        logger.info(`Catch-all serving index.html for route: ${req.path}`);
+        res.sendFile(indexPath);
+    } catch (error) {
+        logger.error('Error in catch-all route:', error);
+        res.status(500).send('Error loading application');
+    }
 });
 
 // Error handling middleware
