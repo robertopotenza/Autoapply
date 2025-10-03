@@ -652,7 +652,7 @@ async function uploadFiles(token) {
         if (resumeFile) formData.append('resume', resumeFile);
         if (coverLetterFile) formData.append('coverLetter', coverLetterFile);
 
-        const response = await fetch('/api/upload', {
+        const response = await fetch('/api/autoapply/upload', {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${token}`

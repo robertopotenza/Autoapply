@@ -21,8 +21,44 @@ try {
 
 const { authenticateToken: auth } = require('../middleware/auth');
 const { Logger } = require('../utils/logger');
+const multer = require('multer');
+const path = require('path');
+const fs = require('fs');
 
 const logger = new Logger('AutoApplyAPI');
+
+// Configure multer for file uploads
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        const uploadDir = path.join(__dirname, '../../uploads');
+        if (!fs.existsSync(uploadDir)) {
+            fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        cb(null, uploadDir);
+    },
+    filename: function (req, file, cb) {
+        // Create unique filename with timestamp
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
+    }
+});
+
+const upload = multer({ 
+    storage: storage,
+    limits: {
+        fileSize: 10 * 1024 * 1024 // 10MB limit
+    },
+    fileFilter: (req, file, cb) => {
+        // Allow resume and cover letter file types
+        const allowedTypes = ['.pdf', '.doc', '.docx', '.txt'];
+        const ext = path.extname(file.originalname).toLowerCase();
+        if (allowedTypes.includes(ext)) {
+            cb(null, true);
+        } else {
+            cb(new Error('Invalid file type. Only PDF, DOC, DOCX, and TXT files are allowed.'));
+        }
+    }
+});
 
 // Initialize orchestrator (will be passed from main app)
 let orchestrator = null;
@@ -37,6 +73,83 @@ function initializeOrchestrator(database) {
 }
 
 // Enhanced AutoApply Endpoints (if orchestrator available)
+
+// File upload endpoint for resumes and cover letters
+router.post('/upload', auth, upload.fields([
+    { name: 'resume', maxCount: 1 },
+    { name: 'coverLetter', maxCount: 1 }
+]), async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        logger.info(`📁 File upload request from user ${userId}`);
+
+        const uploadedFiles = {};
+        
+        if (req.files) {
+            // Handle resume upload
+            if (req.files.resume) {
+                const resumeFile = req.files.resume[0];
+                uploadedFiles.resume = {
+                    filename: resumeFile.filename,
+                    originalname: resumeFile.originalname,
+                    path: resumeFile.path,
+                    size: resumeFile.size,
+                    mimetype: resumeFile.mimetype
+                };
+                logger.info(`✅ Resume uploaded: ${resumeFile.originalname}`);
+            }
+
+            // Handle cover letter upload
+            if (req.files.coverLetter) {
+                const coverLetterFile = req.files.coverLetter[0];
+                uploadedFiles.coverLetter = {
+                    filename: coverLetterFile.filename,
+                    originalname: coverLetterFile.originalname,
+                    path: coverLetterFile.path,
+                    size: coverLetterFile.size,
+                    mimetype: coverLetterFile.mimetype
+                };
+                logger.info(`✅ Cover letter uploaded: ${coverLetterFile.originalname}`);
+            }
+        }
+
+        // Store file references in user profile
+        const userProfile = new UserProfile();
+        await userProfile.updateProfile(userId, {
+            uploads: uploadedFiles,
+            lastUploadDate: new Date().toISOString()
+        });
+
+        res.json({
+            success: true,
+            message: 'Files uploaded successfully',
+            data: {
+                uploadedFiles,
+                count: Object.keys(uploadedFiles).length
+            }
+        });
+
+        logger.info(`🎉 Upload successful for user ${userId}: ${Object.keys(uploadedFiles).length} files`);
+
+    } catch (error) {
+        logger.error(`❌ Upload failed:`, error);
+        
+        // Clean up any uploaded files on error
+        if (req.files) {
+            Object.values(req.files).flat().forEach(file => {
+                if (fs.existsSync(file.path)) {
+                    fs.unlinkSync(file.path);
+                }
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            message: 'Upload failed',
+            error: error.message
+        });
+    }
+});
 
 // Start enhanced autoapply session
 router.post('/start', auth, async (req, res) => {
