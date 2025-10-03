@@ -3,6 +3,10 @@
   "version": "1.0.0",
   "description": "Automated job application system with AI-powered content generation",
   "main": "src/index.js",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
   "scripts": {
     "start": "node src/server.js",
     "worker": "node src/index.js",
@@ -20,7 +24,7 @@
   "dependencies": {
     "axios": "^1.6.0",
     "bcrypt": "^5.1.1",
-    "cheerio": "^1.0.0-rc.12",
+    "cheerio": "^1.1.2",
     "cron": "^3.1.6",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
