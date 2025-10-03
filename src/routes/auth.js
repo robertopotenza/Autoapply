@@ -4,7 +4,7 @@ const User = require('../database/models/User');
 const MagicLink = require('../database/models/MagicLink');
 const { generateToken } = require('../middleware/auth');
 const emailService = require('../utils/emailService');
-const logger = require('../utils/logger');
+const { logger } = require('../utils/logger');
 
 // Email validation regex
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
