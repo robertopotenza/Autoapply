@@ -28,6 +28,64 @@ const languages = [
     'Turkish', 'Hindi', 'Bengali', 'Vietnamese', 'Thai', 'Greek'
 ];
 
+// CRITICAL FUNCTIONS - Moved to top to prevent Railway truncation
+async function loadExistingUserData() {
+    try {
+        console.log('🔄 Loading existing user data for edit mode...');
+        
+        const token = localStorage.getItem('authToken');
+        if (!token) {
+            console.log('❌ No auth token found');
+            return;
+        }
+
+        const response = await fetch('/api/wizard/data', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ API Response:', result);
+            
+            if (result.success && result.data) {
+                console.log('📊 Populating form with user data...');
+                populateFormFields(result.data);
+            } else {
+                console.log('❌ No user data found in response');
+            }
+        } else {
+            console.log('❌ API request failed:', response.status);
+        }
+    } catch (error) {
+        console.error('❌ Error loading user data:', error);
+    }
+}
+
+function populateFormFields(userData) {
+    try {
+        console.log('🔄 Populating form fields with:', userData);
+        
+        // Convert API data to form format
+        const formData = convertUserDataToFormState(userData);
+        console.log('📝 Converted form data:', formData);
+        
+        // Populate form fields
+        Object.keys(formData).forEach(fieldId => {
+            const element = document.getElementById(fieldId);
+            if (element && formData[fieldId]) {
+                element.value = formData[fieldId];
+                console.log(`✅ Set ${fieldId} = ${formData[fieldId]}`);
+            }
+        });
+        
+        console.log('✅ Form population completed');
+    } catch (error) {
+        console.error('❌ Error populating form fields:', error);
+    }
+}
+
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', () => {
     // Check authentication
