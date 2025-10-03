@@ -67,11 +67,12 @@ function populateFormFields(userData) {
     try {
         console.log('🔄 Populating form fields with:', userData);
         
-        // Convert API data to form format
+        // The convertUserDataToFormState function now handles the complex form elements
+        // (pills, multi-selects, etc.) directly, so we just need to call it
         const formData = convertUserDataToFormState(userData);
         console.log('📝 Converted form data:', formData);
         
-        // Populate form fields
+        // Populate simple input fields
         Object.keys(formData).forEach(fieldId => {
             const element = document.getElementById(fieldId);
             if (element && formData[fieldId]) {
@@ -922,24 +923,71 @@ function addJobTitle(title) {
 
 // Convert user data to form state format
 function convertUserDataToFormState(userData) {
+    console.log('🔄 Converting user data to form state:', userData);
     const formData = {};
     
-    if (userData.jobPreferences) {
-        formData['job-types'] = userData.jobPreferences.job_types || '';
-        formData['job-titles'] = userData.jobPreferences.job_titles || '';
-        formData['seniority-levels'] = userData.jobPreferences.seniority_levels || '';
+    // Fix: Use 'preferences' instead of 'jobPreferences' to match API response
+    if (userData.preferences) {
+        console.log('📋 Processing preferences:', userData.preferences);
+        
+        // Job types - activate pill buttons
+        if (userData.preferences.job_types) {
+            userData.preferences.job_types.forEach(jobType => {
+                const pill = document.querySelector(`[data-value="${jobType}"]`);
+                if (pill) {
+                    pill.classList.add('active');
+                    console.log(`✅ Activated job type: ${jobType}`);
+                }
+            });
+        }
+        
+        // Job titles - populate tags input
+        if (userData.preferences.job_titles) {
+            const jobTitlesInput = document.getElementById('job-titles');
+            const tagsContainer = document.getElementById('job-titles-tags');
+            if (jobTitlesInput && tagsContainer) {
+                userData.preferences.job_titles.forEach(title => {
+                    addJobTitle(title);
+                    console.log(`✅ Added job title: ${title}`);
+                });
+            }
+        }
+        
+        // Remote countries - populate multi-select
+        if (userData.preferences.remote_jobs) {
+            const remoteInput = document.getElementById('remote-countries');
+            if (remoteInput) {
+                // Handle remote job preferences
+                console.log(`✅ Remote jobs: ${userData.preferences.remote_jobs}`);
+            }
+        }
+        
+        // Seniority levels - activate pill buttons
+        if (userData.preferences.seniority_levels) {
+            userData.preferences.seniority_levels.forEach(level => {
+                const pill = document.querySelector(`[data-value="${level.toLowerCase()}"]`);
+                if (pill) {
+                    pill.classList.add('active');
+                    console.log(`✅ Activated seniority: ${level}`);
+                }
+            });
+        }
     }
     
-    if (userData.profile) {
-        formData['full-name'] = userData.profile.full_name || '';
-        formData['phone'] = userData.profile.phone || '';
-        formData['location-city'] = userData.profile.city || '';
-        formData['location-state'] = userData.profile.state_region || '';
-        formData['location-postal'] = userData.profile.postal_code || '';
-        formData['location-country'] = userData.profile.country || '';
+    // Personal information
+    if (userData.personal) {
+        console.log('👤 Processing personal info:', userData.personal);
+        formData['full-name'] = userData.personal.full_name || '';
+        formData['phone'] = userData.personal.phone || '';
+        formData['city'] = userData.personal.city || '';
+        formData['state-region'] = userData.personal.state_region || '';
+        formData['postal-code'] = userData.personal.postal_code || '';
+        formData['country'] = userData.personal.country || '';
     }
     
+    // Eligibility information
     if (userData.eligibility) {
+        console.log('🎯 Processing eligibility:', userData.eligibility);
         formData['current-job-title'] = userData.eligibility.current_job_title || '';
         formData['expected-salary'] = userData.eligibility.expected_salary || '';
     }
