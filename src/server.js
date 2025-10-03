@@ -1,125 +1,201 @@
-require('dotenv').config();
+﻿/**
+ * Comprehensive Apply Autonomously Server
+ * Combines enhanced autoapply features with user authentication and management
+ */
+
 const express = require('express');
-const multer = require('multer');
+const cors = require('cors');
 const path = require('path');
-const fs = require('fs').promises;
-const logger = require('./utils/logger');
-const { initializeDatabase } = require('./database/db');
+const { Pool } = require('pg');
+require('dotenv').config();
 
 // Import routes
 const authRoutes = require('./routes/auth');
 const wizardRoutes = require('./routes/wizard');
-const autoApplyRoutes = require('./routes/autoapply');
+const { router: autoApplyRouter, initializeOrchestrator } = require('./routes/autoapply');
 
+// Import utilities and middleware
+const { Logger } = require('./utils/logger');
+const authenticateToken = require('./middleware/auth').authenticateToken;
+
+// Initialize logger
+const logger = new Logger('Server');
+
+// Create Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Configure multer for file uploads
-const storage = multer.diskStorage({
-    destination: async (req, file, cb) => {
-        const uploadDir = path.join(process.cwd(), 'data', 'uploads');
-        await fs.mkdir(uploadDir, { recursive: true });
-        cb(null, uploadDir);
-    },
-    filename: (req, file, cb) => {
-        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-        cb(null, file.fieldname + '-' + uniqueSuffix + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({
-    storage: storage,
-    limits: {
-        fileSize: 5 * 1024 * 1024 // 5MB
-    },
-    fileFilter: (req, file, cb) => {
-        const allowedTypes = /pdf|doc|docx/;
-        const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = allowedTypes.test(file.mimetype);
-
-        if (mimetype && extname) {
-            return cb(null, true);
-        } else {
-            cb(new Error('Only PDF, DOC, and DOCX files are allowed'));
-        }
-    }
-});
-
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(cors({
+    origin: process.env.CORS_ORIGIN || '*',
+    credentials: true
+}));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Serve static files
 app.use(express.static(path.join(__dirname, '../public')));
+
+// Database connection
+let pool = null;
+
+async function initializeDatabase() {
+    try {
+        if (!process.env.DATABASE_URL) {
+            logger.warn('DATABASE_URL not found, some features may be limited');
+            return null;
+        }
+
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+
+        // Test connection
+        await pool.query('SELECT NOW()');
+        logger.info(' Database connected successfully');
+        
+        return pool;
+    } catch (error) {
+        logger.error(' Database connection failed:', error.message);
+        return null;
+    }
+}
+
+// Health check endpoint
+app.get('/health', (req, res) => {
+    res.json({
+        status: 'operational',
+        timestamp: new Date().toISOString(),
+        database: !!pool,
+        environment: process.env.NODE_ENV || 'development'
+    });
+});
 
 // API Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/wizard', wizardRoutes);
-app.use('/api/autoapply', autoApplyRoutes);
+app.use('/api/autoapply', autoApplyRouter);
 
-// File upload endpoint (authenticated)
-const { authenticateToken } = require('./middleware/auth');
+// Root endpoint
+app.get('/', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+});
 
-app.post('/api/upload', authenticateToken, upload.fields([
-    { name: 'resume', maxCount: 1 },
-    { name: 'coverLetter', maxCount: 1 }
-]), async (req, res) => {
-    try {
-        const files = {
-            resumePath: req.files?.resume ? req.files.resume[0].path : null,
-            coverLetterPath: req.files?.coverLetter ? req.files.coverLetter[0].path : null
-        };
+// Dashboard endpoint
+app.get('/dashboard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/dashboard.html'));
+});
 
-        res.json({
-            success: true,
-            data: files
-        });
-    } catch (error) {
-        logger.error('File upload error:', error);
-        res.status(500).json({
-            success: false,
-            message: 'Error uploading files',
-            error: error.message
-        });
+// Wizard endpoint
+app.get('/wizard', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/wizard.html'));
+});
+
+// API info endpoint
+app.get('/api', (req, res) => {
+    res.json({
+        name: 'Apply Autonomously API',
+        version: '2.0.0',
+        description: 'Enhanced autoapply platform with user authentication',
+        endpoints: {
+            auth: '/api/auth',
+            wizard: '/api/wizard',
+            autoapply: '/api/autoapply'
+        },
+        documentation: '/api/docs'
+    });
+});
+
+// Catch-all for SPA routing
+app.get('*', (req, res) => {
+    res.sendFile(path.join(__dirname, '../public/index.html'));
+});
+
+// Error handling middleware
+app.use((error, req, res, next) => {
+    logger.error('Unhandled error:', error);
+    res.status(500).json({
+        success: false,
+        message: 'Internal server error',
+        error: process.env.NODE_ENV === 'development' ? error.message : 'Something went wrong'
+    });
+});
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    logger.info('SIGTERM received, shutting down gracefully');
+    
+    if (pool) {
+        await pool.end();
+        logger.info('Database connections closed');
     }
+    
+    process.exit(0);
 });
 
-// Health check endpoint
-app.get('/api/health', (req, res) => {
-    res.json({ status: 'ok', timestamp: new Date().toISOString() });
+process.on('SIGINT', async () => {
+    logger.info('SIGINT received, shutting down gracefully');
+    
+    if (pool) {
+        await pool.end();
+        logger.info('Database connections closed');
+    }
+    
+    process.exit(0);
 });
 
-// Initialize database and start server
+// Start server
 async function startServer() {
     try {
-        // Initialize database tables (if database is configured)
-        try {
-            await initializeDatabase();
-            if (require('./database/db').isDatabaseConfigured()) {
-                logger.info('Database initialized successfully');
+        // Initialize database
+        pool = await initializeDatabase();
+        
+        if (pool) {
+            // Attach database to app for middleware
+            app.locals.db = pool;
+            
+            // Initialize enhanced autoapply features if available
+            try {
+                initializeOrchestrator(pool);
+                logger.info(' Enhanced autoapply features initialized');
+            } catch (error) {
+                logger.warn('Enhanced autoapply features not available:', error.message);
             }
-        } catch (dbError) {
-            logger.error('Database initialization failed:', dbError);
-            logger.warn('Server will start without database functionality');
-            logger.warn('Please configure PostgreSQL credentials in Railway environment variables');
         }
-
-        // Start Express server
-        app.listen(PORT, () => {
-            logger.info(`Auto-Apply Platform running on port ${PORT}`);
-            logger.info(`Landing page: http://localhost:${PORT}`);
-            logger.info(`Login: http://localhost:${PORT}/login.html`);
-            logger.info(`Signup: http://localhost:${PORT}/signup.html`);
-
-            if (!require('./database/db').isDatabaseConfigured()) {
-                logger.warn('⚠️  Database not configured - authentication features will not work');
-                logger.warn('⚠️  Set these environment variables: PGHOST, PGUSER, PGPASSWORD, PGDATABASE');
-            }
+        
+        // Start HTTP server
+        const server = app.listen(PORT, '0.0.0.0', () => {
+            logger.info(` Apply Autonomously server running on port ${PORT}`);
+            logger.info(` Dashboard: http://localhost:${PORT}/dashboard`);
+            logger.info(` Wizard: http://localhost:${PORT}/wizard`);
+            logger.info(` API: http://localhost:${PORT}/api`);
         });
+
+        // Handle server errors
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                logger.error(` Port ${PORT} is already in use`);
+            } else {
+                logger.error(' Server error:', error);
+            }
+            process.exit(1);
+        });
+
+        return server;
+        
     } catch (error) {
-        logger.error('Failed to start server:', error);
+        logger.error(' Failed to start server:', error);
         process.exit(1);
     }
 }
 
-startServer();
+// Start the server
+if (require.main === module) {
+    startServer().catch((error) => {
+        logger.error(' Fatal error starting server:', error);
+        process.exit(1);
+    });
+}
 
-module.exports = app;
+module.exports = { app, startServer };
