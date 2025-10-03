@@ -400,6 +400,56 @@ class UserProfile {
     }
   }
 
+  // Get profile completion status for dashboard
+  static async getProfileCompletion(userId) {
+    try {
+      console.log(`🔍 Getting profile completion for user ${userId}`);
+      
+      const profile = await this.getCompleteProfile(userId);
+      if (!profile) {
+        console.log(`❌ No profile found for user ${userId}`);
+        return {
+          percentage: 0,
+          sections: {
+            jobPreferences: false,
+            profile: false,
+            eligibility: false
+          }
+        };
+      }
+
+      console.log(`✅ Profile found for user ${userId}:`, profile);
+
+      // Calculate completion based on available data
+      const sections = {
+        jobPreferences: !!(profile.preferences?.job_titles?.length > 0),
+        profile: !!(profile.personal?.full_name?.trim()),
+        eligibility: !!(profile.eligibility?.current_job_title)
+      };
+
+      const completedSections = Object.values(sections).filter(Boolean).length;
+      const totalSections = Object.keys(sections).length;
+      const percentage = Math.round((completedSections / totalSections) * 100);
+
+      console.log(`📊 Completion calculation:`, { sections, completedSections, totalSections, percentage });
+
+      return {
+        percentage,
+        sections
+      };
+    } catch (error) {
+      console.error('❌ Error in getProfileCompletion:', error);
+      return {
+        percentage: 0,
+        sections: {
+          jobPreferences: false,
+          profile: false,
+          eligibility: false
+        }
+      };
+    }
+  }
+
   static async generateCoverLetter(profile, jobData) {
     // Basic cover letter template using profile data
     const name = profile.personal.full_name;
