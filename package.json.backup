@@ -1,0 +1,58 @@
+{
+  "name": "apply-autonomously-enhanced",
+  "version": "2.0.0",
+  "description": "Enhanced Auto-Apply Platform with Advanced Job Scanning, Application Automation, and User Authentication",
+  "main": "src/server.js",
+  "engines": {
+    "node": ">=20.0.0",
+    "npm": ">=10.0.0"
+  },
+  "scripts": {
+    "start": "node src/server.js",
+    "worker": "node src/index.js",
+    "dev": "nodemon src/server.js",
+    "build": "npm install",
+    "test": "jest",
+    "db:init": "node scripts/init-database.js",
+    "db:migrate": "node database/migrations/run.js",
+    "db:seed": "node database/seed.js"
+  },
+  "keywords": [
+    "job-application",
+    "automation",
+    "ai",
+    "autoapply",
+    "resume",
+    "career"
+  ],
+  "dependencies": {
+    "express": "^4.18.2",
+    "pg": "^8.11.3",
+    "bcryptjs": "^2.4.3",
+    "jsonwebtoken": "^9.0.2",
+    "puppeteer": "^21.11.0",
+    "axios": "^1.6.0",
+    "cheerio": "^1.1.2",
+    "openai": "^4.20.0",
+    "dotenv": "^16.3.1",
+    "cors": "^2.8.5",
+    "multer": "^1.4.5-lts.1",
+    "resend": "^2.1.0",
+    "uuid": "^9.0.1",
+    "winston": "^3.11.0",
+    "node-cron": "^3.0.3",
+    "bcrypt": "^5.1.1",
+    "cron": "^3.1.6"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "jest": "^29.7.0",
+    "supertest": "^6.3.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/robertopotenza/Autoapply.git"
+  },
+  "author": "Roberto Potenza",
+  "license": "MIT"
+}

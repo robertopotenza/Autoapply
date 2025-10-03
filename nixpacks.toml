@@ -4,13 +4,14 @@ nixPkgs = ["nodejs_20"]
 [phases.install]
 cmds = [
   "npm config set fund false",
-  "npm config set audit false", 
+  "npm config set audit false",
+  "npm config set update-notifier false", 
   "export PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true",
-  "npm ci --omit=dev --omit=optional --silent"
+  "npm install --omit=dev --omit=optional --silent --no-progress"
 ]
 
 [phases.build]
-cmds = ["echo 'Build optimized for Railway deployment'"]
+cmds = ["echo 'Build optimized with latest secure packages'"]
 
 [start]
 cmd = "node src/server.js"
@@ -18,3 +19,4 @@ cmd = "node src/server.js"
 [variables]
 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD = "true"
 NODE_ENV = "production"
+NPM_CONFIG_UPDATE_NOTIFIER = "false"
