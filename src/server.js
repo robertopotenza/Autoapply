@@ -26,6 +26,14 @@ const logger = new Logger('Server');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// Debug Railway environment
+logger.info(`🔍 Environment Debug:`);
+logger.info(`   NODE_ENV: ${process.env.NODE_ENV}`);
+logger.info(`   PORT (Railway): ${process.env.PORT}`);
+logger.info(`   PORT (Used): ${PORT}`);
+logger.info(`   Railway Internal: ${process.env.RAILWAY_ENVIRONMENT || 'Not set'}`);
+logger.info(`   All ENV vars: ${Object.keys(process.env).filter(k => k.includes('PORT') || k.includes('RAILWAY')).join(', ')}`);
+
 // Middleware
 app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
