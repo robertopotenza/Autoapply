@@ -135,6 +135,7 @@ SELECT
     sa.languages,
     sa.date_of_birth,
     sa.gpa,
+    sa.is_adult,
     sa.gender_identity,
     sa.disability_status,
     sa.military_service,

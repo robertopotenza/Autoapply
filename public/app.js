@@ -1099,36 +1099,132 @@ function convertUserDataToFormState(userData) {
     }
     
     // Step 4: Eligibility information (flat structure from API)
+    console.log('🎯 Processing eligibility');
+    
     if (userData.current_job_title || userData.eligibility?.current_job_title) {
-        console.log('🎯 Processing eligibility');
         formData['current-job-title'] = userData.current_job_title || userData.eligibility?.current_job_title || '';
         formData['expected-salary'] = userData.expected_salary || userData.eligibility?.expected_salary || '';
         formData['current-salary'] = userData.current_salary || userData.eligibility?.current_salary || '';
         formData['availability'] = userData.availability || userData.eligibility?.availability || '';
         formData['visa-sponsorship'] = userData.visa_sponsorship || userData.eligibility?.visa_sponsorship || '';
-        formData['nationality'] = userData.nationality || userData.eligibility?.nationality || '';
+        console.log(`✅ Set eligibility fields`);
+    }
+    
+    // Eligible countries - populate multi-select
+    const eligibleCountries = userData.eligible_countries || userData.eligibility?.eligible_countries;
+    if (eligibleCountries) {
+        const countriesArray = Array.isArray(eligibleCountries) ? eligibleCountries : 
+                              (typeof eligibleCountries === 'string' ? JSON.parse(eligibleCountries) : []);
+        populateMultiSelect('eligible-countries', countriesArray);
+        console.log(`✅ Set eligible countries: ${countriesArray.join(', ')}`);
+    }
+    
+    // Nationality - populate multi-select
+    const nationality = userData.nationality || userData.eligibility?.nationality;
+    if (nationality) {
+        const nationalityArray = Array.isArray(nationality) ? nationality : 
+                                (typeof nationality === 'string' ? JSON.parse(nationality) : []);
+        populateMultiSelect('nationalities', nationalityArray);
+        console.log(`✅ Set nationalities: ${nationalityArray.join(', ')}`);
     }
     
     // Screening answers
+    console.log('📝 Processing screening answers');
+    
     if (userData.experience_summary) {
         formData['experience-summary'] = userData.experience_summary;
         console.log(`✅ Set experience summary`);
     }
     
+    // Hybrid preference - activate pill buttons
     if (userData.hybrid_preference) {
-        formData['hybrid-preference'] = userData.hybrid_preference;
+        const hybridPill = document.querySelector(`.pill[data-value="${userData.hybrid_preference.toLowerCase()}"]`);
+        if (hybridPill && hybridPill.closest('.form-group')?.querySelector('#hybrid-preference')) {
+            hybridPill.classList.add('active');
+            formData['hybrid-preference'] = userData.hybrid_preference;
+            console.log(`✅ Set hybrid preference: ${userData.hybrid_preference}`);
+        }
     }
     
+    // Travel - activate pill buttons
     if (userData.travel) {
-        formData['travel'] = userData.travel;
+        const travelPill = document.querySelector(`.pill[data-value="${userData.travel.toLowerCase()}"]`);
+        if (travelPill && travelPill.closest('.form-group')?.querySelector('#travel-comfortable')) {
+            travelPill.classList.add('active');
+            formData['travel-comfortable'] = userData.travel;
+            console.log(`✅ Set travel: ${userData.travel}`);
+        }
     }
     
+    // Relocation - activate pill buttons
     if (userData.relocation) {
-        formData['relocation'] = userData.relocation;
+        const relocationPill = document.querySelector(`.pill[data-value="${userData.relocation.toLowerCase()}"]`);
+        if (relocationPill && relocationPill.closest('.form-group')?.querySelector('#relocation-open')) {
+            relocationPill.classList.add('active');
+            formData['relocation-open'] = userData.relocation;
+            console.log(`✅ Set relocation: ${userData.relocation}`);
+        }
     }
     
+    // Languages - populate multi-select
     if (userData.languages) {
-        formData['languages'] = userData.languages;
+        const languagesArray = Array.isArray(userData.languages) ? userData.languages : 
+                              (typeof userData.languages === 'string' ? JSON.parse(userData.languages) : []);
+        populateMultiSelect('languages', languagesArray);
+        console.log(`✅ Set languages: ${languagesArray.join(', ')}`);
+    }
+    
+    // Date of birth
+    if (userData.date_of_birth) {
+        formData['date-of-birth'] = userData.date_of_birth;
+        console.log(`✅ Set date of birth: ${userData.date_of_birth}`);
+    }
+    
+    // GPA
+    if (userData.gpa) {
+        formData['gpa'] = userData.gpa;
+        console.log(`✅ Set GPA: ${userData.gpa}`);
+    }
+    
+    // Is adult (18+) - activate pill buttons
+    if (userData.is_adult !== null && userData.is_adult !== undefined) {
+        const isAdultValue = userData.is_adult ? 'yes' : 'no';
+        const adultPill = document.querySelector(`.pill[data-value="${isAdultValue}"]`);
+        if (adultPill && adultPill.closest('.form-group')?.querySelector('#age-18')) {
+            adultPill.classList.add('active');
+            formData['age-18'] = isAdultValue;
+            console.log(`✅ Set is adult: ${isAdultValue}`);
+        }
+    }
+    
+    // Gender identity
+    if (userData.gender_identity) {
+        formData['gender'] = userData.gender_identity;
+        console.log(`✅ Set gender: ${userData.gender_identity}`);
+    }
+    
+    // Disability status
+    if (userData.disability_status) {
+        formData['disability'] = userData.disability_status;
+        console.log(`✅ Set disability: ${userData.disability_status}`);
+    }
+    
+    // Military service
+    if (userData.military_service) {
+        formData['military'] = userData.military_service;
+        console.log(`✅ Set military: ${userData.military_service}`);
+    }
+    
+    // Ethnicity
+    if (userData.ethnicity) {
+        formData['ethnicity'] = userData.ethnicity;
+        console.log(`✅ Set ethnicity: ${userData.ethnicity}`);
+    }
+    
+    // Driving license
+    if (userData.driving_license) {
+        formData['licenses'] = userData.driving_license;
+        console.log(`✅ Set licenses: ${userData.driving_license}`);
     }
     
     console.log('✅ Form data conversion completed:', formData);
