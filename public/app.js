@@ -569,7 +569,7 @@ async function saveAndExit() {
         alert('Progress saved successfully!');
         // Keep the saved state for when they return
         // localStorage.removeItem('autoApplyFormState'); // Don't remove so they can continue later
-        window.location.href = '/dashboard.html';
+        window.location.href = '/dashboard';
 
     } catch (error) {
         console.error('Save and exit error:', error);
@@ -793,7 +793,7 @@ async function submitForm() {
 
         alert('Configuration saved successfully!');
         localStorage.removeItem('autoApplyFormState');
-        window.location.href = '/dashboard.html';
+        window.location.href = '/dashboard';
 
     } catch (error) {
         console.error('Submit error:', error);
