@@ -593,14 +593,15 @@ async function saveAndExit() {
             });
         }
 
-        alert('Progress saved successfully!');
-        // Keep the saved state for when they return
-        // localStorage.removeItem('autoApplyFormState'); // Don't remove so they can continue later
-        window.location.href = '/dashboard';
+        showSuccessDialog('Progress saved successfully!', () => {
+            // Keep the saved state for when they return
+            // localStorage.removeItem('autoApplyFormState'); // Don't remove so they can continue later
+            window.location.href = '/dashboard.html';
+        });
 
     } catch (error) {
         console.error('Save and exit error:', error);
-        alert('Error saving progress. Please try again.');
+        showErrorDialog('Error saving progress. Please try again.');
     }
 }
 
@@ -819,13 +820,14 @@ async function submitForm() {
             });
         }
 
-        alert('Configuration saved successfully!');
-        localStorage.removeItem('autoApplyFormState');
-        window.location.href = '/dashboard';
+        showSuccessDialog('Configuration saved successfully!', () => {
+            localStorage.removeItem('autoApplyFormState');
+            window.location.href = '/dashboard.html';
+        });
 
     } catch (error) {
         console.error('Submit error:', error);
-        alert('Error saving configuration. Please try again.');
+        showErrorDialog('Error saving configuration. Please try again.');
     }
 }
 
@@ -1307,3 +1309,174 @@ function updateMultiSelectInput(baseId) {
     console.log(`Updated ${baseId}-input:`, input.value);
 }
 // Force deployment Fri Oct  3 17:59:37 EDT 2025
+
+
+// Custom Dialog Functions to Replace Basic Alerts
+function showSuccessDialog(message, callback) {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+
+    // Create modal dialog
+    const modal = document.createElement('div');
+    modal.className = 'success-modal';
+    modal.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    `;
+
+    modal.innerHTML = `
+        <div style="margin-bottom: 24px;">
+            <div style="width: 64px; height: 64px; background: #10b981; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                <svg width="32" height="32" fill="white" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #111827;">Success!</h3>
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">${message}</p>
+        </div>
+        <button id="success-ok-btn" style="
+            background: #3b82f6;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        ">OK</button>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Handle OK button click
+    const okBtn = modal.querySelector('#success-ok-btn');
+    okBtn.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+        if (callback) callback();
+    });
+
+    // Handle overlay click (close modal)
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+            if (callback) callback();
+        }
+    });
+
+    // Handle escape key
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', handleEscape);
+            if (callback) callback();
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    // Focus the OK button
+    setTimeout(() => okBtn.focus(), 100);
+}
+
+function showErrorDialog(message) {
+    // Create modal overlay
+    const overlay = document.createElement('div');
+    overlay.className = 'modal-overlay';
+    overlay.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+
+    // Create modal dialog
+    const modal = document.createElement('div');
+    modal.className = 'error-modal';
+    modal.style.cssText = `
+        background: white;
+        border-radius: 12px;
+        padding: 32px;
+        max-width: 400px;
+        width: 90%;
+        text-align: center;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+    `;
+
+    modal.innerHTML = `
+        <div style="margin-bottom: 24px;">
+            <div style="width: 64px; height: 64px; background: #ef4444; border-radius: 50%; margin: 0 auto 16px; display: flex; align-items: center; justify-content: center;">
+                <svg width="32" height="32" fill="white" viewBox="0 0 20 20">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+            </div>
+            <h3 style="margin: 0 0 8px 0; font-size: 18px; font-weight: 600; color: #111827;">Error</h3>
+            <p style="margin: 0; color: #6b7280; font-size: 14px;">${message}</p>
+        </div>
+        <button id="error-ok-btn" style="
+            background: #ef4444;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 12px 24px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            width: 100%;
+            transition: background-color 0.2s;
+        ">OK</button>
+    `;
+
+    overlay.appendChild(modal);
+    document.body.appendChild(overlay);
+
+    // Handle OK button click
+    const okBtn = modal.querySelector('#error-ok-btn');
+    okBtn.addEventListener('click', () => {
+        document.body.removeChild(overlay);
+    });
+
+    // Handle overlay click (close modal)
+    overlay.addEventListener('click', (e) => {
+        if (e.target === overlay) {
+            document.body.removeChild(overlay);
+        }
+    });
+
+    // Handle escape key
+    const handleEscape = (e) => {
+        if (e.key === 'Escape') {
+            document.body.removeChild(overlay);
+            document.removeEventListener('keydown', handleEscape);
+        }
+    };
+    document.addEventListener('keydown', handleEscape);
+
+    // Focus the OK button
+    setTimeout(() => okBtn.focus(), 100);
+}

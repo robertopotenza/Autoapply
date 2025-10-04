@@ -152,7 +152,8 @@
         
         // Redirect to applications view or update UI
         setTimeout(() => {
-          window.location.href = '/applications' || window.location.reload();
+          // Stay on dashboard and reload to show updated status
+          window.location.reload();
         }, 2000);
       } else {
         showNotification(result.message || 'Failed to enable AutoApply', 'error');
