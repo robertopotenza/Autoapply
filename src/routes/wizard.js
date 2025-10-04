@@ -80,6 +80,7 @@ router.post('/step2', async (req, res) => {
         const userId = req.user.userId;
         const data = {
             fullName: req.body.fullName || '',
+            email: req.body.email || '',
             resumePath: req.body.resumePath || '',
             coverLetterOption: req.body.coverLetterOption || '',
             coverLetterPath: req.body.coverLetterPath || '',
