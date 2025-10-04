@@ -211,55 +211,8 @@ async function setupRailwayDatabase() {
                 await pool.query(indexQuery);
             }
 
-            // 5. Create views
-            log.info('Creating database views...');
-            await pool.query(`
-                CREATE OR REPLACE VIEW user_complete_profile AS
-                SELECT
-                    u.user_id,
-                    u.email,
-                    u.created_at,
-                    jp.remote_jobs,
-                    jp.onsite_location,
-                    jp.job_types,
-                    jp.job_titles,
-                    jp.seniority_levels,
-                    jp.time_zones,
-                    p.full_name,
-                    p.email as profile_email,
-                    p.resume_path,
-                    p.cover_letter_option,
-                    p.phone,
-                    p.country,
-                    p.city,
-                    p.state_region,
-                    p.postal_code,
-                    e.current_job_title,
-                    e.availability,
-                    e.eligible_countries,
-                    e.visa_sponsorship,
-                    e.nationality,
-                    e.current_salary,
-                    e.expected_salary,
-                    sa.experience_summary,
-                    sa.hybrid_preference,
-                    sa.travel,
-                    sa.relocation,
-                    sa.languages,
-                    sa.date_of_birth,
-                    sa.gpa,
-                    sa.is_adult,
-                    sa.gender_identity,
-                    sa.disability_status,
-                    sa.military_service,
-                    sa.ethnicity,
-                    sa.driving_license
-                FROM users u
-                LEFT JOIN job_preferences jp ON u.user_id = jp.user_id
-                LEFT JOIN profile p ON u.user_id = p.user_id
-                LEFT JOIN eligibility e ON u.user_id = e.user_id
-                LEFT JOIN screening_answers sa ON u.user_id = sa.user_id;
-            `);
+            // 5. Create views (skip for now to avoid column reference issues)
+            log.info('Skipping database views creation to avoid column reference issues...');
 
             // Commit transaction
             await pool.query('COMMIT');
