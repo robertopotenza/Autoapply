@@ -20,6 +20,16 @@ CREATE TABLE IF NOT EXISTS magic_link_tokens (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Password Reset Tokens Table (for password recovery)
+CREATE TABLE IF NOT EXISTS password_reset_tokens (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR(255) NOT NULL,
+    token VARCHAR(64) UNIQUE NOT NULL,
+    expires_at TIMESTAMP NOT NULL,
+    used_at TIMESTAMP DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Job Preferences Table (Steps 1 & 2)
 CREATE TABLE IF NOT EXISTS job_preferences (
     id SERIAL PRIMARY KEY,
@@ -97,6 +107,9 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_magic_link_token ON magic_link_tokens(token);
 CREATE INDEX IF NOT EXISTS idx_magic_link_email ON magic_link_tokens(email);
 CREATE INDEX IF NOT EXISTS idx_magic_link_expires ON magic_link_tokens(expires_at);
+CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_reset_tokens(token);
+CREATE INDEX IF NOT EXISTS idx_password_reset_email ON password_reset_tokens(email);
+CREATE INDEX IF NOT EXISTS idx_password_reset_expires ON password_reset_tokens(expires_at);
 CREATE INDEX IF NOT EXISTS idx_job_preferences_user_id ON job_preferences(user_id);
 CREATE INDEX IF NOT EXISTS idx_profile_user_id ON profile(user_id);
 CREATE INDEX IF NOT EXISTS idx_profile_email ON profile(email);
