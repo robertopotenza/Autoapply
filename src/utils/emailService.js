@@ -5,7 +5,17 @@ const axios = require('axios');
 // For production, use services like SendGrid, Mailgun, AWS SES, or Resend
 // For now, we'll use a simple SMTP or log-based approach
 
-const EMAIL_SERVICE = process.env.EMAIL_SERVICE || 'console'; // 'console', 'smtp', 'sendgrid', 'resend'
+// Auto-detect email service based on available API keys
+const EMAIL_SERVICE = process.env.EMAIL_SERVICE || 
+    (process.env.RESEND_API_KEY ? 'resend' : 
+     process.env.SENDGRID_API_KEY ? 'sendgrid' : 'console');
+
+// Import logger
+const { Logger } = require('./logger');
+const logger = new Logger('EmailService');
+
+// Log email service configuration
+logger.info(`📧 Email service configured: ${EMAIL_SERVICE}`);
 
 class EmailService {
     async sendMagicLink(email, magicLink) {
@@ -203,7 +213,7 @@ class EmailService {
 
         try {
             const response = await axios.post('https://api.resend.com/emails', {
-                from: process.env.EMAIL_FROM || 'Auto-Apply <onboarding@resend.dev>',
+                from: process.env.EMAIL_FROM || 'Auto-Apply <noreply@autoapply-production-1393.up.railway.app>',
                 to: [email],
                 subject: subject,
                 html: html,
