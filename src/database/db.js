@@ -48,6 +48,14 @@ async function query(text, params) {
     }
 }
 
+// Get a client from the pool for manual transaction management
+async function getClient() {
+    if (!pool) {
+        throw new Error('Database not configured');
+    }
+    return await pool.connect();
+}
+
 // Transaction helper
 async function transaction(callback) {
     if (!pool) {
@@ -105,6 +113,7 @@ async function initializeDatabase() {
 
 module.exports = {
     query,
+    getClient,
     transaction,
     pool,
     initializeDatabase,
