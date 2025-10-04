@@ -62,9 +62,28 @@ async function initializeDatabase() {
         await pool.query('SELECT NOW()');
         logger.info('✅ Database connected successfully');
 
+        // Initialize database schema
+        const fs = require('fs');
+        const schemaPath = path.join(__dirname, '../database/schema.sql');
+
+        if (fs.existsSync(schemaPath)) {
+            const schema = fs.readFileSync(schemaPath, 'utf8');
+            await pool.query(schema);
+            logger.info('✅ Database schema initialized successfully');
+        } else {
+            logger.warn('⚠️  Schema file not found at:', schemaPath);
+        }
+
         return pool;
     } catch (error) {
-        logger.error('❌ Database connection failed:', error.message);
+        logger.error('❌ Database initialization failed:', error.message);
+
+        // If error is about existing tables, that's OK
+        if (error.code === '42P07') {
+            logger.info('ℹ️  Tables already exist, continuing...');
+            return pool;
+        }
+
         return null;
     }
 }
