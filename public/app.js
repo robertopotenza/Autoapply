@@ -89,6 +89,26 @@ function populateFormFields(userData) {
             }
         });
         
+        // Capture all populated field values into formState.data for ALL steps
+        // This ensures the data is available when the form is submitted
+        console.log('💾 Capturing populated values into formState...');
+        for (let step = 1; step <= formState.totalSteps; step++) {
+            const stepEl = document.querySelector(`.form-step[data-step="${step}"]`);
+            if (stepEl) {
+                const inputs = stepEl.querySelectorAll('input, select, textarea');
+                inputs.forEach(input => {
+                    if (input.type === 'file') return;
+                    
+                    if (input.type === 'checkbox') {
+                        formState.data[input.id] = input.checked;
+                    } else {
+                        formState.data[input.id] = input.value;
+                    }
+                });
+            }
+        }
+        console.log('✅ FormState updated:', formState.data);
+        
         console.log('✅ Form population completed');
     } catch (error) {
         console.error('❌ Error populating form fields:', error);
