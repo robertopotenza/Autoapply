@@ -52,8 +52,11 @@ cd /path/to/your/Autoapply
 # Install dependencies if needed
 npm install
 
-# Run the database fix script
+# Run the database fix script (requires database env vars to be set)
 node scripts/fix-database-schema.js
+
+# Or use the npm script
+npm run db:railway-setup
 ```
 
 ### Option 2: Run on Railway (Recommended)
@@ -71,6 +74,10 @@ node scripts/fix-database-schema.js
    - Option A: Use Railway CLI
      ```bash
      railway run node scripts/railway-db-setup.js
+     ```
+     Or with npm script:
+     ```bash
+     railway run npm run db:railway-setup
      ```
    
    - Option B: Add as a build command in `railway.json`:

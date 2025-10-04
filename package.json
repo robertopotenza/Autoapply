@@ -15,7 +15,8 @@
     "test": "jest",
     "db:init": "node scripts/init-database.js",
     "db:migrate": "node database/migrations/run.js",
-    "db:seed": "node database/seed.js"
+    "db:seed": "node database/seed.js",
+    "db:railway-setup": "node scripts/railway-db-setup.js"
   },
   "keywords": [
     "job-application",
