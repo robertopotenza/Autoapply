@@ -396,6 +396,229 @@ router.get('/analytics', auth, async (req, res) => {
     }
 });
 
+// Get user application statistics
+router.get('/stats', auth, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        
+        // Get comprehensive stats from Application.getUserStats
+        const stats = await Application.getUserStats(userId);
+        
+        // Get autoapply settings status
+        const settings = await AutoApplySettings.findByUserId(userId);
+        
+        res.json({
+            success: true,
+            data: {
+                stats,
+                settings: {
+                    enabled: settings?.enabled || false,
+                    maxApplicationsPerDay: settings?.max_applications_per_day || 0,
+                    excludeCompanies: settings?.exclude_companies || []
+                }
+            }
+        });
+    } catch (error) {
+        logger.error('Error getting user stats:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get user statistics',
+            error: error.message
+        });
+    }
+});
+
+// Pause autoapply
+router.post('/pause', auth, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        
+        const settings = await AutoApplySettings.toggleEnabled(userId, false);
+        
+        logger.info(`AutoApply paused for user ${userId}`);
+        
+        res.json({
+            success: true,
+            message: 'AutoApply paused successfully',
+            settings
+        });
+    } catch (error) {
+        logger.error('Error pausing autoapply:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to pause AutoApply',
+            error: error.message
+        });
+    }
+});
+
+// Resume autoapply
+router.post('/resume', auth, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        
+        const settings = await AutoApplySettings.toggleEnabled(userId, true);
+        
+        logger.info(`AutoApply resumed for user ${userId}`);
+        
+        res.json({
+            success: true,
+            message: 'AutoApply resumed successfully',
+            settings
+        });
+    } catch (error) {
+        logger.error('Error resuming autoapply:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to resume AutoApply',
+            error: error.message
+        });
+    }
+});
+
+// Enable autoapply (for backward compatibility)
+router.post('/enable', auth, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        
+        const settings = await AutoApplySettings.toggleEnabled(userId, true);
+        
+        logger.info(`AutoApply enabled for user ${userId}`);
+        
+        res.json({
+            success: true,
+            message: 'AutoApply enabled successfully',
+            settings
+        });
+    } catch (error) {
+        logger.error('Error enabling autoapply:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to enable AutoApply',
+            error: error.message
+        });
+    }
+});
+
+// Get blacklist (exclude companies)
+router.get('/blacklist', auth, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        
+        const settings = await AutoApplySettings.findByUserId(userId);
+        
+        const excludeCompanies = settings?.exclude_companies || [];
+        
+        res.json({
+            success: true,
+            data: {
+                excludeCompanies: typeof excludeCompanies === 'string' 
+                    ? JSON.parse(excludeCompanies) 
+                    : excludeCompanies
+            }
+        });
+    } catch (error) {
+        logger.error('Error getting blacklist:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to get blacklist',
+            error: error.message
+        });
+    }
+});
+
+// Add company to blacklist
+router.post('/blacklist/add', auth, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        const { company } = req.body;
+        
+        if (!company) {
+            return res.status(400).json({
+                success: false,
+                message: 'Company name is required'
+            });
+        }
+        
+        const settings = await AutoApplySettings.findByUserId(userId);
+        let excludeCompanies = settings?.exclude_companies || [];
+        
+        // Parse if string
+        if (typeof excludeCompanies === 'string') {
+            excludeCompanies = JSON.parse(excludeCompanies);
+        }
+        
+        // Add company if not already in list
+        if (!excludeCompanies.includes(company)) {
+            excludeCompanies.push(company);
+            
+            await AutoApplySettings.update(userId, {
+                exclude_companies: excludeCompanies
+            });
+            
+            logger.info(`Company ${company} added to blacklist for user ${userId}`);
+        }
+        
+        res.json({
+            success: true,
+            message: 'Company added to blacklist',
+            data: { excludeCompanies }
+        });
+    } catch (error) {
+        logger.error('Error adding to blacklist:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to add company to blacklist',
+            error: error.message
+        });
+    }
+});
+
+// Remove company from blacklist
+router.post('/blacklist/remove', auth, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        const { company } = req.body;
+        
+        if (!company) {
+            return res.status(400).json({
+                success: false,
+                message: 'Company name is required'
+            });
+        }
+        
+        const settings = await AutoApplySettings.findByUserId(userId);
+        let excludeCompanies = settings?.exclude_companies || [];
+        
+        // Parse if string
+        if (typeof excludeCompanies === 'string') {
+            excludeCompanies = JSON.parse(excludeCompanies);
+        }
+        
+        // Remove company from list
+        excludeCompanies = excludeCompanies.filter(c => c !== company);
+        
+        await AutoApplySettings.update(userId, {
+            exclude_companies: excludeCompanies
+        });
+        
+        logger.info(`Company ${company} removed from blacklist for user ${userId}`);
+        
+        res.json({
+            success: true,
+            message: 'Company removed from blacklist',
+            data: { excludeCompanies }
+        });
+    } catch (error) {
+        logger.error('Error removing from blacklist:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to remove company from blacklist',
+            error: error.message
+        });
+    }
+});
+
 
 // Debug endpoint for profile readiness and completion data
 router.get('/debug/readiness', auth, async (req, res) => {

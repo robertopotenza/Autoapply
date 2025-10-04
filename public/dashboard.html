@@ -284,6 +284,70 @@
             font-family: 'Courier New', monospace;
             font-size: 0.9em;
         }
+
+        .stat-card {
+            background: white;
+            padding: 1.5rem;
+            border-radius: 12px;
+            border: 2px solid #e2e8f0;
+            text-align: center;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 800;
+            color: #4299e1;
+            margin-bottom: 0.5rem;
+        }
+
+        .stat-label {
+            color: #718096;
+            font-size: 0.9rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .status-active {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+
+        .status-paused {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+
+        .blacklist-item {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 8px;
+            font-size: 0.9rem;
+        }
+
+        .blacklist-item button {
+            background: #f56565;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 0.25rem 0.5rem;
+            cursor: pointer;
+            font-size: 0.8rem;
+        }
+
+        .blacklist-item button:hover {
+            background: #e53e3e;
+        }
     </style>
 </head>
 <body>
@@ -317,6 +381,70 @@
 
                 <div class="profile-sections" id="profile-sections">
                     <!-- Profile sections will be populated dynamically -->
+                </div>
+
+                <!-- Application Statistics Section -->
+                <div id="stats-section" class="hidden" style="margin: 2rem 0;">
+                    <h2 style="color: #2d3748; margin-bottom: 1.5rem;">📊 Application Statistics</h2>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin-bottom: 2rem;">
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-total">0</div>
+                            <div class="stat-label">Total Applications</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-submitted">0</div>
+                            <div class="stat-label">Submitted</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-interviews">0</div>
+                            <div class="stat-label">Interviews</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-offers">0</div>
+                            <div class="stat-label">Offers</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-today">0</div>
+                            <div class="stat-label">Today</div>
+                        </div>
+                        <div class="stat-card">
+                            <div class="stat-value" id="stat-week">0</div>
+                            <div class="stat-label">This Week</div>
+                        </div>
+                    </div>
+
+                    <!-- AutoApply Controls -->
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 2px solid #e2e8f0;">
+                        <h3 style="color: #2d3748; margin-bottom: 1rem;">🎛️ AutoApply Controls</h3>
+                        <div style="display: flex; gap: 1rem; align-items: center; margin-bottom: 1rem;">
+                            <span style="font-weight: 600;">Status:</span>
+                            <span id="autoapply-status" style="padding: 0.5rem 1rem; border-radius: 8px; font-weight: 600;">Loading...</span>
+                        </div>
+                        <div style="display: flex; gap: 1rem;">
+                            <button id="pause-btn" class="btn-secondary" onclick="pauseAutoApply()" style="flex: 1;">
+                                ⏸️ Pause AutoApply
+                            </button>
+                            <button id="resume-btn" class="btn-primary" onclick="resumeAutoApply()" style="flex: 1;">
+                                ▶️ Resume AutoApply
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Blacklist Management -->
+                    <div style="background: #f8fafc; padding: 1.5rem; border-radius: 12px; border: 2px solid #e2e8f0; margin-top: 1rem;">
+                        <h3 style="color: #2d3748; margin-bottom: 1rem;">🚫 Company Blacklist</h3>
+                        <div style="margin-bottom: 1rem;">
+                            <input type="text" id="blacklist-company-input" placeholder="Enter company name" 
+                                   style="width: 70%; padding: 0.75rem; border: 2px solid #e2e8f0; border-radius: 8px; font-size: 1rem;">
+                            <button onclick="addToBlacklist()" class="btn-primary" 
+                                    style="width: 28%; margin-left: 2%; padding: 0.75rem;">
+                                Add Company
+                            </button>
+                        </div>
+                        <div id="blacklist-items" style="display: flex; flex-wrap: wrap; gap: 0.5rem;">
+                            <!-- Blacklist items will be populated dynamically -->
+                        </div>
+                    </div>
                 </div>
 
                 <div class="action-buttons">
@@ -400,47 +528,184 @@
                     document.getElementById('debug-content').textContent = JSON.stringify(readinessData, null, 2);
                 }
 
-                // Calculate completion
-                const isComplete = profileData?.completeness?.complete || false;
-                const completionPercentage = calculateCompletionPercentage(profileData);
-
-                // Update UI
-                updateCompletionDisplay(completionPercentage, isComplete);
-                updateProfileSections(profileData);
-                updateAutoApplyButton(isComplete, profileData?.completeness?.missing);
-
-                showContent();
-
-            } catch (error) {
-                console.error('Failed to load profile:', error);
+                // Display profile info
+                displayProfile(profileData);
                 
-                // Fallback: Use complete profile data
-                const mockProfileData = {
-                    profile: {
-                        personal: {
-                            full_name: "Roberto Potenza",
-                            city: "New York"
-                        },
-                        preferences: {
-                            job_titles: ["Software Engineer", "Full Stack Developer"],
-                            seniority_levels: ["Senior", "Lead"],
-                            onsite_location: "Remote"
-                        },
-                        eligibility: {
-                            current_job_title: "Senior Developer"
-                        }
-                    },
-                    completeness: {
-                        complete: true,
-                        missing: ""
-                    }
-                };
-
-                profileData = mockProfileData;
-                updateCompletionDisplay(100, true);
-                updateProfileSections(mockProfileData);
-                updateAutoApplyButton(true, '');
+                // Load application stats
+                await loadStats();
+                
+                // Load blacklist
+                await loadBlacklist();
+                
                 showContent();
+                
+            } catch (error) {
+                console.error('Error loading profile:', error);
+                showError(error.message);
+            }
+        }
+
+        // Load application statistics
+        async function loadStats() {
+            try {
+                const response = await apiCall('/stats');
+                
+                if (response.success && response.data) {
+                    const { stats, settings } = response.data;
+                    
+                    // Update stat cards
+                    document.getElementById('stat-total').textContent = stats.total_applications || 0;
+                    document.getElementById('stat-submitted').textContent = stats.applications_submitted || 0;
+                    document.getElementById('stat-interviews').textContent = stats.interviews_received || 0;
+                    document.getElementById('stat-offers').textContent = stats.offers_received || 0;
+                    document.getElementById('stat-today').textContent = stats.applications_today || 0;
+                    document.getElementById('stat-week').textContent = stats.applications_this_week || 0;
+                    
+                    // Update status
+                    updateAutoApplyStatus(settings.enabled);
+                    
+                    // Show stats section
+                    document.getElementById('stats-section').classList.remove('hidden');
+                    
+                    console.log('✅ Stats loaded successfully');
+                }
+            } catch (error) {
+                console.error('Error loading stats:', error);
+                // Don't fail the whole page if stats fail
+            }
+        }
+
+        // Update AutoApply status display
+        function updateAutoApplyStatus(enabled) {
+            const statusEl = document.getElementById('autoapply-status');
+            const pauseBtn = document.getElementById('pause-btn');
+            const resumeBtn = document.getElementById('resume-btn');
+            
+            if (enabled) {
+                statusEl.textContent = '✅ Active';
+                statusEl.className = 'status-active';
+                statusEl.style.background = '#c6f6d5';
+                statusEl.style.color = '#22543d';
+                pauseBtn.disabled = false;
+                resumeBtn.disabled = true;
+            } else {
+                statusEl.textContent = '⏸️ Paused';
+                statusEl.className = 'status-paused';
+                statusEl.style.background = '#fed7d7';
+                statusEl.style.color = '#742a2a';
+                pauseBtn.disabled = true;
+                resumeBtn.disabled = false;
+            }
+        }
+
+        // Pause AutoApply
+        async function pauseAutoApply() {
+            try {
+                showNotification('Pausing AutoApply...', 'info');
+                const response = await apiCall('/pause', { method: 'POST' });
+                
+                if (response.success) {
+                    updateAutoApplyStatus(false);
+                    showNotification('AutoApply paused successfully', 'success');
+                } else {
+                    showNotification('Failed to pause AutoApply', 'error');
+                }
+            } catch (error) {
+                showNotification('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Resume AutoApply
+        async function resumeAutoApply() {
+            try {
+                showNotification('Resuming AutoApply...', 'info');
+                const response = await apiCall('/resume', { method: 'POST' });
+                
+                if (response.success) {
+                    updateAutoApplyStatus(true);
+                    showNotification('AutoApply resumed successfully', 'success');
+                } else {
+                    showNotification('Failed to resume AutoApply', 'error');
+                }
+            } catch (error) {
+                showNotification('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Load blacklist
+        async function loadBlacklist() {
+            try {
+                const response = await apiCall('/blacklist');
+                
+                if (response.success && response.data) {
+                    displayBlacklist(response.data.excludeCompanies || []);
+                }
+            } catch (error) {
+                console.error('Error loading blacklist:', error);
+            }
+        }
+
+        // Display blacklist items
+        function displayBlacklist(companies) {
+            const container = document.getElementById('blacklist-items');
+            
+            if (companies.length === 0) {
+                container.innerHTML = '<p style="color: #718096; font-style: italic;">No companies blacklisted</p>';
+                return;
+            }
+            
+            container.innerHTML = companies.map(company => `
+                <div class="blacklist-item">
+                    <span>${company}</span>
+                    <button onclick="removeFromBlacklist('${company}')">Remove</button>
+                </div>
+            `).join('');
+        }
+
+        // Add company to blacklist
+        async function addToBlacklist() {
+            const input = document.getElementById('blacklist-company-input');
+            const company = input.value.trim();
+            
+            if (!company) {
+                showNotification('Please enter a company name', 'error');
+                return;
+            }
+            
+            try {
+                const response = await apiCall('/blacklist/add', {
+                    method: 'POST',
+                    body: JSON.stringify({ company })
+                });
+                
+                if (response.success) {
+                    displayBlacklist(response.data.excludeCompanies);
+                    input.value = '';
+                    showNotification(`${company} added to blacklist`, 'success');
+                } else {
+                    showNotification('Failed to add company', 'error');
+                }
+            } catch (error) {
+                showNotification('Error: ' + error.message, 'error');
+            }
+        }
+
+        // Remove company from blacklist
+        async function removeFromBlacklist(company) {
+            try {
+                const response = await apiCall('/blacklist/remove', {
+                    method: 'POST',
+                    body: JSON.stringify({ company })
+                });
+                
+                if (response.success) {
+                    displayBlacklist(response.data.excludeCompanies);
+                    showNotification(`${company} removed from blacklist`, 'success');
+                } else {
+                    showNotification('Failed to remove company', 'error');
+                }
+            } catch (error) {
+                showNotification('Error: ' + error.message, 'error');
             }
         }
 
@@ -681,6 +946,10 @@
         window.startAutoApply = startAutoApply;
         window.viewApplications = viewApplications;
         window.logout = logout;
+        window.pauseAutoApply = pauseAutoApply;
+        window.resumeAutoApply = resumeAutoApply;
+        window.addToBlacklist = addToBlacklist;
+        window.removeFromBlacklist = removeFromBlacklist;
 
         // Initialize dashboard
         document.addEventListener('DOMContentLoaded', () => {
