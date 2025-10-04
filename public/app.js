@@ -906,14 +906,43 @@ function convertUserDataToFormState(userData) {
     }
     
     // Step 3: Personal information (flat structure from API)
+    console.log('👤 Processing personal info');
+    
+    // Full name
     if (userData.full_name || userData.personal?.full_name) {
-        console.log('👤 Processing personal info');
         formData['full-name'] = userData.full_name || userData.personal?.full_name || '';
-        formData['phone'] = userData.phone || userData.personal?.phone || '';
-        formData['city'] = userData.city || userData.personal?.city || '';
-        formData['state-region'] = userData.state_region || userData.personal?.state_region || '';
-        formData['postal-code'] = userData.postal_code || userData.personal?.postal_code || '';
-        formData['country'] = userData.country || userData.personal?.country || '';
+        console.log(`✅ Set full name: ${formData['full-name']}`);
+    }
+    
+    // Email field (comes from users table)
+    if (userData.email) {
+        formData['email'] = userData.email;
+        console.log(`✅ Set email: ${userData.email}`);
+    }
+    
+    // Phone field - need to split into country code and number
+    const phone = userData.phone || userData.personal?.phone || '';
+    if (phone) {
+        // Extract country code (assumes format like "+1234567890")
+        const phoneMatch = phone.match(/^(\+\d{1,3})(.+)$/);
+        if (phoneMatch) {
+            formData['country-code'] = phoneMatch[1];
+            formData['phone'] = phoneMatch[2];
+            console.log(`✅ Set phone: ${phoneMatch[1]} ${phoneMatch[2]}`);
+        } else {
+            // If no country code, just set the phone number
+            formData['phone'] = phone;
+            console.log(`✅ Set phone: ${phone}`);
+        }
+    }
+    
+    // Location fields - use correct IDs matching HTML
+    if (userData.city || userData.country || userData.state_region || userData.postal_code) {
+        formData['location-city'] = userData.city || userData.personal?.city || '';
+        formData['location-state'] = userData.state_region || userData.personal?.state_region || '';
+        formData['location-postal'] = userData.postal_code || userData.personal?.postal_code || '';
+        formData['location-country'] = userData.country || userData.personal?.country || '';
+        console.log(`✅ Set location: ${formData['location-country']}, ${formData['location-city']}, ${formData['location-state']}, ${formData['location-postal']}`);
     }
     
     // Resume path
