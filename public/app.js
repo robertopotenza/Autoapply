@@ -903,22 +903,56 @@ function populateFormFields(userData) {
 
 // Helper function to add job titles to the tags input
 function addJobTitle(title) {
-    const container = document.querySelector('#job-titles').closest('.tags-input-container');
-    if (!container) return;
+    const tagsDisplay = document.getElementById('job-titles-tags');
+    const hiddenInput = document.getElementById('job-titles');
     
-    const tagsContainer = container.querySelector('.tags');
-    const input = container.querySelector('input');
+    if (!tagsDisplay || !hiddenInput) {
+        console.warn('Job titles elements not found');
+        return;
+    }
+    
+    // Get existing tags
+    const currentTags = hiddenInput.value ? hiddenInput.value.split(',') : [];
+    
+    // Don't add duplicates
+    if (currentTags.includes(title)) {
+        console.log(`Tag "${title}" already exists`);
+        return;
+    }
     
     // Create tag element
-    const tag = document.createElement('span');
-    tag.className = 'tag';
-    tag.innerHTML = `${title} <span class="tag-remove" onclick="removeTag(this)">×</span>`;
+    const tagEl = document.createElement('div');
+    tagEl.className = 'tag';
+    tagEl.innerHTML = `
+        <span>${title}</span>
+        <span class="tag-remove" onclick="this.parentElement.remove(); updateJobTitlesHiddenInput();">×</span>
+    `;
     
-    // Insert before the input
-    tagsContainer.insertBefore(tag, input);
+    // Add to display
+    tagsDisplay.appendChild(tagEl);
     
-    // Update the counter
-    updateTagCounter(container);
+    // Update hidden input
+    updateJobTitlesHiddenInput();
+    
+    // Update counter
+    const counter = document.querySelector('#job-titles-input').closest('.form-group')?.querySelector('.counter');
+    if (counter) {
+        const tagCount = tagsDisplay.querySelectorAll('.tag').length;
+        counter.textContent = `${tagCount}/5`;
+    }
+}
+
+// Helper function to update the hidden input from displayed tags
+function updateJobTitlesHiddenInput() {
+    const tagsDisplay = document.getElementById('job-titles-tags');
+    const hiddenInput = document.getElementById('job-titles');
+    
+    if (!tagsDisplay || !hiddenInput) return;
+    
+    const tags = Array.from(tagsDisplay.querySelectorAll('.tag span:first-child')).map(span => span.textContent);
+    hiddenInput.value = tags.join(',');
+    
+    console.log('Updated job titles:', hiddenInput.value);
 }
 
 // Convert user data to form state format
@@ -926,72 +960,189 @@ function convertUserDataToFormState(userData) {
     console.log('🔄 Converting user data to form state:', userData);
     const formData = {};
     
-    // Fix: Use 'preferences' instead of 'jobPreferences' to match API response
-    if (userData.preferences) {
-        console.log('📋 Processing preferences:', userData.preferences);
-        
-        // Job types - activate pill buttons
-        if (userData.preferences.job_types) {
-            userData.preferences.job_types.forEach(jobType => {
-                const pill = document.querySelector(`[data-value="${jobType}"]`);
-                if (pill) {
-                    pill.classList.add('active');
-                    console.log(`✅ Activated job type: ${jobType}`);
-                }
-            });
-        }
-        
-        // Job titles - populate tags input
-        if (userData.preferences.job_titles) {
-            const jobTitlesInput = document.getElementById('job-titles');
-            const tagsContainer = document.getElementById('job-titles-tags');
-            if (jobTitlesInput && tagsContainer) {
-                userData.preferences.job_titles.forEach(title => {
-                    addJobTitle(title);
-                    console.log(`✅ Added job title: ${title}`);
-                });
+    // The API returns a flat structure from user_complete_profile view
+    // Handle both nested (old format) and flat (current API) structures for compatibility
+    
+    // Step 1: Job Preferences - Job types (activate pill buttons)
+    const jobTypes = userData.job_types || userData.preferences?.job_types;
+    if (jobTypes) {
+        console.log('📋 Processing job types:', jobTypes);
+        const jobTypesArray = Array.isArray(jobTypes) ? jobTypes : (jobTypes || '').split(',').filter(Boolean);
+        jobTypesArray.forEach(jobType => {
+            const pill = document.querySelector(`.pill[data-value="${jobType.trim().toLowerCase()}"]`);
+            if (pill) {
+                pill.classList.add('active');
+                console.log(`✅ Activated job type: ${jobType}`);
             }
+        });
+        // Update hidden input for job types
+        const jobTypesInput = document.getElementById('job-types');
+        if (jobTypesInput) {
+            jobTypesInput.value = jobTypesArray.map(t => t.trim().toLowerCase()).join(',');
         }
-        
-        // Remote countries - populate multi-select
-        if (userData.preferences.remote_jobs) {
-            const remoteInput = document.getElementById('remote-countries');
-            if (remoteInput) {
-                // Handle remote job preferences
-                console.log(`✅ Remote jobs: ${userData.preferences.remote_jobs}`);
-            }
-        }
-        
-        // Seniority levels - activate pill buttons
-        if (userData.preferences.seniority_levels) {
-            userData.preferences.seniority_levels.forEach(level => {
-                const pill = document.querySelector(`[data-value="${level.toLowerCase()}"]`);
-                if (pill) {
-                    pill.classList.add('active');
-                    console.log(`✅ Activated seniority: ${level}`);
-                }
+    }
+    
+    // Job titles - populate tags input
+    const jobTitles = userData.job_titles || userData.preferences?.job_titles;
+    if (jobTitles) {
+        console.log('📋 Processing job titles:', jobTitles);
+        const jobTitlesArray = Array.isArray(jobTitles) ? jobTitles : (jobTitles || '').split(',').filter(Boolean);
+        const jobTitlesInput = document.getElementById('job-titles');
+        const tagsContainer = document.getElementById('job-titles-tags');
+        if (jobTitlesInput && tagsContainer) {
+            // Clear existing tags
+            tagsContainer.innerHTML = '';
+            jobTitlesArray.forEach(title => {
+                addJobTitle(title.trim());
+                console.log(`✅ Added job title: ${title}`);
             });
         }
     }
     
-    // Personal information
-    if (userData.personal) {
-        console.log('👤 Processing personal info:', userData.personal);
-        formData['full-name'] = userData.personal.full_name || '';
-        formData['phone'] = userData.personal.phone || '';
-        formData['city'] = userData.personal.city || '';
-        formData['state-region'] = userData.personal.state_region || '';
-        formData['postal-code'] = userData.personal.postal_code || '';
-        formData['country'] = userData.personal.country || '';
+    // Remote countries - populate multi-select by directly updating the tags
+    const remoteJobs = userData.remote_jobs || userData.preferences?.remote_jobs;
+    if (remoteJobs) {
+        console.log('🌍 Processing remote jobs:', remoteJobs);
+        const remoteArray = Array.isArray(remoteJobs) ? remoteJobs : (remoteJobs || '').split(',').filter(Boolean);
+        populateMultiSelect('remote-countries', remoteArray);
     }
     
-    // Eligibility information
-    if (userData.eligibility) {
-        console.log('🎯 Processing eligibility:', userData.eligibility);
-        formData['current-job-title'] = userData.eligibility.current_job_title || '';
-        formData['expected-salary'] = userData.eligibility.expected_salary || '';
+    // Onsite location
+    const onsiteLocation = userData.onsite_location || userData.preferences?.onsite_location;
+    if (onsiteLocation) {
+        formData['onsite-region'] = onsiteLocation;
+        console.log(`✅ Set onsite location: ${onsiteLocation}`);
     }
     
+    // Step 2: Seniority & Time Zones - Seniority levels (activate pill buttons)
+    const seniorityLevels = userData.seniority_levels || userData.preferences?.seniority_levels;
+    if (seniorityLevels) {
+        console.log('📊 Processing seniority levels:', seniorityLevels);
+        const seniorityArray = Array.isArray(seniorityLevels) ? seniorityLevels : (seniorityLevels || '').split(',').filter(Boolean);
+        seniorityArray.forEach(level => {
+            const pill = document.querySelector(`.pill[data-value="${level.trim().toLowerCase()}"]`);
+            if (pill) {
+                pill.classList.add('active');
+                console.log(`✅ Activated seniority: ${level}`);
+            }
+        });
+        // Update hidden input for seniority levels
+        const seniorityInput = document.getElementById('seniority-levels');
+        if (seniorityInput) {
+            seniorityInput.value = seniorityArray.map(s => s.trim().toLowerCase()).join(',');
+        }
+    }
+    
+    // Time zones
+    const timeZones = userData.time_zones || userData.preferences?.time_zones;
+    if (timeZones) {
+        console.log('🕐 Processing time zones:', timeZones);
+        const timeZonesArray = Array.isArray(timeZones) ? timeZones : (timeZones || '').split(',').filter(Boolean);
+        populateMultiSelect('timezones', timeZonesArray);
+    }
+    
+    // Step 3: Personal information (flat structure from API)
+    if (userData.full_name || userData.personal?.full_name) {
+        console.log('👤 Processing personal info');
+        formData['full-name'] = userData.full_name || userData.personal?.full_name || '';
+        formData['phone'] = userData.phone || userData.personal?.phone || '';
+        formData['city'] = userData.city || userData.personal?.city || '';
+        formData['state-region'] = userData.state_region || userData.personal?.state_region || '';
+        formData['postal-code'] = userData.postal_code || userData.personal?.postal_code || '';
+        formData['country'] = userData.country || userData.personal?.country || '';
+    }
+    
+    // Resume path
+    if (userData.resume_path) {
+        formData['resume-path'] = userData.resume_path;
+        console.log(`✅ Set resume path: ${userData.resume_path}`);
+    }
+    
+    // Cover letter option
+    if (userData.cover_letter_option) {
+        formData['cover-letter-option'] = userData.cover_letter_option;
+        console.log(`✅ Set cover letter option: ${userData.cover_letter_option}`);
+    }
+    
+    // Step 4: Eligibility information (flat structure from API)
+    if (userData.current_job_title || userData.eligibility?.current_job_title) {
+        console.log('🎯 Processing eligibility');
+        formData['current-job-title'] = userData.current_job_title || userData.eligibility?.current_job_title || '';
+        formData['expected-salary'] = userData.expected_salary || userData.eligibility?.expected_salary || '';
+        formData['current-salary'] = userData.current_salary || userData.eligibility?.current_salary || '';
+        formData['availability'] = userData.availability || userData.eligibility?.availability || '';
+        formData['visa-sponsorship'] = userData.visa_sponsorship || userData.eligibility?.visa_sponsorship || '';
+        formData['nationality'] = userData.nationality || userData.eligibility?.nationality || '';
+    }
+    
+    // Screening answers
+    if (userData.experience_summary) {
+        formData['experience-summary'] = userData.experience_summary;
+        console.log(`✅ Set experience summary`);
+    }
+    
+    if (userData.hybrid_preference) {
+        formData['hybrid-preference'] = userData.hybrid_preference;
+    }
+    
+    if (userData.travel) {
+        formData['travel'] = userData.travel;
+    }
+    
+    if (userData.relocation) {
+        formData['relocation'] = userData.relocation;
+    }
+    
+    if (userData.languages) {
+        formData['languages'] = userData.languages;
+    }
+    
+    console.log('✅ Form data conversion completed:', formData);
     return formData;
+}
+
+// Helper function to populate multi-select fields with existing values
+function populateMultiSelect(baseId, values) {
+    const tagsContainer = document.getElementById(`${baseId}-tags`);
+    const hiddenInput = document.getElementById(baseId);
+    
+    if (!tagsContainer || !hiddenInput) {
+        console.warn(`Multi-select elements for ${baseId} not found`);
+        return;
+    }
+    
+    // Clear existing tags
+    tagsContainer.innerHTML = '';
+    
+    // Add each value as a tag
+    values.forEach(value => {
+        const trimmedValue = value.trim();
+        if (!trimmedValue) return;
+        
+        const tagEl = document.createElement('div');
+        tagEl.className = 'tag';
+        tagEl.innerHTML = `
+            <span>${trimmedValue}</span>
+            <span class="tag-remove" onclick="this.parentElement.remove(); updateMultiSelectHiddenInput('${baseId}');">×</span>
+        `;
+        tagsContainer.appendChild(tagEl);
+    });
+    
+    // Update hidden input
+    updateMultiSelectHiddenInput(baseId);
+    console.log(`✅ Populated ${baseId} with ${values.length} items`);
+}
+
+// Helper function to update multi-select hidden inputs
+function updateMultiSelectHiddenInput(baseId) {
+    const tagsContainer = document.getElementById(`${baseId}-tags`);
+    const hiddenInput = document.getElementById(baseId);
+    
+    if (!tagsContainer || !hiddenInput) return;
+    
+    const tags = Array.from(tagsContainer.querySelectorAll('.tag span:first-child')).map(span => span.textContent);
+    hiddenInput.value = tags.join(',');
+    
+    console.log(`Updated ${baseId}:`, hiddenInput.value);
 }
 // Force deployment Fri Oct  3 17:59:37 EDT 2025
