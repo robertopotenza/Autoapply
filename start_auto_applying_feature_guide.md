@@ -28,7 +28,29 @@ When a user clicks the "🚀 Start Auto-Applying to Jobs" button, the system ini
 
 **Initial Setup Verification**: The system performs a comprehensive check to ensure the user's profile is complete and all required information is available. This includes validating resume uploads, contact information, and preference settings.
 
-**Automation Mode Selection**: Users choose between two primary operating modes. "Full Auto-Apply Mode" provides complete automation where the system applies to jobs without manual intervention, while "Review-First Mode" requires user approval before each application submission.
+**Automation Mode Selection**: Users choose between two distinct operating modes that provide different levels of control and automation:
+
+#### **🤝 Copilot Mode (Review-First)**
+In Copilot Mode, the AutoApply system acts as an intelligent assistant that handles the heavy lifting while keeping the user in complete control of final decisions.
+
+**Job Discovery & Analysis**: The system continuously scans for relevant opportunities and performs comprehensive analysis of each job posting against the user's profile and preferences.
+
+**Intelligent Preparation**: For each qualifying job, the system automatically customizes the user's resume to highlight the most relevant skills and experiences, generates a personalized cover letter, and prepares answers to common screening questions.
+
+**User Review & Approval**: Before any application is submitted, the user receives a detailed notification containing the job description, customized application materials, match score, and recommendation rationale. The user can then review, modify, approve, or reject each application.
+
+**Enhanced Control**: Users can edit the generated cover letter, adjust resume customizations, modify screening question responses, or request alternative approaches before giving final approval for submission.
+
+#### **🚁 Autopilot Mode (Full Automation)**
+In Autopilot Mode, the system operates with complete autonomy within user-defined parameters, applying to jobs without requiring individual approval for each application.
+
+**Autonomous Operation**: The system discovers jobs, customizes application materials, and submits applications automatically based on the user's predefined criteria and quality thresholds.
+
+**Smart Filtering**: Only jobs that meet or exceed the user's minimum match score and quality criteria receive applications, ensuring high relevance and appropriateness.
+
+**Continuous Monitoring**: While operating autonomously, the system provides real-time updates and comprehensive reporting on all application activity through the user dashboard.
+
+**Safety Controls**: Users maintain override capabilities and can pause, modify parameters, or switch to Copilot mode at any time to regain direct control over the application process.
 
 **Application Limits Configuration**: Users set daily, weekly, and monthly application limits to control the volume of submissions. This prevents overwhelming both the user and potential employers while maintaining quality standards.
 
@@ -104,11 +126,31 @@ When a user clicks the "🚀 Start Auto-Applying to Jobs" button, the system ini
 
 **Quality Indicators**: Users receive feedback on application quality, match scores, and suggestions for profile improvements to enhance future application success.
 
+### **Mode Switching & Flexibility**
+
+**Dynamic Mode Changes**: Users can switch between Copilot and Autopilot modes at any time without losing their configuration settings or application history.
+
+**Hybrid Approach**: Users can operate in Copilot mode for new industries or job types while using Autopilot mode for familiar roles where they're confident in the system's performance.
+
+**Situation-Specific Control**: Users might choose Copilot mode during active job searches when they want maximum control, then switch to Autopilot mode for passive opportunity monitoring.
+
+### **Copilot vs Autopilot: Detailed Comparison**
+
+| Feature | 🤝 Copilot Mode | 🚁 Autopilot Mode |
+|---------|----------------|-------------------|
+| **User Involvement** | High - Review every application | Low - Set parameters once |
+| **Application Speed** | Moderate - Depends on user response time | Fast - Immediate submission |
+| **Control Level** | Maximum - Edit all materials before submission | Moderate - Control through settings |
+| **Best For** | New job seekers, career changers, selective applicants | Experienced users, high-volume searches |
+| **Time Investment** | 5-10 minutes per application review | 5-10 minutes per week for monitoring |
+| **Customization** | Full editing capability for each application | Automated customization based on profile |
+| **Learning Curve** | Immediate feedback improves system quickly | Gradual improvement through analytics |
+
 ### **User Control & Intervention**
 
 **Pause/Resume Functionality**: Users can instantly pause the automation process for any reason and resume when ready, providing complete control over their job search activity.
 
-**Application Review**: In review-first mode, users receive notifications about potential applications and can approve, reject, or modify applications before submission.
+**Application Review**: In Copilot mode, users receive detailed notifications about potential applications and can approve, reject, or modify applications before submission. In Autopilot mode, users can review submitted applications and provide feedback to improve future targeting.
 
 **Blacklist Management**: Users can exclude specific companies, job types, or keywords from their automation, ensuring applications align with their preferences and career goals.
 
