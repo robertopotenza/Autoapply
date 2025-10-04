@@ -132,7 +132,8 @@ app.get('/', (req, res) => {
     }
 });
 
-// Dashboard endpoint
+// CRITICAL FIX: Explicit routes for ALL HTML files to fix Railway static file serving
+// Dashboard endpoints (both /dashboard and /dashboard.html)
 app.get('/dashboard', (req, res) => {
     try {
         const dashboardPath = path.join(__dirname, '../public/dashboard.html');
@@ -144,7 +145,18 @@ app.get('/dashboard', (req, res) => {
     }
 });
 
-// Wizard endpoint
+app.get('/dashboard.html', (req, res) => {
+    try {
+        const dashboardPath = path.join(__dirname, '../public/dashboard.html');
+        logger.info(`Serving dashboard.html from: ${dashboardPath}`);
+        res.sendFile(dashboardPath);
+    } catch (error) {
+        logger.error('Error serving dashboard.html:', error);
+        res.status(500).send('Error loading dashboard');
+    }
+});
+
+// Wizard endpoints (both /wizard and /wizard.html)
 app.get('/wizard', (req, res) => {
     try {
         const wizardPath = path.join(__dirname, '../public/wizard.html');
@@ -153,6 +165,53 @@ app.get('/wizard', (req, res) => {
     } catch (error) {
         logger.error('Error serving wizard.html:', error);
         res.status(500).send('Error loading wizard');
+    }
+});
+
+app.get('/wizard.html', (req, res) => {
+    try {
+        const wizardPath = path.join(__dirname, '../public/wizard.html');
+        logger.info(`Serving wizard.html from: ${wizardPath}`);
+        res.sendFile(wizardPath);
+    } catch (error) {
+        logger.error('Error serving wizard.html:', error);
+        res.status(500).send('Error loading wizard');
+    }
+});
+
+// Login endpoints
+app.get('/login.html', (req, res) => {
+    try {
+        const loginPath = path.join(__dirname, '../public/login.html');
+        logger.info(`Serving login.html from: ${loginPath}`);
+        res.sendFile(loginPath);
+    } catch (error) {
+        logger.error('Error serving login.html:', error);
+        res.status(500).send('Error loading login');
+    }
+});
+
+// Signup endpoints
+app.get('/signup.html', (req, res) => {
+    try {
+        const signupPath = path.join(__dirname, '../public/signup.html');
+        logger.info(`Serving signup.html from: ${signupPath}`);
+        res.sendFile(signupPath);
+    } catch (error) {
+        logger.error('Error serving signup.html:', error);
+        res.status(500).send('Error loading signup');
+    }
+});
+
+// Index.html endpoint
+app.get('/index.html', (req, res) => {
+    try {
+        const indexPath = path.join(__dirname, '../public/index.html');
+        logger.info(`Serving index.html from: ${indexPath}`);
+        res.sendFile(indexPath);
+    } catch (error) {
+        logger.error('Error serving index.html:', error);
+        res.status(500).send('Error loading index');
     }
 });
 
