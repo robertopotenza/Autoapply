@@ -751,7 +751,11 @@ function getStepNumber(stepName) {
         'step1': 1,
         'step2': 2, 
         'step3': 3,
-        'step4': 4
+        'step4': 4,
+        '1': 1,  // Support direct number strings from dashboard
+        '2': 2,
+        '3': 3,
+        '4': 4
     };
     return stepMap[stepName] || 1;
 }
