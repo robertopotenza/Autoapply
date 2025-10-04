@@ -1,4 +1,4 @@
-const logger = require('./logger');
+const { Logger } = require('./logger');
 const axios = require('axios');
 
 // Email service configuration
@@ -10,8 +10,7 @@ const EMAIL_SERVICE = process.env.EMAIL_SERVICE ||
     (process.env.RESEND_API_KEY ? 'resend' : 
      process.env.SENDGRID_API_KEY ? 'sendgrid' : 'console');
 
-// Import logger
-const { Logger } = require('./logger');
+// Initialize logger
 const logger = new Logger('EmailService');
 
 // Log email service configuration
