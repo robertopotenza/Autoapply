@@ -742,6 +742,7 @@ async function submitForm() {
             headers,
             body: JSON.stringify({
                 fullName: data.fullName || '',
+                email: data.email || '',
                 resumePath: data.resumePath || '',
                 coverLetterOption: data.coverLetterOption || '',
                 coverLetterPath: data.coverLetterPath || '',
@@ -815,6 +816,7 @@ function parseFormData() {
 
         // Step 2
         fullName: data['full-name'] || '',
+        email: data['email'] || '',
         resumePath: data.resumePath || '',
         coverLetterOption: data['cover-letter-option'] || '',
         coverLetterPath: data.coverLetterPath || '',
@@ -846,7 +848,8 @@ function parseFormData() {
         disability: data['disability'] || '',
         military: data['military'] || '',
         ethnicity: data['ethnicity'] || '',
-        licenses: data['licenses'] || ''
+        licenses: data['no-license'] === true ? 'No driver\'s license' : (data['licenses'] || ''),
+        noLicense: data['no-license'] || false
     };
 }
 

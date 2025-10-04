@@ -4,11 +4,12 @@ class Profile {
     static async upsert(userId, data) {
         const result = await query(
             `INSERT INTO profile (
-                user_id, full_name, resume_path, cover_letter_option,
+                user_id, full_name, email, resume_path, cover_letter_option,
                 cover_letter_path, phone, country, city, state_region, postal_code
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
             ON CONFLICT (user_id) DO UPDATE SET
                 full_name = EXCLUDED.full_name,
+                email = EXCLUDED.email,
                 resume_path = EXCLUDED.resume_path,
                 cover_letter_option = EXCLUDED.cover_letter_option,
                 cover_letter_path = EXCLUDED.cover_letter_path,
@@ -22,6 +23,7 @@ class Profile {
             [
                 userId,
                 data.fullName || null,
+                data.email || null,
                 data.resumePath || null,
                 data.coverLetterOption || null,
                 data.coverLetterPath || null,

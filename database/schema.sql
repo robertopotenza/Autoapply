@@ -40,6 +40,7 @@ CREATE TABLE IF NOT EXISTS profile (
     id SERIAL PRIMARY KEY,
     user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
     full_name VARCHAR(255),
+    email VARCHAR(255),
     resume_path TEXT,
     cover_letter_option VARCHAR(50),
     cover_letter_path TEXT,
@@ -98,6 +99,7 @@ CREATE INDEX IF NOT EXISTS idx_magic_link_email ON magic_link_tokens(email);
 CREATE INDEX IF NOT EXISTS idx_magic_link_expires ON magic_link_tokens(expires_at);
 CREATE INDEX IF NOT EXISTS idx_job_preferences_user_id ON job_preferences(user_id);
 CREATE INDEX IF NOT EXISTS idx_profile_user_id ON profile(user_id);
+CREATE INDEX IF NOT EXISTS idx_profile_email ON profile(email);
 CREATE INDEX IF NOT EXISTS idx_eligibility_user_id ON eligibility(user_id);
 CREATE INDEX IF NOT EXISTS idx_screening_answers_user_id ON screening_answers(user_id);
 
@@ -114,6 +116,7 @@ SELECT
     jp.seniority_levels,
     jp.time_zones,
     p.full_name,
+    p.email,
     p.resume_path,
     p.cover_letter_option,
     p.phone,
