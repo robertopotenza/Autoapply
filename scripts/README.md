@@ -22,7 +22,48 @@ node scripts/init-database.js
 
 ---
 
-### 2. run-migration-003.js
+### 2. railway-db-setup.js
+**Purpose**: Railway-optimized database setup for production deployment
+
+**Usage**:
+```bash
+# Using Railway CLI (recommended for Railway deployments)
+railway run npm run db:railway-setup
+# or
+railway run node scripts/railway-db-setup.js
+
+# Or locally with environment variables set
+npm run db:railway-setup
+# or
+node scripts/railway-db-setup.js
+```
+
+**What it does**:
+- Tests database connection with retry logic (5 attempts)
+- Creates all required tables in a transaction
+- Sets up authentication tables (users, magic_link_tokens, password_reset_tokens)
+- Creates user profile tables (job_preferences, profile, eligibility, screening_answers)
+- Creates indexes for performance
+- Creates database views
+- Verifies critical tables exist
+- Safe to run multiple times (uses `IF NOT EXISTS` and `CREATE OR REPLACE`)
+
+**When to use**:
+- Initial Railway deployment setup
+- After database reset or migration
+- When database schema needs to be recreated
+- For fixing missing tables or schema issues
+
+**Features**:
+- Railway-specific connection settings
+- Automatic retry on connection failure
+- Transaction-based setup for data safety
+- Detailed logging for debugging
+- SSL support for production environments
+
+---
+
+### 3. run-migration-003.js
 **Purpose**: Add email column to profile table (Migration 003)
 
 **Usage**:
@@ -42,7 +83,7 @@ node scripts/run-migration-003.js
 
 ---
 
-### 3. verify-database.js
+### 4. verify-database.js
 **Purpose**: Verify database structure and check user data
 
 **Usage**:
@@ -67,6 +108,37 @@ node scripts/verify-database.js --user user@example.com
 
 ---
 
+### 5. fix-database-schema.js
+**Purpose**: Comprehensive database schema fix with detailed verification and testing
+
+**Usage**:
+```bash
+node scripts/fix-database-schema.js
+```
+
+**What it does**:
+- Creates all required tables with detailed logging
+- Sets up indexes for all tables
+- Creates database views
+- Tests password reset token functionality
+- Provides comprehensive verification
+- Detailed error reporting and debugging information
+
+**When to use**:
+- When database schema has issues or missing tables
+- For comprehensive database setup with verification
+- When troubleshooting database-related errors
+- For testing password reset functionality
+
+**Features**:
+- Step-by-step logging
+- Comprehensive table verification
+- Password reset token testing
+- Detailed error messages
+- Safe to run multiple times
+
+---
+
 ## Environment Setup
 
 All scripts require database connection. Set these environment variables:
@@ -86,7 +158,7 @@ DATABASE_URL=postgresql://postgres:password@host:5432/database
 
 ## Typical Workflow
 
-### Initial Setup:
+### Initial Setup (Local Development):
 ```bash
 # 1. Initialize database
 npm run db:init
@@ -96,6 +168,18 @@ node scripts/run-migration-003.js
 
 # 3. Verify structure
 node scripts/verify-database.js
+```
+
+### Initial Setup (Railway Production):
+```bash
+# 1. Use Railway-optimized setup
+railway run npm run db:railway-setup
+
+# 2. Verify deployment
+railway logs
+
+# 3. Check database structure (optional)
+railway run node scripts/verify-database.js
 ```
 
 ### After Form Submission:
