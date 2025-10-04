@@ -649,17 +649,32 @@
         function displayBlacklist(companies) {
             const container = document.getElementById('blacklist-items');
             
+            container.innerHTML = ''; // Clear previous contents
             if (companies.length === 0) {
-                container.innerHTML = '<p style="color: #718096; font-style: italic;">No companies blacklisted</p>';
+                const p = document.createElement('p');
+                p.style.color = '#718096';
+                p.style.fontStyle = 'italic';
+                p.textContent = 'No companies blacklisted';
+                container.appendChild(p);
                 return;
             }
-            
-            container.innerHTML = companies.map(company => `
-                <div class="blacklist-item">
-                    <span>${company}</span>
-                    <button onclick="removeFromBlacklist('${company}')">Remove</button>
-                </div>
-            `).join('');
+            companies.forEach(company => {
+                const div = document.createElement('div');
+                div.className = 'blacklist-item';
+
+                const span = document.createElement('span');
+                span.textContent = company;
+                div.appendChild(span);
+
+                const button = document.createElement('button');
+                button.textContent = 'Remove';
+                button.onclick = function() {
+                    removeFromBlacklist(company);
+                };
+                div.appendChild(button);
+
+                container.appendChild(div);
+            });
         }
 
         // Add company to blacklist
