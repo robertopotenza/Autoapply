@@ -71,10 +71,11 @@ app.get('/health', (req, res) => {
 });
 
 // CRITICAL FIX: API Routes MUST come BEFORE static file serving
-app.use('/api/auth', authRoutes);
-app.use('/api/wizard', wizardRoutes);
-app.use('/api/autoapply', autoApplyRouter);
-app.use('/api/debug', debugRoutes);
+// Temporarily commenting out to test static file serving
+// app.use('/api/auth', authRoutes);
+// app.use('/api/wizard', wizardRoutes);
+// app.use('/api/autoapply', autoApplyRouter);
+// app.use('/api/debug', debugRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
