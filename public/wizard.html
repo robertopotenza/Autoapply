@@ -115,7 +115,7 @@
                 <h2>Resume, Cover Letter & Contact Information</h2>
 
                 <div class="form-group">
-                    <label>Resume <span class="required">*</span></label>
+                    <label>Resume <span class="optional">(Optional for testing)</span></label>
                     <div class="file-upload">
                         <input type="file" id="resume-upload" accept=".pdf,.doc,.docx" hidden>
                         <button type="button" class="btn-secondary" onclick="document.getElementById('resume-upload').click()">
@@ -134,7 +134,7 @@
                         <button type="button" class="pill" data-value="auto">Auto-Generate with AI</button>
                         <button type="button" class="pill" data-value="upload">Upload My Own</button>
                     </div>
-                    <input type="hidden" id="cover-letter-option" required>
+                    <input type="hidden" id="cover-letter-option">
                     <div class="file-upload hidden" id="cover-letter-upload-section">
                         <input type="file" id="cover-letter-file" accept=".pdf,.doc,.docx" hidden>
                         <button type="button" class="btn-secondary" onclick="document.getElementById('cover-letter-file').click()">
