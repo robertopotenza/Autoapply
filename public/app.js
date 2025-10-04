@@ -5,6 +5,9 @@ const formState = {
     data: {}
 };
 
+// Store multi-select instances for programmatic access
+const multiSelectInstances = {};
+
 // Data for dropdowns
 const countries = [
     'United States', 'United Kingdom', 'Canada', 'Australia', 'Germany', 'France',
@@ -301,6 +304,8 @@ function initMultiSelect(baseId, options, maxItems = null) {
         if (hiddenInput) {
             hiddenInput.value = Array.from(selectedItems).join(',');
         }
+        // Also update the input field value for form data capture
+        input.value = Array.from(selectedItems).join(',');
     }
 
     function updateCounter() {
@@ -309,6 +314,29 @@ function initMultiSelect(baseId, options, maxItems = null) {
             label.textContent = `${selectedItems.size}/${maxItems}`;
         }
     }
+    
+    // Store instance API for programmatic access
+    multiSelectInstances[baseId] = {
+        addItem,
+        removeItem,
+        clear: () => {
+            selectedItems.clear();
+            renderTags();
+            updateHiddenInput();
+            updateCounter();
+        },
+        setItems: (items) => {
+            selectedItems.clear();
+            items.forEach(item => {
+                if (options.includes(item)) {
+                    selectedItems.add(item);
+                }
+            });
+            renderTags();
+            updateHiddenInput();
+            updateCounter();
+        }
+    };
 }
 
 function initTagsInput(fieldId, maxTags) {
@@ -996,33 +1024,15 @@ function convertUserDataToFormState(userData) {
 
 // Helper function to populate multi-select fields with existing values
 function populateMultiSelect(baseId, values) {
-    const tagsContainer = document.getElementById(`${baseId}-tags`);
-    const hiddenInput = document.getElementById(baseId);
+    const instance = multiSelectInstances[baseId];
     
-    if (!tagsContainer || !hiddenInput) {
-        console.warn(`Multi-select elements for ${baseId} not found`);
+    if (!instance) {
+        console.warn(`Multi-select instance for ${baseId} not found`);
         return;
     }
     
-    // Clear existing tags
-    tagsContainer.innerHTML = '';
-    
-    // Add each value as a tag
-    values.forEach(value => {
-        const trimmedValue = value.trim();
-        if (!trimmedValue) return;
-        
-        const tagEl = document.createElement('div');
-        tagEl.className = 'tag';
-        tagEl.innerHTML = `
-            <span>${trimmedValue}</span>
-            <span class="tag-remove" onclick="this.parentElement.remove(); updateMultiSelectHiddenInput('${baseId}');">×</span>
-        `;
-        tagsContainer.appendChild(tagEl);
-    });
-    
-    // Update hidden input
-    updateMultiSelectHiddenInput(baseId);
+    // Use the instance API to set items
+    instance.setItems(values);
     console.log(`✅ Populated ${baseId} with ${values.length} items`);
 }
 
@@ -1037,5 +1047,18 @@ function updateMultiSelectHiddenInput(baseId) {
     hiddenInput.value = tags.join(',');
     
     console.log(`Updated ${baseId}:`, hiddenInput.value);
+}
+
+// Helper function to update multi-select input fields (for fields without hidden inputs)
+function updateMultiSelectInput(baseId) {
+    const tagsContainer = document.getElementById(`${baseId}-tags`);
+    const input = document.getElementById(`${baseId}-input`);
+    
+    if (!tagsContainer || !input) return;
+    
+    const tags = Array.from(tagsContainer.querySelectorAll('.tag span:first-child')).map(span => span.textContent);
+    input.value = tags.join(',');
+    
+    console.log(`Updated ${baseId}-input:`, input.value);
 }
 // Force deployment Fri Oct  3 17:59:37 EDT 2025
