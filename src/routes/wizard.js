@@ -6,7 +6,8 @@ const JobPreferences = require('../database/models/JobPreferences');
 const Profile = require('../database/models/Profile');
 const Eligibility = require('../database/models/Eligibility');
 const ScreeningAnswers = require('../database/models/ScreeningAnswers');
-const logger = require('../utils/logger');
+const { Logger } = require('../utils/logger');
+const logger = new Logger('Wizard');
 
 // All wizard routes require authentication
 router.use(authenticateToken);
