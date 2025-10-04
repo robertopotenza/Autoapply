@@ -14,6 +14,7 @@ const authRoutes = require('./routes/auth');
 const wizardRoutes = require('./routes/wizard');
 const { router: autoApplyRouter, initializeOrchestrator } = require('./routes/autoapply');
 const debugRoutes = require('./routes/debug');
+const debugResetRoutes = require('./routes/debug-reset');
 
 // Import utilities and middleware
 const { Logger } = require('./utils/logger');
@@ -114,6 +115,7 @@ app.use('/api/auth', authRoutes);
 app.use('/api/wizard', wizardRoutes);
 app.use('/api/autoapply', autoApplyRouter);
 app.use('/api/debug', debugRoutes);
+app.use('/api/debug-reset', debugResetRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
