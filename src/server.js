@@ -70,12 +70,22 @@ app.get('/health', (req, res) => {
     });
 });
 
+// Test endpoint to verify deployment updates
+app.get('/test-deployment', (req, res) => {
+    res.json({
+        message: 'DEPLOYMENT TEST - October 4, 2025 - Version 2.1',
+        timestamp: new Date().toISOString(),
+        deploymentId: 'test-' + Date.now(),
+        staticFilesPath: path.join(__dirname, '../public'),
+        indexExists: require('fs').existsSync(path.join(__dirname, '../public/index.html'))
+    });
+});
+
 // CRITICAL FIX: API Routes MUST come BEFORE static file serving
-// Temporarily commenting out to test static file serving
-// app.use('/api/auth', authRoutes);
-// app.use('/api/wizard', wizardRoutes);
-// app.use('/api/autoapply', autoApplyRouter);
-// app.use('/api/debug', debugRoutes);
+app.use('/api/auth', authRoutes);
+app.use('/api/wizard', wizardRoutes);
+app.use('/api/autoapply', autoApplyRouter);
+app.use('/api/debug', debugRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
