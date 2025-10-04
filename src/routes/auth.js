@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const User = require('../database/models/User');
 const MagicLink = require('../database/models/MagicLink');
+const PasswordReset = require('../database/models/PasswordReset');
 const { generateToken } = require('../middleware/auth');
 const emailService = require('../utils/emailService');
 const { logger } = require('../utils/logger');
@@ -330,6 +331,154 @@ router.get('/verify-magic-link', async (req, res) => {
             success: false,
             message: 'Error verifying magic link',
             error: error.message
+        });
+    }
+});
+
+// POST /api/auth/forgot-password - Request password reset
+router.post('/forgot-password', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // Validation
+        if (!email) {
+            return res.status(400).json({
+                success: false,
+                message: 'Email is required'
+            });
+        }
+
+        if (!EMAIL_REGEX.test(email)) {
+            return res.status(400).json({
+                success: false,
+                message: 'Invalid email format'
+            });
+        }
+
+        // Check if user exists
+        const user = await User.findByEmail(email);
+
+        // Always return success (don't reveal if email exists)
+        // This prevents email enumeration attacks
+        if (!user) {
+            logger.info(`Password reset requested for non-existent email: ${email}`);
+            return res.json({
+                success: true,
+                message: 'If an account exists with this email, you will receive a password reset link.'
+            });
+        }
+
+        // Check if user has a password (not passwordless account)
+        if (!user.password_hash) {
+            logger.info(`Password reset requested for passwordless account: ${email}`);
+            return res.json({
+                success: true,
+                message: 'If an account exists with this email, you will receive a password reset link.',
+                hint: 'This account uses magic link login. Use "Login with Magic Link" instead.'
+            });
+        }
+
+        // Generate password reset token
+        const resetData = await PasswordReset.create(email);
+
+        // Build reset URL
+        let baseUrl = process.env.BASE_URL;
+        if (!baseUrl) {
+            const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+            const host = req.headers['x-forwarded-host'] || req.headers.host;
+            baseUrl = `${protocol}://${host}`;
+        }
+
+        const resetUrl = `${baseUrl}/reset-password.html?token=${resetData.token}`;
+
+        // Send email
+        try {
+            const emailResult = await emailService.sendPasswordReset(email, resetUrl);
+            logger.info(`Password reset email sent to: ${email} via ${emailResult.mode}`);
+        } catch (emailError) {
+            logger.error('Error sending password reset email:', emailError);
+            // Still return success to user (don't reveal email send failures)
+        }
+
+        res.json({
+            success: true,
+            message: 'If an account exists with this email, you will receive a password reset link.',
+            // In development, return the link
+            ...(process.env.NODE_ENV !== 'production' && {
+                resetLink: resetUrl,
+                devNote: 'In development mode, check the server console for the reset link.'
+            })
+        });
+
+    } catch (error) {
+        logger.error('Forgot password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error processing password reset request',
+            error: process.env.NODE_ENV !== 'production' ? error.message : undefined
+        });
+    }
+});
+
+// POST /api/auth/reset-password - Reset password with token
+router.post('/reset-password', async (req, res) => {
+    try {
+        const { token, newPassword } = req.body;
+
+        // Validation
+        if (!token || !newPassword) {
+            return res.status(400).json({
+                success: false,
+                message: 'Token and new password are required'
+            });
+        }
+
+        if (newPassword.length < 8) {
+            return res.status(400).json({
+                success: false,
+                message: 'Password must be at least 8 characters long'
+            });
+        }
+
+        // Verify reset token
+        const resetData = await PasswordReset.verify(token);
+
+        if (!resetData) {
+            return res.status(401).json({
+                success: false,
+                message: 'Invalid or expired reset token'
+            });
+        }
+
+        // Find user
+        const user = await User.findByEmail(resetData.email);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        // Update password
+        await User.updatePassword(user.user_id, newPassword);
+
+        // Mark token as used
+        await PasswordReset.markAsUsed(token);
+
+        logger.info(`Password reset successful for user: ${resetData.email}`);
+
+        res.json({
+            success: true,
+            message: 'Password reset successful. You can now log in with your new password.'
+        });
+
+    } catch (error) {
+        logger.error('Reset password error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Error resetting password',
+            error: process.env.NODE_ENV !== 'production' ? error.message : undefined
         });
     }
 });

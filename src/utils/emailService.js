@@ -34,6 +34,32 @@ class EmailService {
         throw new Error('Invalid email service configured');
     }
 
+    async sendPasswordReset(email, resetLink) {
+        const subject = 'Reset Your Auto-Apply Password';
+        const html = this.getPasswordResetTemplate(resetLink);
+        const text = `Click here to reset your Auto-Apply password: ${resetLink}\n\nThis link will expire in 1 hour.\n\nIf you didn't request this, please ignore this email.`;
+
+        if (EMAIL_SERVICE === 'console') {
+            // For development - log to console
+            logger.info('='.repeat(60));
+            logger.info('📧 PASSWORD RESET EMAIL (Development Mode)');
+            logger.info('='.repeat(60));
+            logger.info(`To: ${email}`);
+            logger.info(`Subject: ${subject}`);
+            logger.info(`\nReset Link: ${resetLink}`);
+            logger.info('='.repeat(60));
+            return { success: true, mode: 'console' };
+        } else if (EMAIL_SERVICE === 'resend') {
+            return await this.sendViaResend(email, subject, html, text);
+        } else if (EMAIL_SERVICE === 'sendgrid') {
+            return await this.sendViaSendGrid(email, subject, html, text);
+        } else if (EMAIL_SERVICE === 'smtp') {
+            return await this.sendViaSMTP(email, subject, html, text);
+        }
+
+        throw new Error('Invalid email service configured');
+    }
+
     getMagicLinkTemplate(magicLink) {
         return `
 <!DOCTYPE html>
@@ -79,6 +105,73 @@ class EmailService {
 
                             <p style="margin: 0; font-size: 14px; color: #9ca3af;">
                                 If you didn't request this login link, you can safely ignore this email.
+                            </p>
+                        </td>
+                    </tr>
+
+                    <!-- Footer -->
+                    <tr>
+                        <td style="padding: 24px; background-color: #f9fafb; text-align: center;">
+                            <p style="margin: 0; font-size: 12px; color: #9ca3af;">
+                                Auto-Apply - Automated Job Application Platform<br>
+                                Powered by AI
+                            </p>
+                        </td>
+                    </tr>
+                </table>
+            </td>
+        </tr>
+    </table>
+</body>
+</html>
+        `;
+    }
+
+    getPasswordResetTemplate(resetLink) {
+        return `
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your Password</title>
+</head>
+<body style="margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background-color: #f9fafb;">
+    <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f9fafb; padding: 40px 0;">
+        <tr>
+            <td align="center">
+                <table width="600" cellpadding="0" cellspacing="0" style="background-color: white; border-radius: 16px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); overflow: hidden;">
+                    <!-- Header -->
+                    <tr>
+                        <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px; text-align: center;">
+                            <h1 style="color: white; margin: 0; font-size: 28px;">🔐 Auto-Apply</h1>
+                        </td>
+                    </tr>
+
+                    <!-- Content -->
+                    <tr>
+                        <td style="padding: 40px;">
+                            <h2 style="margin: 0 0 16px 0; font-size: 24px; color: #1f2937;">Reset Your Password</h2>
+                            <p style="margin: 0 0 24px 0; font-size: 16px; color: #6b7280; line-height: 1.6;">
+                                We received a request to reset your password. Click the button below to create a new password. This link will expire in 1 hour.
+                            </p>
+
+                            <!-- Button -->
+                            <div style="text-align: center; margin: 32px 0;">
+                                <a href="${resetLink}" style="display: inline-block; background-color: #7c3aed; color: white; text-decoration: none; padding: 16px 32px; border-radius: 8px; font-weight: 600; font-size: 16px;">
+                                    Reset Password
+                                </a>
+                            </div>
+
+                            <p style="margin: 24px 0 0 0; font-size: 14px; color: #9ca3af;">
+                                Or copy and paste this URL into your browser:<br>
+                                <a href="${resetLink}" style="color: #7c3aed; word-break: break-all;">${resetLink}</a>
+                            </p>
+
+                            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 32px 0;">
+
+                            <p style="margin: 0; font-size: 14px; color: #9ca3af;">
+                                If you didn't request a password reset, you can safely ignore this email. Your password will remain unchanged.
                             </p>
                         </td>
                     </tr>
