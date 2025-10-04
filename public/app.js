@@ -406,10 +406,12 @@ function setupEventListeners() {
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
     const submitBtn = document.getElementById('submit-btn');
+    const saveExitBtn = document.getElementById('save-exit-btn');
     const form = document.getElementById('config-form');
 
     prevBtn?.addEventListener('click', previousStep);
     nextBtn?.addEventListener('click', nextStep);
+    saveExitBtn?.addEventListener('click', saveAndExit);
 
     form?.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -433,6 +435,117 @@ function nextStep() {
             formState.currentStep++;
             updateUI();
         }
+    }
+}
+
+async function saveAndExit() {
+    // Save current step data to localStorage
+    saveStepData();
+
+    // Check if user is authenticated
+    const token = localStorage.getItem('authToken');
+    if (!token) {
+        alert('Please login first');
+        window.location.href = '/login.html';
+        return;
+    }
+
+    try {
+        // Parse form data into structured objects
+        const data = parseFormData();
+
+        // Save each step to the API
+        const headers = {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        };
+
+        // Upload files first if any
+        await uploadFiles(token);
+
+        // Save step 1 (Job Preferences) - only if data exists
+        if (data.jobTypes || data.jobTitles) {
+            await fetch('/api/wizard/step1', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    remoteJobs: data.remoteJobs || [],
+                    onsiteLocation: data.onsiteLocation || '',
+                    jobTypes: data.jobTypes || [],
+                    jobTitles: data.jobTitles || [],
+                    seniorityLevels: data.seniorityLevels || [],
+                    timeZones: data.timeZones || []
+                })
+            });
+        }
+
+        // Save step 2 (Profile) - only if data exists
+        if (data.fullName || data.phone || data.country) {
+            await fetch('/api/wizard/step2', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    fullName: data.fullName || '',
+                    resumePath: data.resumePath || '',
+                    coverLetterOption: data.coverLetterOption || '',
+                    coverLetterPath: data.coverLetterPath || '',
+                    phone: data.phone || '',
+                    country: data.country || '',
+                    city: data.city || '',
+                    stateRegion: data.stateRegion || '',
+                    postalCode: data.postalCode || ''
+                })
+            });
+        }
+
+        // Save step 3 (Eligibility) - only if data exists
+        if (data.availability || data.eligibleCountries || data.visaSponsorship) {
+            await fetch('/api/wizard/step3', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    currentJobTitle: data.currentJobTitle || '',
+                    availability: data.availability || '',
+                    eligibleCountries: data.eligibleCountries || [],
+                    visaSponsorship: data.visaSponsorship === 'yes',
+                    nationality: data.nationality || [],
+                    currentSalary: data.currentSalary || null,
+                    expectedSalary: data.expectedSalary || null
+                })
+            });
+        }
+
+        // Save screening answers if any
+        if (hasScreeningData(data)) {
+            await fetch('/api/wizard/screening', {
+                method: 'POST',
+                headers,
+                body: JSON.stringify({
+                    experienceSummary: data.experienceSummary || '',
+                    hybridPreference: data.hybridPreference || '',
+                    travel: data.travel || '',
+                    relocation: data.relocation || '',
+                    languages: data.languages || [],
+                    dateOfBirth: data.dateOfBirth || null,
+                    gpa: data.gpa || null,
+                    isAdult: data.isAdult === 'yes',
+                    genderIdentity: data.gender || '',
+                    disabilityStatus: data.disability || '',
+                    militaryService: data.military || '',
+                    ethnicity: data.ethnicity || '',
+                    drivingLicense: data.licenses || ''
+                })
+            });
+        }
+
+        alert('Progress saved successfully!');
+        // Keep the saved state for when they return
+        // localStorage.removeItem('autoApplyFormState'); // Don't remove so they can continue later
+        window.location.href = '/dashboard.html';
+
+    } catch (error) {
+        console.error('Save and exit error:', error);
+        alert('Error saving progress. Please try again.');
     }
 }
 
