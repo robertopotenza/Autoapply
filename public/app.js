@@ -55,14 +55,19 @@ async function loadExistingUserData() {
             if (result.success && result.data) {
                 console.log('📊 Populating form with user data...');
                 populateFormFields(result.data);
+                console.log('✅ Form fields populated successfully');
             } else {
                 console.log('❌ No user data found in response');
+                console.log('Response details:', result);
             }
         } else {
-            console.log('❌ API request failed:', response.status);
+            console.log('❌ API request failed:', response.status, response.statusText);
+            const errorText = await response.text();
+            console.log('Error response:', errorText);
         }
     } catch (error) {
         console.error('❌ Error loading user data:', error);
+        console.error('Error details:', error.message, error.stack);
     }
 }
 
@@ -972,6 +977,12 @@ function convertUserDataToFormState(userData) {
     
     // The API returns a flat structure from user_complete_profile view
     // Handle both nested (old format) and flat (current API) structures for compatibility
+    
+    // Clear all existing pill selections first to ensure clean state
+    console.log('🧹 Clearing existing pill selections...');
+    document.querySelectorAll('.pill.active').forEach(pill => {
+        pill.classList.remove('active');
+    });
     
     // Step 1: Job Preferences - Job types (activate pill buttons)
     const jobTypes = userData.job_types || userData.preferences?.job_types;
