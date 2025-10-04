@@ -4,10 +4,10 @@
     "builder": "NIXPACKS"
   },
   "deploy": {
-    "startCommand": "node src/server.js",
+    "startCommand": "node railway-diagnostic.js",
     "restartPolicyType": "ON_FAILURE",
-    "restartPolicyMaxRetries": 10,
+    "restartPolicyMaxRetries": 5,
     "healthcheckPath": "/health",
-    "healthcheckTimeout": 300
+    "healthcheckTimeout": 30
   }
 }
