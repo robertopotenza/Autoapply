@@ -212,7 +212,7 @@ class EmailService {
 
         try {
             const response = await axios.post('https://api.resend.com/emails', {
-                from: process.env.EMAIL_FROM || 'Auto-Apply <noreply@autoapply-production-1393.up.railway.app>',
+                from: process.env.EMAIL_FROM || 'Auto-Apply <onboarding@resend.dev>',
                 to: [email],
                 subject: subject,
                 html: html,
