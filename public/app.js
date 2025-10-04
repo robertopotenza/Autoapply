@@ -106,14 +106,16 @@ document.addEventListener('DOMContentLoaded', () => {
     // Check if we're in edit mode (coming from dashboard)
     const editStep = localStorage.getItem('wizardStep');
     if (editStep) {
-        // Load existing user data first, then navigate to the specific step
-        loadExistingUserData().then(() => {
-            const stepNumber = getStepNumber(editStep);
-            if (stepNumber) {
-                formState.currentStep = stepNumber;
-                updateUI();
-            }
-        });
+        // Navigate to the specific step first, then load existing user data
+        const stepNumber = getStepNumber(editStep);
+        if (stepNumber) {
+            formState.currentStep = stepNumber;
+            updateUI();
+        }
+        
+        // Load existing user data after UI is updated
+        loadExistingUserData();
+        
         // Clear the edit step flag
         localStorage.removeItem('wizardStep');
     } else {
