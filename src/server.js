@@ -27,14 +27,15 @@ const logger = new Logger('Server');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Debug Railway environment - FORCE CACHE REFRESH v2.0
-logger.info(`🔍 Environment Debug - FRESH DEPLOYMENT v2.0:`);
+// Debug Railway environment - FORCE CACHE REFRESH v3.0 - CRITICAL FIX
+const DEPLOYMENT_ID = `CRITICAL-HTML-FIX-${Date.now()}`;
+logger.info(`🔍 Environment Debug - DEPLOYMENT ${DEPLOYMENT_ID}:`);
 logger.info(`   NODE_ENV: ${process.env.NODE_ENV}`);
 logger.info(`   PORT (Railway): ${process.env.PORT}`);
 logger.info(`   PORT (Used): ${PORT}`);
 logger.info(`   Railway Internal: ${process.env.RAILWAY_ENVIRONMENT || 'Not set'}`);
 logger.info(`   All ENV vars: ${Object.keys(process.env).filter(k => k.includes('PORT') || k.includes('RAILWAY')).join(', ')}`);
-logger.info(`   🚀 CACHE BUSTER: This is a fresh deployment - ${new Date().toISOString()}`);
+logger.info(`   🚀 DEPLOYMENT ID: ${DEPLOYMENT_ID} - ${new Date().toISOString()}`);
 
 // Middleware
 app.use(cors({
@@ -102,11 +103,13 @@ app.get('/health', (req, res) => {
 // Test endpoint to verify deployment updates
 app.get('/test-deployment', (req, res) => {
     res.json({
-        message: 'DEPLOYMENT TEST - October 4, 2025 - Version 2.1',
+        message: 'CRITICAL HTML FIX DEPLOYMENT - October 4, 2025 - Version 3.0',
         timestamp: new Date().toISOString(),
-        deploymentId: 'test-' + Date.now(),
+        deploymentId: DEPLOYMENT_ID,
         staticFilesPath: path.join(__dirname, '../public'),
-        indexExists: require('fs').existsSync(path.join(__dirname, '../public/index.html'))
+        indexExists: require('fs').existsSync(path.join(__dirname, '../public/index.html')),
+        dashboardExists: require('fs').existsSync(path.join(__dirname, '../public/dashboard.html')),
+        explicitRoutesActive: true
     });
 });
 
