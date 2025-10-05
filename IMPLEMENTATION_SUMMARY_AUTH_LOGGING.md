@@ -35,7 +35,7 @@ The issue required ensuring proper authentication token management and adding co
   ```javascript
   console.log('⚠️ GET /api/wizard/data returned status 200 but data is null');
   console.log('💡 This means the user_complete_profile view has no row for this user');
-  console.log('💡 Check server logs for [User.getCompleteProfile] messages');
+  console.log('💡 Check server logs for [User] messages');
   console.log('💡 Run: node scripts/verify-database.js --user <your-email>');
   ```
 
@@ -68,23 +68,25 @@ The issue required ensuring proper authentication token management and adding co
 
 ### 3. Enhanced Database Query Logging (src/database/models/User.js)
 
-**Added detailed logging in the getCompleteProfile method:**
+**Updated to use Logger utility for consistent logging:**
 
-- **Line 63**: Log the database query with user_id
+- **Line 65**: Log the database query with user_id using Logger utility
   ```javascript
-  console.log(`[User.getCompleteProfile] Querying user_complete_profile for user_id: ${userId}`);
+  logger.info(`Querying user_complete_profile for user_id: ${userId}`);
   ```
 
-- **Line 70-71**: Log when no rows found + troubleshooting hint
+- **Line 72-73**: Log when no rows found + troubleshooting hint using Logger utility
   ```javascript
-  console.log(`[User.getCompleteProfile] No rows found in user_complete_profile for user_id: ${userId}`);
-  console.log(`[User.getCompleteProfile] Hint: Run 'node scripts/verify-database.js --user <email>' to check DB`);
+  logger.warn(`No rows found in user_complete_profile for user_id: ${userId}`);
+  logger.info(`Hint: Run 'node scripts/verify-database.js --user <email>' to check DB`);
   ```
 
-- **Line 73**: Confirm data found
+- **Line 75**: Confirm data found using Logger utility
   ```javascript
-  console.log(`[User.getCompleteProfile] Found profile data for user_id: ${userId}`);
+  logger.info(`Found profile data for user_id: ${userId}`);
   ```
+
+**Note:** The logging now uses the Logger utility with `[User]` prefix instead of direct console.log with `[User.getCompleteProfile]` prefix, maintaining consistency with other parts of the application.
 
 ### 4. Documentation Created
 

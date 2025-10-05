@@ -72,7 +72,7 @@ const screeningContent = document.getElementById('screening-content');
             } else if (result.success && !result.data) {
                 console.log('⚠️ GET /api/wizard/data returned status 200 but data is null');
                 console.log('💡 This means the user_complete_profile view has no row for this user');
-                console.log('💡 Check server logs for [User.getCompleteProfile] messages');
+                console.log('💡 Check server logs for [User] messages');
                 console.log('💡 Run: node scripts/verify-database.js --user <your-email>');
                 console.log('Response details:', result);
             } else {

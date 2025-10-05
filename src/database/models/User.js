@@ -1,7 +1,9 @@
 const { query } = require('../db');
 const bcrypt = require('bcrypt');
+const { Logger } = require('../../utils/logger');
 
 const SALT_ROUNDS = 10;
+const logger = new Logger('User');
 
 class User {
     static async create(email, password) {
@@ -60,17 +62,17 @@ class User {
     }
 
     static async getCompleteProfile(userId) {
-        console.log(`[User.getCompleteProfile] Querying user_complete_profile for user_id: ${userId}`);
+        logger.info(`Querying user_complete_profile for user_id: ${userId}`);
         const result = await query(
             'SELECT * FROM user_complete_profile WHERE user_id = $1',
             [userId]
         );
 
         if (result.rows.length === 0) {
-            console.log(`[User.getCompleteProfile] No rows found in user_complete_profile for user_id: ${userId}`);
-            console.log(`[User.getCompleteProfile] Hint: Run 'node scripts/verify-database.js --user <email>' to check DB`);
+            logger.warn(`No rows found in user_complete_profile for user_id: ${userId}`);
+            logger.info(`Hint: Run 'node scripts/verify-database.js --user <email>' to check DB`);
         } else {
-            console.log(`[User.getCompleteProfile] Found profile data for user_id: ${userId}`);
+            logger.info(`Found profile data for user_id: ${userId}`);
         }
 
         return result.rows[0];
