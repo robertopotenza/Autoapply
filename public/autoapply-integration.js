@@ -150,10 +150,9 @@
       if (result.success) {
         showNotification('AutoApply enabled successfully! We\'ll start applying to matching jobs.', 'success');
         
-        // Redirect to applications view or update UI
+        // Redirect to applications dashboard
         setTimeout(() => {
-          // Stay on dashboard and reload to show updated status
-          window.location.reload();
+          window.location.href = '/applications.html';
         }, 2000);
       } else {
         showNotification(result.message || 'Failed to enable AutoApply', 'error');

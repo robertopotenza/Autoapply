@@ -206,6 +206,29 @@ app.get('/signup.html', (req, res) => {
     }
 });
 
+// Applications endpoints (both /applications and /applications.html)
+app.get('/applications', (req, res) => {
+    try {
+        const applicationsPath = path.join(__dirname, '../public/applications.html');
+        logger.info(`Serving applications.html from: ${applicationsPath}`);
+        res.sendFile(applicationsPath);
+    } catch (error) {
+        logger.error('Error serving applications.html:', error);
+        res.status(500).send('Error loading applications');
+    }
+});
+
+app.get('/applications.html', (req, res) => {
+    try {
+        const applicationsPath = path.join(__dirname, '../public/applications.html');
+        logger.info(`Serving applications.html from: ${applicationsPath}`);
+        res.sendFile(applicationsPath);
+    } catch (error) {
+        logger.error('Error serving applications.html:', error);
+        res.status(500).send('Error loading applications');
+    }
+});
+
 // Index.html endpoint
 app.get('/index.html', (req, res) => {
     try {
