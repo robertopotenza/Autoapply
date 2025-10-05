@@ -374,7 +374,7 @@ class AutoApplyOrchestrator {
     async getTodaysApplicationCount(userId) {
         const query = `
             SELECT COUNT(*) as count
-            FROM job_applications 
+            FROM applications 
             WHERE user_id = $1 
             AND DATE(created_at) = CURRENT_DATE
         `;
@@ -386,43 +386,41 @@ class AutoApplyOrchestrator {
     async getPendingJobsCount(userId) {
         const query = `
             SELECT COUNT(*) as count
-            FROM job_opportunities jo
-            LEFT JOIN job_applications ja ON jo.id = ja.job_id AND ja.user_id = $1
-            WHERE jo.user_id = $1 
-            AND ja.id IS NULL
-            AND jo.match_score >= $2
+            FROM jobs j
+            LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
+            WHERE (j.user_id = $1 OR j.user_id IS NULL)
+            AND a.application_id IS NULL
         `;
         
-        const result = await this.db.query(query, [userId, this.config.minMatchScore]);
+        const result = await this.db.query(query, [userId]);
         return parseInt(result.rows[0].count);
     }
 
     async getTotalApplicationsCount(userId) {
-        const query = 'SELECT COUNT(*) as count FROM job_applications WHERE user_id = $1';
+        const query = 'SELECT COUNT(*) as count FROM applications WHERE user_id = $1';
         const result = await this.db.query(query, [userId]);
         return parseInt(result.rows[0].count);
     }
 
     async getQualifiedJobsForUser(userId) {
         const query = `
-            SELECT jo.*
-            FROM job_opportunities jo
-            LEFT JOIN job_applications ja ON jo.id = ja.job_id AND ja.user_id = $1
-            WHERE jo.user_id = $1 
-            AND ja.id IS NULL
-            AND jo.match_score >= $2
-            ORDER BY jo.match_score DESC, jo.scanned_at DESC
+            SELECT j.*
+            FROM jobs j
+            LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
+            WHERE (j.user_id = $1 OR j.user_id IS NULL)
+            AND a.application_id IS NULL
+            ORDER BY j.created_at DESC
             LIMIT 10
         `;
         
-        const result = await this.db.query(query, [userId, this.config.minMatchScore]);
+        const result = await this.db.query(query, [userId]);
         return result.rows;
     }
 
     async getJobsByIds(jobIds, userId) {
         const query = `
-            SELECT * FROM job_opportunities 
-            WHERE id = ANY($1) AND user_id = $2
+            SELECT * FROM jobs 
+            WHERE job_id = ANY($1) AND (user_id = $2 OR user_id IS NULL)
         `;
         
         const result = await this.db.query(query, [jobIds, userId]);
@@ -430,9 +428,38 @@ class AutoApplyOrchestrator {
     }
 
     async checkIfAlreadyApplied(userId, jobId) {
-        const query = 'SELECT id FROM job_applications WHERE user_id = $1 AND job_id = $2';
+        const query = 'SELECT application_id FROM applications WHERE user_id = $1 AND job_id = $2';
         const result = await this.db.query(query, [userId, jobId]);
         return result.rows.length > 0;
+    }
+
+    /**
+     * Get scanned jobs for a user with pagination
+     */
+    async getScannedJobs(userId, options = {}) {
+        const page = options.page || 1;
+        const limit = options.limit || 10;
+        const minScore = options.minScore || 0;
+        const offset = (page - 1) * limit;
+
+        const query = `
+            SELECT j.*,
+                   j.job_id as id,
+                   j.job_title as title,
+                   j.company_name as company,
+                   j.job_description as description,
+                   j.job_url as url,
+                   CASE WHEN a.application_id IS NOT NULL THEN true ELSE false END as already_applied
+            FROM jobs j
+            LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
+            WHERE (j.user_id = $1 OR j.user_id IS NULL)
+            AND j.is_active = true
+            ORDER BY j.created_at DESC
+            LIMIT $2 OFFSET $3
+        `;
+        
+        const result = await this.db.query(query, [userId, limit, offset]);
+        return result.rows;
     }
 
     /**

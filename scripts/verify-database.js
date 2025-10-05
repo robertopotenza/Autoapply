@@ -24,7 +24,7 @@ async function verifyDataStructure() {
         console.log('✅ Database connection successful\n');
 
         // Check all required tables
-        const tables = ['job_preferences', 'profile', 'eligibility', 'screening_answers'];
+        const tables = ['job_preferences', 'profile', 'eligibility', 'screening_answers', 'jobs', 'applications'];
         console.log('📋 Checking required tables:');
         
         for (const table of tables) {
@@ -57,6 +57,14 @@ async function verifyDataStructure() {
                                  'languages', 'date_of_birth', 'gpa', 'is_adult', 'gender_identity',
                                  'disability_status', 'military_service', 'ethnicity', 'driving_license'];
         await checkColumns(pool, 'screening_answers', screeningColumns);
+
+        console.log('\n📊 Checking jobs table columns:');
+        const jobsColumns = ['job_id', 'user_id', 'job_title', 'company_name', 'job_url', 'ats_type', 'source', 'external_id'];
+        await checkColumns(pool, 'jobs', jobsColumns);
+
+        console.log('\n📊 Checking applications table columns:');
+        const applicationsColumns = ['application_id', 'user_id', 'job_id', 'status', 'application_mode', 'applied_at'];
+        await checkColumns(pool, 'applications', applicationsColumns);
 
         console.log('\n✅ All required database structures verified successfully!\n');
 

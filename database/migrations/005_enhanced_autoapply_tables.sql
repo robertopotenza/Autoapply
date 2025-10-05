@@ -1,8 +1,6 @@
--- Enhanced AutoApply Database Schema
--- Additional tables and indexes for advanced autoapply functionality
--- 
--- NOTE: The jobs and applications tables are already created by database/migrations/002_autoapply_tables.sql
--- This schema file adds supplementary tables for enhanced autoapply features
+-- Migration 005: Add enhanced autoapply tables
+-- This migration adds supplementary tables for advanced autoapply functionality
+-- Note: jobs and applications tables are already created by migration 002
 
 -- Table: autoapply_sessions
 -- Tracks autoapply sessions for users
@@ -136,7 +134,9 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Create a scheduled job to run cleanup (if using pg_cron extension)
--- SELECT cron.schedule('cleanup-autoapply-data', '0 2 * * *', 'SELECT cleanup_old_autoapply_data();');
-
-COMMIT;
+COMMENT ON TABLE autoapply_sessions IS 'Tracks user autoapply sessions with status and statistics';
+COMMENT ON TABLE user_autoapply_status IS 'Current autoapply on/off status for each user';
+COMMENT ON TABLE autoapply_config IS 'User-specific autoapply configuration and preferences';
+COMMENT ON TABLE application_templates IS 'User templates for cover letters and screening answers';
+COMMENT ON TABLE job_board_cookies IS 'Stored authentication cookies for job board sessions';
+COMMENT ON TABLE application_logs IS 'Detailed logs for debugging application attempts';

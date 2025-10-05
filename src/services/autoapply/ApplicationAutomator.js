@@ -574,7 +574,7 @@ For salary expectations, respond with "Competitive" or "Negotiable".
      * Database helper methods
      */
     async getJobById(jobId) {
-        const query = 'SELECT * FROM job_opportunities WHERE id = $1';
+        const query = 'SELECT * FROM jobs WHERE job_id = $1';
         const result = await this.db.query(query, [jobId]);
         return result.rows[0];
     }
@@ -593,14 +593,15 @@ For salary expectations, respond with "Competitive" or "Negotiable".
 
     async saveApplicationRecord(userId, jobId, result) {
         const query = `
-            INSERT INTO job_applications (
-                user_id, job_id, status, ats_type, error_message, 
-                application_data, created_at, updated_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, NOW(), NOW())
+            INSERT INTO applications (
+                user_id, job_id, status, application_mode, error_message, 
+                ats_data, applied_at
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7)
             ON CONFLICT (user_id, job_id) DO UPDATE SET
                 status = EXCLUDED.status,
                 error_message = EXCLUDED.error_message,
-                application_data = EXCLUDED.application_data,
+                ats_data = EXCLUDED.ats_data,
+                applied_at = EXCLUDED.applied_at,
                 updated_at = NOW()
         `;
 
@@ -608,9 +609,10 @@ For salary expectations, respond with "Competitive" or "Negotiable".
             userId,
             jobId,
             result.status,
-            result.atsType || null,
+            'auto',
             result.error || null,
-            JSON.stringify(result)
+            JSON.stringify(result),
+            result.status === 'submitted' ? new Date() : null
         ]);
     }
 
