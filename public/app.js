@@ -90,12 +90,23 @@ function normalizeUserData(userData) {
         return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
     }
     
-    // If data is already flat with snake_case keys, return as is
-    // Check for presence of snake_case keys like job_types, full_name, etc.
-    const hasSnakeCaseKeys = Object.keys(userData).some(key => key.includes('_'));
-    if (hasSnakeCaseKeys && !userData.preferences && !userData.personal && !userData.eligibility && !userData.screening) {
-        console.log('✅ Data is already in flat snake_case format');
-        return userData;
+    // Check if this is a nested structure (has preference/personal/eligibility/screening objects)
+    const isNestedStructure = userData.preferences || userData.personal || userData.eligibility || userData.screening;
+    
+    // If data is nested, handle it separately
+    if (isNestedStructure) {
+        // Will be handled in the nested structure section below
+    } 
+    // If data is already flat with ALL snake_case keys, return as is
+    // Check that NO keys are in camelCase
+    else {
+        const keys = Object.keys(userData).filter(k => k !== 'user_id' && k !== 'email' && k !== 'created_at');
+        const hasCamelCaseKeys = keys.some(key => /[A-Z]/.test(key));
+        
+        if (!hasCamelCaseKeys) {
+            console.log('✅ Data is already in flat snake_case format');
+            return userData;
+        }
     }
     
     const normalized = {};
