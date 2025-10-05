@@ -199,4 +199,92 @@ describe('AutoApply API Endpoints', () => {
       expect(response.body.mode).toBe('basic');
     });
   });
+
+  describe('GET /api/autoapply/analytics', () => {
+    test('should return analytics data with correct structure', async () => {
+      const Application = require('../src/models/Application');
+      const Job = require('../src/models/Job');
+      
+      Application.getAnalytics.mockResolvedValueOnce({
+        total: 10,
+        this_week: 5,
+        today: 2,
+        period_total: 8
+      });
+      
+      Application.getSuccessRate.mockResolvedValueOnce(75);
+      
+      Job.getAnalytics.mockResolvedValueOnce({
+        total: 50,
+        this_week: 20,
+        today: 5,
+        applied: 10,
+        available: 40
+      });
+
+      const response = await request(app)
+        .get('/api/autoapply/analytics')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.analytics).toBeDefined();
+      expect(response.body.analytics.applications).toBeDefined();
+      expect(response.body.analytics.applications.total).toBe(10);
+      expect(response.body.analytics.applications.this_week).toBe(5);
+      expect(response.body.analytics.jobs).toBeDefined();
+      expect(response.body.analytics.jobs.total).toBe(50);
+      expect(response.body.analytics.success_rate).toBe(75);
+    });
+
+    test('should handle analytics endpoint with custom period', async () => {
+      const Application = require('../src/models/Application');
+      const Job = require('../src/models/Job');
+      
+      Application.getAnalytics.mockResolvedValueOnce({
+        total: 20,
+        this_week: 8,
+        today: 3,
+        period_total: 15
+      });
+      
+      Application.getSuccessRate.mockResolvedValueOnce(60);
+      
+      Job.getAnalytics.mockResolvedValueOnce({
+        total: 100,
+        this_week: 30,
+        today: 8,
+        applied: 20,
+        available: 80
+      });
+
+      const response = await request(app)
+        .get('/api/autoapply/analytics?period=60')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.analytics).toBeDefined();
+      expect(Application.getAnalytics).toHaveBeenCalledWith('test-user-123', '60');
+      expect(Job.getAnalytics).toHaveBeenCalledWith('test-user-123', '60');
+      expect(Application.getSuccessRate).toHaveBeenCalledWith('test-user-123', '60');
+    });
+
+    test('should handle analytics errors gracefully', async () => {
+      const Application = require('../src/models/Application');
+      
+      Application.getAnalytics.mockRejectedValueOnce(
+        new Error('Database error')
+      );
+
+      const response = await request(app)
+        .get('/api/autoapply/analytics')
+        .expect('Content-Type', /json/)
+        .expect(500);
+
+      expect(response.body.success).toBe(false);
+      expect(response.body.message).toBe('Failed to get analytics');
+      expect(response.body.error).toBeDefined();
+    });
+  });
 });

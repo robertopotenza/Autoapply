@@ -206,6 +206,29 @@ class Job {
       throw new Error(`Error getting job statistics: ${error.message}`);
     }
   }
+
+  static async getAnalytics(userId, period = '30') {
+    try {
+      const periodDays = parseInt(period) || 30;
+      const query = `
+        SELECT 
+          COUNT(*) as total,
+          COUNT(CASE WHEN j.created_at >= NOW() - INTERVAL '7 days' THEN 1 END) as this_week,
+          COUNT(CASE WHEN j.created_at >= NOW() - INTERVAL '1 day' THEN 1 END) as today,
+          COUNT(CASE WHEN a.application_id IS NOT NULL THEN 1 END) as applied,
+          COUNT(CASE WHEN a.application_id IS NULL THEN 1 END) as available
+        FROM jobs j
+        LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
+        WHERE (j.user_id = $1 OR j.user_id IS NULL)
+          AND j.created_at >= NOW() - INTERVAL '${periodDays} days'
+      `;
+      
+      const result = await db.query(query, [userId]);
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Error getting job analytics: ${error.message}`);
+    }
+  }
 }
 
 module.exports = Job;
