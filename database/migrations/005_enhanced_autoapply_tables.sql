@@ -99,7 +99,7 @@ LEFT JOIN user_autoapply_status uas ON u.user_id = uas.user_id
 LEFT JOIN autoapply_config ac ON u.user_id = ac.user_id
 LEFT JOIN (
     SELECT 
-        COALESCE(user_id, 0) as user_id,
+        user_id,
         COUNT(*) as total_jobs
     FROM jobs
     WHERE user_id IS NOT NULL

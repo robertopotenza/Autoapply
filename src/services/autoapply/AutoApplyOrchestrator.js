@@ -23,6 +23,11 @@ class AutoApplyOrchestrator {
         };
 
         this.activeUsers = new Map(); // Track active autoapply sessions
+        
+        // Reusable WHERE clause for queries that include both user-specific and global jobs
+        // Global jobs (user_id IS NULL) are job board postings available to all users
+        // User-specific jobs (user_id = $1) are jobs saved/created by this specific user
+        this.USER_AND_GLOBAL_JOBS_WHERE = '(j.user_id = $1 OR j.user_id IS NULL)';
     }
 
     /**
@@ -388,7 +393,7 @@ class AutoApplyOrchestrator {
             SELECT COUNT(*) as count
             FROM jobs j
             LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
-            WHERE (j.user_id = $1 OR j.user_id IS NULL)
+            WHERE ${this.USER_AND_GLOBAL_JOBS_WHERE}
             AND a.application_id IS NULL
         `;
         
@@ -407,7 +412,7 @@ class AutoApplyOrchestrator {
             SELECT j.*
             FROM jobs j
             LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
-            WHERE (j.user_id = $1 OR j.user_id IS NULL)
+            WHERE ${this.USER_AND_GLOBAL_JOBS_WHERE}
             AND a.application_id IS NULL
             ORDER BY j.created_at DESC
             LIMIT 10
@@ -420,7 +425,7 @@ class AutoApplyOrchestrator {
     async getJobsByIds(jobIds, userId) {
         const query = `
             SELECT * FROM jobs 
-            WHERE job_id = ANY($1) AND (user_id = $2 OR user_id IS NULL)
+            WHERE job_id = ANY($1) AND ${this.USER_AND_GLOBAL_JOBS_WHERE}
         `;
         
         const result = await this.db.query(query, [jobIds, userId]);
@@ -452,7 +457,7 @@ class AutoApplyOrchestrator {
                    CASE WHEN a.application_id IS NOT NULL THEN true ELSE false END as already_applied
             FROM jobs j
             LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
-            WHERE (j.user_id = $1 OR j.user_id IS NULL)
+            WHERE ${this.USER_AND_GLOBAL_JOBS_WHERE}
             AND j.is_active = true
             ORDER BY j.created_at DESC
             LIMIT $2 OFFSET $3
