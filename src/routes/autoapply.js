@@ -366,7 +366,7 @@ router.get('/profile', auth, async (req, res) => {
 router.put('/settings', auth, async (req, res) => {
     try {
         const userId = req.user.userId || req.user.user_id;
-        const settings = await AutoApplySettings.updateByUserId(userId, req.body);
+        const settings = await AutoApplySettings.update(userId, req.body);
         
         res.json({
             success: true,

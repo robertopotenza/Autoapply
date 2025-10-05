@@ -961,7 +961,7 @@
             try {
                 const settings = {
                     mode: document.getElementById('mode-select').value,
-                    daily_limit: parseInt(document.getElementById('daily-limit').value),
+                    max_applications_per_day: parseInt(document.getElementById('daily-limit').value),
                     min_match_score: parseInt(document.getElementById('min-score').value)
                 };
 
@@ -991,8 +991,8 @@
                     if (settings.mode) {
                         document.getElementById('mode-select').value = settings.mode;
                     }
-                    if (settings.daily_limit) {
-                        document.getElementById('daily-limit').value = settings.daily_limit;
+                    if (settings.max_applications_per_day) {
+                        document.getElementById('daily-limit').value = settings.max_applications_per_day;
                     }
                     if (settings.min_match_score !== undefined) {
                         document.getElementById('min-score').value = settings.min_match_score;
