@@ -23,11 +23,18 @@ class AutoApplyOrchestrator {
         };
 
         this.activeUsers = new Map(); // Track active autoapply sessions
-        
-        // Reusable WHERE clause for queries that include both user-specific and global jobs
-        // Global jobs (user_id IS NULL) are job board postings available to all users
-        // User-specific jobs (user_id = $1) are jobs saved/created by this specific user
-        this.USER_AND_GLOBAL_JOBS_WHERE = '(j.user_id = $1 OR j.user_id IS NULL)';
+    }
+
+    /**
+     * Generate WHERE clause for queries that include both user-specific and global jobs
+     * Global jobs (user_id IS NULL) are job board postings available to all users
+     * User-specific jobs are jobs saved/created by this specific user
+     * 
+     * @param {number} paramNumber - The parameter position for userId in the query (e.g., 1 for $1, 2 for $2)
+     * @returns {string} - WHERE clause with the appropriate parameter placeholder
+     */
+    getUserAndGlobalJobsWhere(paramNumber = 1) {
+        return `(j.user_id = $${paramNumber} OR j.user_id IS NULL)`;
     }
 
     /**
@@ -393,7 +400,7 @@ class AutoApplyOrchestrator {
             SELECT COUNT(*) as count
             FROM jobs j
             LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
-            WHERE ${this.USER_AND_GLOBAL_JOBS_WHERE}
+            WHERE ${this.getUserAndGlobalJobsWhere(1)}
             AND a.application_id IS NULL
         `;
         
@@ -412,7 +419,7 @@ class AutoApplyOrchestrator {
             SELECT j.*
             FROM jobs j
             LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
-            WHERE ${this.USER_AND_GLOBAL_JOBS_WHERE}
+            WHERE ${this.getUserAndGlobalJobsWhere(1)}
             AND a.application_id IS NULL
             ORDER BY j.created_at DESC
             LIMIT 10
@@ -425,7 +432,7 @@ class AutoApplyOrchestrator {
     async getJobsByIds(jobIds, userId) {
         const query = `
             SELECT * FROM jobs 
-            WHERE job_id = ANY($1) AND ${this.USER_AND_GLOBAL_JOBS_WHERE}
+            WHERE job_id = ANY($1) AND ${this.getUserAndGlobalJobsWhere(2)}
         `;
         
         const result = await this.db.query(query, [jobIds, userId]);
@@ -457,7 +464,7 @@ class AutoApplyOrchestrator {
                    CASE WHEN a.application_id IS NOT NULL THEN true ELSE false END as already_applied
             FROM jobs j
             LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
-            WHERE ${this.USER_AND_GLOBAL_JOBS_WHERE}
+            WHERE ${this.getUserAndGlobalJobsWhere(1)}
             AND j.is_active = true
             ORDER BY j.created_at DESC
             LIMIT $2 OFFSET $3
