@@ -342,6 +342,134 @@
             display: none;
         }
 
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.65);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1100;
+            padding: 1rem;
+        }
+
+        .modal-overlay.hidden {
+            display: none;
+        }
+
+        .modal-content {
+            background: #ffffff;
+            border-radius: 16px;
+            box-shadow: 0 10px 40px rgba(15, 23, 42, 0.25);
+            width: min(720px, 100%);
+            max-height: 85vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .modal-header {
+            padding: 1.25rem 1.5rem;
+            border-bottom: 1px solid #e5e7eb;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+
+        .modal-header h3 {
+            margin: 0;
+            color: #1f2937;
+        }
+
+        .modal-close {
+            background: transparent;
+            border: none;
+            font-size: 1.25rem;
+            cursor: pointer;
+            color: #6b7280;
+            transition: color 0.2s ease;
+        }
+
+        .modal-close:hover {
+            color: #374151;
+        }
+
+        .modal-body {
+            padding: 1.5rem;
+            overflow-y: auto;
+        }
+
+        .jobs-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .job-card {
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            background: #f9fafb;
+            transition: border-color 0.2s ease, transform 0.2s ease;
+        }
+
+        .job-card:hover {
+            border-color: #7c3aed;
+            transform: translateY(-2px);
+        }
+
+        .job-card h4 {
+            color: #1f2937;
+            margin-bottom: 0.35rem;
+        }
+
+        .job-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            color: #6b7280;
+            margin-bottom: 0.5rem;
+        }
+
+        .job-status {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.6rem;
+            border-radius: 999px;
+            background: #ede9fe;
+            color: #5b21b6;
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+            margin-bottom: 0.65rem;
+        }
+
+        .job-status.applied {
+            background: #dcfce7;
+            color: #166534;
+        }
+
+        .job-description {
+            font-size: 0.9rem;
+            color: #4b5563;
+            line-height: 1.5;
+        }
+
+        .modal-empty {
+            text-align: center;
+            padding: 2rem 1rem;
+            color: #6b7280;
+        }
+
+        .modal-empty h4 {
+            margin-bottom: 0.5rem;
+            color: #1f2937;
+        }
+
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -470,11 +598,26 @@
         </div>
     </div>
 
+    <div id="jobs-modal" class="modal-overlay hidden">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="jobs-modal-title">
+            <div class="modal-header">
+                <h3 id="jobs-modal-title">Available Jobs</h3>
+                <button class="modal-close" type="button" onclick="closeJobsModal()" aria-label="Close jobs modal">&times;</button>
+            </div>
+            <div id="jobs-modal-body" class="modal-body">
+                <div class="loading">Loading jobs...</div>
+            </div>
+        </div>
+    </div>
+
     <script>
         // API Configuration
         const API_BASE = window.location.origin + '/api/autoapply';
         let autoApplyActive = false;
         let currentFilter = 'all';
+    let jobsModal = null;
+    let jobsModalBody = null;
+    let isFetchingJobs = false;
 
         // Get auth token
         function getAuthToken() {
@@ -511,6 +654,137 @@
             }
 
             return response.json();
+        }
+
+        function escapeHtml(value) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return value.replace(/[&<>"']/g, (char) => map[char]);
+        }
+
+        function truncateText(value, maxLength = 220) {
+            if (typeof value !== 'string') {
+                return '';
+            }
+            return value.length > maxLength ? `${value.slice(0, maxLength - 1)}…` : value;
+        }
+
+        function formatMatchScore(score) {
+            const numeric = Number(score);
+            if (!Number.isFinite(numeric) || numeric <= 0) {
+                return null;
+            }
+            return Math.round(numeric);
+        }
+
+        function sanitizeUrl(url) {
+            if (typeof url !== 'string') {
+                return null;
+            }
+            const trimmed = url.trim();
+            if (!trimmed) {
+                return null;
+            }
+            if (!/^https?:\/\//i.test(trimmed)) {
+                return null;
+            }
+            try {
+                return new URL(trimmed).toString();
+            } catch (error) {
+                return null;
+            }
+        }
+
+        function openJobsModal() {
+            if (!jobsModal) {
+                return;
+            }
+            jobsModal.classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeJobsModal() {
+            if (!jobsModal) {
+                return;
+            }
+            jobsModal.classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        function setJobsModalContent(html) {
+            if (jobsModalBody) {
+                jobsModalBody.innerHTML = html;
+            }
+        }
+
+        function renderJobCard(job) {
+            const title = escapeHtml(job.title || job.job_title || job.position || 'Untitled role');
+            const company = escapeHtml(job.company || job.company_name || job.organization || '');
+            const location = escapeHtml(job.location || job.city || job.country || '');
+            const matchScore = formatMatchScore(job.match_score ?? job.matchScore ?? job.score);
+            const salaryMin = job.salary_min ?? job.salaryMin;
+            const salaryMax = job.salary_max ?? job.salaryMax;
+            const sanitizedUrl = sanitizeUrl(job.application_url || job.url || job.job_url || job.link);
+            const posted = job.posted_at || job.created_at || job.createdAt;
+            const alreadyApplied = Boolean(job.already_applied);
+
+            const metaPieces = [];
+            if (company) metaPieces.push(`🏢 ${company}`);
+            if (location) metaPieces.push(`📍 ${location}`);
+            if (matchScore !== null) metaPieces.push(`🎯 Match ${matchScore}%`);
+
+            if (salaryMin || salaryMax) {
+                const salaryParts = [];
+                if (salaryMin) salaryParts.push(`$${Number(salaryMin).toLocaleString()}`);
+                if (salaryMax) salaryParts.push(`$${Number(salaryMax).toLocaleString()}`);
+                metaPieces.push(`💰 ${salaryParts.join(' - ')}`);
+            }
+
+            if (posted) {
+                try {
+                    metaPieces.push(`🗓️ ${new Date(posted).toLocaleDateString()}`);
+                } catch (error) {
+                    // Ignore invalid dates
+                }
+            }
+
+            const description = truncateText(job.description || job.summary || job.snippet || '', 260);
+
+            return `
+                <div class="job-card">
+                    <h4>${title}</h4>
+                    ${alreadyApplied ? '<span class="job-status applied">Already applied</span>' : ''}
+                    ${metaPieces.length ? `<div class="job-meta">${metaPieces.map(piece => `<span>${piece}</span>`).join('')}</div>` : ''}
+                    ${description ? `<p class="job-description">${escapeHtml(description)}</p>` : ''}
+                    ${sanitizedUrl ? `<div style="margin-top: 0.75rem;"><a class="btn btn-primary" href="${sanitizedUrl}" target="_blank" rel="noopener noreferrer">Open job posting</a></div>` : ''}
+                </div>
+            `;
+        }
+
+        function renderJobsList(jobs) {
+            if (!jobs || !jobs.length) {
+                setJobsModalContent(`
+                    <div class="modal-empty">
+                        <h4>No jobs available yet</h4>
+                        <p>Once AutoApply scans new roles, they'll appear here automatically.</p>
+                    </div>
+                `);
+                return;
+            }
+
+            setJobsModalContent(`
+                <div class="jobs-list">
+                    ${jobs.map(renderJobCard).join('')}
+                </div>
+            `);
         }
 
         // Show notification
@@ -735,8 +1009,67 @@
             window.location.href = '/dashboard.html';
         }
 
-        function viewJobs() {
-            showNotification('Jobs view coming soon!', 'info');
+        async function viewJobs() {
+            if (!getAuthToken()) {
+                window.location.href = '/login.html';
+                return;
+            }
+
+            if (!jobsModal || !jobsModalBody) {
+                jobsModal = document.getElementById('jobs-modal');
+                jobsModalBody = document.getElementById('jobs-modal-body');
+            }
+
+            if (!jobsModal || !jobsModalBody) {
+                showNotification('Unable to open jobs modal right now.', 'error');
+                return;
+            }
+
+            if (isFetchingJobs) {
+                openJobsModal();
+                return;
+            }
+
+            openJobsModal();
+            setJobsModalContent('<div class="loading">Loading jobs...</div>');
+            isFetchingJobs = true;
+
+            const params = new URLSearchParams({ limit: '20' });
+            const minScoreInput = document.getElementById('min-score');
+            const minScoreValue = minScoreInput ? parseInt(minScoreInput.value, 10) : null;
+            if (Number.isFinite(minScoreValue) && minScoreValue > 0) {
+                params.set('minScore', String(minScoreValue));
+            }
+
+            try {
+                const result = await apiCall(`/jobs?${params.toString()}`);
+
+                if (!result || result.success === false) {
+                    throw new Error(result?.message || 'Jobs API responded with an unexpected payload');
+                }
+
+                let jobs = [];
+                if (Array.isArray(result.jobs)) {
+                    jobs = result.jobs;
+                } else if (result.jobs?.items && Array.isArray(result.jobs.items)) {
+                    jobs = result.jobs.items;
+                } else if (result.jobs?.data && Array.isArray(result.jobs.data)) {
+                    jobs = result.jobs.data;
+                }
+
+                renderJobsList(jobs);
+            } catch (error) {
+                console.error('Failed to load jobs:', error);
+                setJobsModalContent(`
+                    <div class="modal-empty">
+                        <h4>Unable to load jobs</h4>
+                        <p>${escapeHtml(error.message || 'Please try again in a moment.')}</p>
+                    </div>
+                `);
+                showNotification('Failed to load jobs: ' + (error.message || 'Please try again.'), 'error');
+            } finally {
+                isFetchingJobs = false;
+            }
         }
 
         function viewProfile() {
@@ -762,6 +1095,23 @@
                 window.location.href = '/login.html';
                 return;
             }
+
+            jobsModal = document.getElementById('jobs-modal');
+            jobsModalBody = document.getElementById('jobs-modal-body');
+
+            if (jobsModal) {
+                jobsModal.addEventListener('click', (event) => {
+                    if (event.target === jobsModal) {
+                        closeJobsModal();
+                    }
+                });
+            }
+
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape' && jobsModal && !jobsModal.classList.contains('hidden')) {
+                    closeJobsModal();
+                }
+            });
 
             // Load data
             const [isActive] = await Promise.all([
