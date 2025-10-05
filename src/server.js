@@ -51,7 +51,10 @@ let pool = null;
 // Helper function to split SQL statements
 function splitSqlStatements(sql) {
     return sql
+        // Remove line comments
         .replace(/--.*$/gm, '')
+        // Remove block comments
+        .replace(/\/\*[\s\S]*?\*\//gm, '')
         .split(/;\s*(?:\r?\n|$)/)
         .map(statement => statement.trim())
         .filter(statement => statement.length > 0);
