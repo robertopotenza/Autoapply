@@ -3,7 +3,12 @@ const db = require('../database/db');
 class Application {
   static async findById(id) {
     try {
-      const query = 'SELECT * FROM applications WHERE id = $1';
+      const query = `
+        SELECT *,
+               application_id as id
+        FROM applications 
+        WHERE application_id = $1
+      `;
       const result = await db.query(query, [id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -14,9 +19,16 @@ class Application {
   static async findByUserId(userId, filters = {}) {
     try {
       let query = `
-        SELECT a.*, j.title as job_title, j.company, j.location
+        SELECT a.*,
+               a.application_id as id,
+               j.job_id,
+               j.job_title,
+               j.job_title as title,
+               j.company_name,
+               j.company_name as company,
+               j.location
         FROM applications a
-        JOIN jobs j ON a.job_id = j.id
+        JOIN jobs j ON a.job_id = j.job_id
         WHERE a.user_id = $1
       `;
       const params = [userId];
@@ -30,7 +42,7 @@ class Application {
 
       if (filters.company) {
         paramCount++;
-        query += ` AND j.company ILIKE $${paramCount}`;
+        query += ` AND j.company_name ILIKE $${paramCount}`;
         params.push(`%${filters.company}%`);
       }
 
@@ -82,7 +94,7 @@ class Application {
       const query = `
         UPDATE applications 
         SET status = $2, notes = COALESCE($3, notes), updated_at = CURRENT_TIMESTAMP
-        WHERE id = $1 
+        WHERE application_id = $1 
         RETURNING *
       `;
       const result = await db.query(query, [id, status, notes]);
@@ -131,7 +143,7 @@ class Application {
         .map((key, index) => `${key} = $${index + 2}`)
         .join(', ');
       
-      const query = `UPDATE applications SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE id = $1 RETURNING *`;
+      const query = `UPDATE applications SET ${setClause}, updated_at = CURRENT_TIMESTAMP WHERE application_id = $1 RETURNING *`;
       const params = [id, ...Object.values(updates)];
       
       const result = await db.query(query, params);
@@ -143,7 +155,7 @@ class Application {
 
   static async delete(id) {
     try {
-      const query = 'DELETE FROM applications WHERE id = $1 RETURNING *';
+      const query = 'DELETE FROM applications WHERE application_id = $1 RETURNING *';
       const result = await db.query(query, [id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -186,9 +198,16 @@ class Application {
   static async getRecentApplications(userId, limit = 10) {
     try {
       const query = `
-        SELECT a.*, j.title as job_title, j.company, j.location
+        SELECT a.*,
+               a.application_id as id,
+               j.job_id,
+               j.job_title,
+               j.job_title as title,
+               j.company_name,
+               j.company_name as company,
+               j.location
         FROM applications a
-        JOIN jobs j ON a.job_id = j.id
+        JOIN jobs j ON a.job_id = j.job_id
         WHERE a.user_id = $1
         ORDER BY a.applied_at DESC
         LIMIT $2
@@ -204,9 +223,18 @@ class Application {
   static async getPendingApplications(userId) {
     try {
       const query = `
-        SELECT a.*, j.title as job_title, j.company, j.location, j.application_url
+        SELECT a.*,
+               a.application_id as id,
+               j.job_id,
+               j.job_title,
+               j.job_title as title,
+               j.company_name,
+               j.company_name as company,
+               j.location,
+               j.job_url,
+               j.job_url as application_url
         FROM applications a
-        JOIN jobs j ON a.job_id = j.id
+        JOIN jobs j ON a.job_id = j.job_id
         WHERE a.user_id = $1 AND a.status IN ('pending', 'queued')
         ORDER BY a.created_at ASC
       `;
