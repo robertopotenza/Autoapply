@@ -13,6 +13,7 @@
     "dev": "nodemon src/server.js",
     "build": "npm install",
     "test": "jest",
+    "test:migrations": "node scripts/test-migration-sequence.js",
     "db:init": "node scripts/init-database.js",
     "db:migrate": "node database/migrations/run.js",
     "db:seed": "node database/seed.js"

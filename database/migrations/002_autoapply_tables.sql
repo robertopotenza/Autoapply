@@ -4,6 +4,7 @@
 -- Jobs Table - Track discovered job postings
 CREATE TABLE IF NOT EXISTS jobs (
     job_id SERIAL PRIMARY KEY,
+    user_id INT REFERENCES users(user_id) ON DELETE CASCADE,
     company_name VARCHAR(255) NOT NULL,
     job_title VARCHAR(255) NOT NULL,
     job_url TEXT NOT NULL UNIQUE,
@@ -18,6 +19,8 @@ CREATE TABLE IF NOT EXISTS jobs (
     benefits TEXT,
     posted_date DATE,
     application_deadline DATE,
+    source VARCHAR(100),
+    external_id VARCHAR(255),
     is_active BOOLEAN DEFAULT TRUE,
     discovered_at TIMESTAMP DEFAULT NOW(),
     last_checked TIMESTAMP DEFAULT NOW(),
@@ -109,11 +112,26 @@ CREATE TABLE IF NOT EXISTS ats_logs (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Add column comments for jobs table
+COMMENT ON COLUMN jobs.user_id IS 
+'Optional user ID. NULL indicates a global job available to all users (scraped from job boards). 
+When set, indicates a user-specific job (e.g., manually added or saved by a specific user).';
+
+COMMENT ON COLUMN jobs.source IS 
+'Source of the job posting (e.g., "indeed", "linkedin", "manual", "glassdoor").';
+
+COMMENT ON COLUMN jobs.external_id IS 
+'External identifier from the source system to prevent duplicate entries.';
+
 -- Create indexes for performance
 CREATE INDEX IF NOT EXISTS idx_jobs_company_title ON jobs(company_name, job_title);
 CREATE INDEX IF NOT EXISTS idx_jobs_ats_type ON jobs(ats_type);
 CREATE INDEX IF NOT EXISTS idx_jobs_active ON jobs(is_active);
 CREATE INDEX IF NOT EXISTS idx_jobs_posted_date ON jobs(posted_date);
+CREATE INDEX IF NOT EXISTS idx_jobs_user_id ON jobs(user_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_jobs_source_external_id 
+ON jobs(source, external_id) 
+WHERE source IS NOT NULL AND external_id IS NOT NULL;
 
 CREATE INDEX IF NOT EXISTS idx_applications_user_id ON applications(user_id);
 CREATE INDEX IF NOT EXISTS idx_applications_job_id ON applications(job_id);
