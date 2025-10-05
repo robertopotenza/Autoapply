@@ -1064,25 +1064,43 @@
             try {
                 const result = await apiCall(`/jobs?${params.toString()}`);
 
-                if (!result || result.success === false) {
-                    throw new Error(result?.message || 'Jobs API responded with an unexpected payload');
+                // Handle successful response (including offline mode)
+                if (result && result.success === true) {
+                    let jobs = [];
+                    if (Array.isArray(result.jobs)) {
+                        jobs = result.jobs;
+                    } else if (result.jobs?.items && Array.isArray(result.jobs.items)) {
+                        jobs = result.jobs.items;
+                    } else if (result.jobs?.data && Array.isArray(result.jobs.data)) {
+                        jobs = result.jobs.data;
+                    }
+
+                    // Handle offline mode or database unavailable
+                    if (result.mode === 'offline' || result.warning) {
+                        const message = result.message || result.warning || 'Service temporarily unavailable';
+                        showNotification(message, 'warning', 8000);
+                        
+                        setJobsModalContent(`
+                            <div class="modal-empty">
+                                <h4>🔧 Service Temporarily Unavailable</h4>
+                                <p>${escapeHtml(message)}</p>
+                                <p><small>Jobs will appear here once the system is fully operational.</small></p>
+                            </div>
+                        `);
+                        return;
+                    }
+
+                    const warningMessage = result.warning || result.notice || null;
+                    if (warningMessage) {
+                        showNotification(warningMessage, 'info', 6000);
+                    }
+
+                    renderJobsList(jobs, warningMessage);
+                    return;
                 }
 
-                let jobs = [];
-                if (Array.isArray(result.jobs)) {
-                    jobs = result.jobs;
-                } else if (result.jobs?.items && Array.isArray(result.jobs.items)) {
-                    jobs = result.jobs.items;
-                } else if (result.jobs?.data && Array.isArray(result.jobs.data)) {
-                    jobs = result.jobs.data;
-                }
-
-                const warningMessage = result.warning || result.notice || null;
-                if (warningMessage) {
-                    showNotification(warningMessage, 'info', 6000);
-                }
-
-                renderJobsList(jobs, warningMessage);
+                // Handle API error response
+                throw new Error(result?.message || 'Jobs API responded with an unexpected payload');
             } catch (error) {
                 console.error('Failed to load jobs:', error);
                 setJobsModalContent(`

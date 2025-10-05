@@ -326,10 +326,26 @@ router.get('/jobs', auth, async (req, res) => {
             throw dbError;
         }
     } catch (error) {
-        const message = error.message && error.message.includes('Database not configured')
-            ? 'Jobs are temporarily unavailable while the database is offline.'
-            : 'Failed to get jobs';
+        // Check if this is a database connection issue
+        const isDatabaseError = error.message && (
+            error.message.includes('Database not configured') ||
+            error.message.includes('connect ECONNREFUSED') ||
+            error.message.includes('database') ||
+            error.code === 'ECONNREFUSED'
+        );
 
+        if (isDatabaseError || !databaseConfigured) {
+            logger.warn('Database unavailable, returning empty jobs list:', error.message);
+            return res.json({
+                success: true,
+                jobs: [],
+                mode: 'offline',
+                message: 'Job scanning is temporarily unavailable. Database connection needed.',
+                warning: 'Please contact support to configure the database connection.'
+            });
+        }
+
+        const message = 'Failed to get jobs';
         logger.error('Error getting jobs:', error);
         res.status(500).json({
             success: false,
