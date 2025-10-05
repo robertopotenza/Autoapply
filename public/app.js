@@ -1189,9 +1189,11 @@ function convertUserDataToFormState(userData) {
     }
     
     // Visa sponsorship - activate pill buttons
-    const visaSponsorship = userData.visa_sponsorship || userData.eligibility?.visa_sponsorship;
-    if (visaSponsorship) {
-        const visaValue = visaSponsorship.toLowerCase();
+    const visaSponsorship = userData.visa_sponsorship !== null && userData.visa_sponsorship !== undefined 
+        ? userData.visa_sponsorship 
+        : userData.eligibility?.visa_sponsorship;
+    if (visaSponsorship !== null && visaSponsorship !== undefined) {
+        const visaValue = visaSponsorship ? 'yes' : 'no';
         const visaPill = document.querySelector(`.pill[data-value="${visaValue}"]`);
         const visaGroup = visaPill?.closest('.pill-group');
         const visaInput = document.getElementById('visa-sponsorship');
@@ -1199,7 +1201,7 @@ function convertUserDataToFormState(userData) {
         if (visaPill && visaGroup && visaInput) {
             visaPill.classList.add('active');
             visaInput.value = visaValue;
-            console.log(`✅ Set visa sponsorship: ${visaSponsorship}`);
+            console.log(`✅ Set visa sponsorship: ${visaValue}`);
         }
     }
     
