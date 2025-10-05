@@ -530,10 +530,12 @@
                 if (result.success) {
                     autoApplyActive = result.status?.active || false;
                     updateStatusUI();
+                    return autoApplyActive;
                 }
             } catch (error) {
                 console.error('Failed to load status:', error);
             }
+            return false;
         }
 
         // Update status UI
@@ -758,16 +760,20 @@
                 return;
             }
 
-            // Show welcome notification
-            showNotification('AutoApply is now active! Monitor your applications here.', 'success');
-
             // Load data
-            await Promise.all([
+            const [isActive] = await Promise.all([
                 loadStatus(),
                 loadStatistics(),
                 loadSettings(),
                 loadApplications()
             ]);
+
+            // Show welcome notification based on actual status
+            if (isActive) {
+                showNotification('AutoApply is now active! Monitor your applications here.', 'success');
+            } else {
+                showNotification('Welcome to your AutoApply Dashboard. Start AutoApply to begin applying to jobs.', 'info');
+            }
 
             // Refresh data periodically
             setInterval(loadStatus, 30000); // Every 30 seconds
