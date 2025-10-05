@@ -3,7 +3,12 @@ const db = require('../database/db');
 class Application {
   static async findById(id) {
     try {
-      const query = 'SELECT * FROM applications WHERE application_id = $1';
+      const query = `
+        SELECT *,
+               application_id as id
+        FROM applications 
+        WHERE application_id = $1
+      `;
       const result = await db.query(query, [id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -14,7 +19,14 @@ class Application {
   static async findByUserId(userId, filters = {}) {
     try {
       let query = `
-        SELECT a.*, j.job_title, j.company_name, j.location
+        SELECT a.*,
+               a.application_id as id,
+               j.job_id,
+               j.job_title,
+               j.job_title as title,
+               j.company_name,
+               j.company_name as company,
+               j.location
         FROM applications a
         JOIN jobs j ON a.job_id = j.job_id
         WHERE a.user_id = $1
@@ -186,7 +198,14 @@ class Application {
   static async getRecentApplications(userId, limit = 10) {
     try {
       const query = `
-        SELECT a.*, j.job_title, j.company_name, j.location
+        SELECT a.*,
+               a.application_id as id,
+               j.job_id,
+               j.job_title,
+               j.job_title as title,
+               j.company_name,
+               j.company_name as company,
+               j.location
         FROM applications a
         JOIN jobs j ON a.job_id = j.job_id
         WHERE a.user_id = $1
@@ -204,7 +223,16 @@ class Application {
   static async getPendingApplications(userId) {
     try {
       const query = `
-        SELECT a.*, j.job_title, j.company_name, j.location, j.job_url
+        SELECT a.*,
+               a.application_id as id,
+               j.job_id,
+               j.job_title,
+               j.job_title as title,
+               j.company_name,
+               j.company_name as company,
+               j.location,
+               j.job_url,
+               j.job_url as application_url
         FROM applications a
         JOIN jobs j ON a.job_id = j.job_id
         WHERE a.user_id = $1 AND a.status IN ('pending', 'queued')

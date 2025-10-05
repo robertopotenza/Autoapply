@@ -3,7 +3,16 @@ const db = require('../database/db');
 class Job {
   static async findById(id) {
     try {
-      const query = 'SELECT * FROM jobs WHERE job_id = $1';
+      const query = `
+        SELECT *, 
+               job_id as id,
+               job_title as title,
+               company_name as company,
+               job_description as description,
+               job_url as application_url
+        FROM jobs 
+        WHERE job_id = $1
+      `;
       const result = await db.query(query, [id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -14,7 +23,12 @@ class Job {
   static async findByUserId(userId, filters = {}) {
     try {
       let query = `
-        SELECT j.*, 
+        SELECT j.*,
+               j.job_id as id,
+               j.job_title as title,
+               j.company_name as company,
+               j.job_description as description,
+               j.job_url as application_url,
                CASE WHEN a.application_id IS NOT NULL THEN true ELSE false END as already_applied
         FROM jobs j
         LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
@@ -123,7 +137,12 @@ class Job {
   static async findMatchingJobs(userId, preferences = {}) {
     try {
       let query = `
-        SELECT j.*, 
+        SELECT j.*,
+               j.job_id as id,
+               j.job_title as title,
+               j.company_name as company,
+               j.job_description as description,
+               j.job_url as application_url,
                CASE WHEN a.application_id IS NOT NULL THEN true ELSE false END as already_applied
         FROM jobs j
         LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1

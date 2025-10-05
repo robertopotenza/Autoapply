@@ -29,7 +29,12 @@ class AutoApplySettings {
 
   static async findByUserId(userId) {
     try {
-      const query = 'SELECT * FROM autoapply_settings WHERE user_id = $1';
+      const query = `
+        SELECT *,
+               is_enabled as enabled
+        FROM autoapply_settings 
+        WHERE user_id = $1
+      `;
       const result = await db.query(query, [userId]);
       return result.rows[0] || null;
     } catch (error) {
