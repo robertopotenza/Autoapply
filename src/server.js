@@ -159,19 +159,8 @@ app.get('/dashboard.html', (req, res) => {
     }
 });
 
-// Wizard endpoints (both /wizard and /wizard.html)
-app.get('/wizard', (req, res) => {
-    try {
-        const wizardPath = path.join(__dirname, '../public/wizard.html');
-        logger.info(`Serving wizard.html from: ${wizardPath}`);
-        res.sendFile(wizardPath);
-    } catch (error) {
-        logger.error('Error serving wizard.html:', error);
-        res.status(500).send('Error loading wizard');
-    }
-});
-
-app.get('/wizard.html', (req, res) => {
+// Wizard endpoint (handles both /wizard and /wizard.html)
+app.get('/wizard(.html)?', (req, res) => {
     try {
         const wizardPath = path.join(__dirname, '../public/wizard.html');
         logger.info(`Serving wizard.html from: ${wizardPath}`);
@@ -206,19 +195,8 @@ app.get('/signup.html', (req, res) => {
     }
 });
 
-// Applications endpoints (both /applications and /applications.html)
-app.get('/applications', (req, res) => {
-    try {
-        const applicationsPath = path.join(__dirname, '../public/applications.html');
-        logger.info(`Serving applications.html from: ${applicationsPath}`);
-        res.sendFile(applicationsPath);
-    } catch (error) {
-        logger.error('Error serving applications.html:', error);
-        res.status(500).send('Error loading applications');
-    }
-});
-
-app.get('/applications.html', (req, res) => {
+// Applications endpoint (handles both /applications and /applications.html)
+app.get('/applications(.html)?', (req, res) => {
     try {
         const applicationsPath = path.join(__dirname, '../public/applications.html');
         logger.info(`Serving applications.html from: ${applicationsPath}`);
