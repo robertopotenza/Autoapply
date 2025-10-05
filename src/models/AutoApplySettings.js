@@ -1,6 +1,32 @@
 const db = require('../database/db');
 
 class AutoApplySettings {
+  static getDefaultSettings(userId = null) {
+    return {
+      user_id: userId,
+      enabled: false,
+      mode: 'review',
+      max_applications_per_day: 10,
+      max_applications_per_company: 1,
+      max_applications_per_week: 50,
+      min_match_score: 70,
+      scan_frequency_hours: 2,
+      preferred_locations: [],
+      job_types: ['full-time'],
+      salary_min: null,
+      salary_max: null,
+      seniority_level: null,
+      exclude_companies: [],
+      include_companies: [],
+      keywords: [],
+      exclude_keywords: [],
+      auto_generate_cover_letter: true,
+      custom_cover_letter_template: null,
+      screening_answers: {},
+      application_delay: 300
+    };
+  }
+
   static async findByUserId(userId) {
     try {
       const query = 'SELECT * FROM autoapply_settings WHERE user_id = $1';
@@ -14,22 +40,7 @@ class AutoApplySettings {
   static async create(userId, settings = {}) {
     try {
       const defaultSettings = {
-        enabled: false,
-        maxApplicationsPerDay: 5,
-        maxApplicationsPerCompany: 1,
-        preferredLocations: [],
-        jobTypes: ['full-time'],
-        salaryMin: null,
-        salaryMax: null,
-        seniorityLevel: null,
-        excludeCompanies: [],
-        includeCompanies: [],
-        keywords: [],
-        excludeKeywords: [],
-        autoGenerateCoverLetter: true,
-        customCoverLetterTemplate: null,
-        screeningAnswers: {},
-        applicationDelay: 300, // 5 minutes between applications
+        ...this.getDefaultSettings(userId),
         ...settings
       };
 
@@ -47,21 +58,21 @@ class AutoApplySettings {
       const params = [
         userId,
         defaultSettings.enabled,
-        defaultSettings.maxApplicationsPerDay,
-        defaultSettings.maxApplicationsPerCompany,
-        JSON.stringify(defaultSettings.preferredLocations),
-        JSON.stringify(defaultSettings.jobTypes),
-        defaultSettings.salaryMin,
-        defaultSettings.salaryMax,
-        defaultSettings.seniorityLevel,
-        JSON.stringify(defaultSettings.excludeCompanies),
-        JSON.stringify(defaultSettings.includeCompanies),
+        defaultSettings.max_applications_per_day,
+        defaultSettings.max_applications_per_company,
+        JSON.stringify(defaultSettings.preferred_locations),
+        JSON.stringify(defaultSettings.job_types),
+        defaultSettings.salary_min,
+        defaultSettings.salary_max,
+        defaultSettings.seniority_level,
+        JSON.stringify(defaultSettings.exclude_companies),
+        JSON.stringify(defaultSettings.include_companies),
         JSON.stringify(defaultSettings.keywords),
-        JSON.stringify(defaultSettings.excludeKeywords),
-        defaultSettings.autoGenerateCoverLetter,
-        defaultSettings.customCoverLetterTemplate,
-        JSON.stringify(defaultSettings.screeningAnswers),
-        defaultSettings.applicationDelay
+        JSON.stringify(defaultSettings.exclude_keywords),
+        defaultSettings.auto_generate_cover_letter,
+        defaultSettings.custom_cover_letter_template,
+        JSON.stringify(defaultSettings.screening_answers),
+        defaultSettings.application_delay
       ];
 
       const result = await db.query(query, params);

@@ -12,6 +12,8 @@
  */
 
 const { Pool } = require('pg');
+const fs = require('fs');
+const path = require('path');
 require('dotenv').config();
 
 console.log('🚀 Railway Database Setup Starting...');
@@ -24,6 +26,38 @@ const log = {
     error: (msg) => console.error(`❌ ${msg}`),
     warn: (msg) => console.warn(`⚠️  ${msg}`)
 };
+
+const splitSqlStatements = (sql) =>
+    sql
+        .replace(/--.*$/gm, '')
+        .split(/;\s*(?:\r?\n|$)/)
+        .map(statement => statement.trim())
+        .filter(statement => statement.length > 0);
+
+async function runSqlFile(pool, relativePath, label) {
+    const filePath = path.join(__dirname, relativePath);
+
+    if (!fs.existsSync(filePath)) {
+        log.warn(`Migration file not found (${label}) at ${filePath}. Skipping.`);
+        return;
+    }
+
+    log.info(`Applying migration ${label}...`);
+
+    const sql = fs.readFileSync(filePath, 'utf8');
+    const statements = splitSqlStatements(sql);
+
+    for (const statement of statements) {
+        try {
+            await pool.query(statement);
+        } catch (error) {
+            log.error(`Migration ${label} failed on statement:\n${statement}`);
+            throw error;
+        }
+    }
+
+    log.success(`Migration ${label} executed successfully (${statements.length} statements).`);
+}
 
 async function setupRailwayDatabase() {
     log.info('Checking environment variables...');
@@ -218,9 +252,37 @@ async function setupRailwayDatabase() {
             await pool.query('COMMIT');
             log.success('Database schema setup completed successfully!');
 
+            // Apply additional migrations (auto-apply, profile enhancements, etc.)
+            const migrations = [
+                {
+                    path: '../database/migrations/002_autoapply_tables.sql',
+                    label: '002_autoapply_tables.sql (Auto-Apply tables)'
+                },
+                {
+                    path: '../database/migrations/003_add_email_to_profile.sql',
+                    label: '003_add_email_to_profile.sql'
+                },
+                {
+                    path: '../database/migrations/003_add_password_reset.sql',
+                    label: '003_add_password_reset.sql'
+                }
+            ];
+
+            for (const migration of migrations) {
+                await runSqlFile(pool, migration.path, migration.label);
+            }
+
             // Verify critical tables
             log.info('Verifying database setup...');
-            const criticalTables = ['users', 'password_reset_tokens', 'magic_link_tokens'];
+            const criticalTables = [
+                'users',
+                'password_reset_tokens',
+                'magic_link_tokens',
+                'autoapply_settings',
+                'jobs',
+                'applications',
+                'job_queue'
+            ];
             
             for (const tableName of criticalTables) {
                 const result = await pool.query(`

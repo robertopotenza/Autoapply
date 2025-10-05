@@ -27,6 +27,265 @@ const fs = require('fs');
 
 const logger = new Logger('AutoApplyAPI');
 
+const SETTINGS_DATA_DIR = path.join(__dirname, '../../data');
+const SETTINGS_STORE_FILE = path.join(SETTINGS_DATA_DIR, 'autoapply-settings.json');
+
+const envFlag = (name) => String(process.env[name] || '').trim().toLowerCase();
+const isFlagEnabled = (value) => ['1', 'true', 'yes', 'on'].includes(value);
+
+const isProductionEnvironment = () => {
+    const nodeEnv = envFlag('NODE_ENV');
+    if (nodeEnv === 'production') {
+        return true;
+    }
+    if (nodeEnv && ['development', 'test'].includes(nodeEnv)) {
+        return false;
+    }
+
+    const railwayEnv = envFlag('RAILWAY_ENVIRONMENT_NAME') || envFlag('RAILWAY_ENVIRONMENT');
+    return railwayEnv === 'production';
+};
+
+const isLocalFallbackAllowed = () => {
+    const forceFallback = envFlag('AUTOAPPLY_FORCE_SETTINGS_FALLBACK');
+    if (forceFallback && isFlagEnabled(forceFallback)) {
+        return true;
+    }
+
+    const disableFallback = envFlag('AUTOAPPLY_DISABLE_SETTINGS_FALLBACK');
+    if (disableFallback && isFlagEnabled(disableFallback)) {
+        return false;
+    }
+
+    return !isProductionEnvironment();
+};
+
+const fallbackNotAllowedResponse = (res, message, statusCode = 503) => res.status(statusCode).json({
+    success: false,
+    message: message || 'AutoApply settings require an active database connection.',
+    storage_mode: 'database-required',
+    requires_database: true
+});
+
+const isDatabaseReady = () => {
+    if (typeof db.isDatabaseConfigured === 'function') {
+        try {
+            return db.isDatabaseConfigured();
+        } catch (error) {
+            logger.warn('Error checking database configuration state', error);
+            return false;
+        }
+    }
+
+    if (db && db.pool) {
+        return true;
+    }
+
+    return typeof db?.query === 'function';
+};
+
+const shouldFallbackToLocal = (error) => {
+    if (!error) {
+        return false;
+    }
+
+    const message = (error.message || '').toLowerCase();
+    return message.includes('database not configured') ||
+        error.code === '42P01' ||
+        error.code === '57P03';
+};
+
+const clampNumber = (value, { min, max, fallback }) => {
+    const numeric = parseInt(value, 10);
+    if (!Number.isFinite(numeric)) {
+        return fallback;
+    }
+    return Math.min(max, Math.max(min, numeric));
+};
+
+const ensureArray = (value, fallback = []) => {
+    if (Array.isArray(value)) {
+        return value;
+    }
+    if (typeof value === 'string') {
+        try {
+            const parsed = JSON.parse(value);
+            return Array.isArray(parsed) ? parsed : fallback;
+        } catch (error) {
+            return fallback;
+        }
+    }
+    if (value === undefined || value === null) {
+        return fallback;
+    }
+    return Array.isArray(value) ? value : [value].filter(Boolean);
+};
+
+const ensureObject = (value, fallback = {}) => {
+    if (!value) {
+        return { ...fallback };
+    }
+    if (typeof value === 'string') {
+        try {
+            const parsed = JSON.parse(value);
+            return typeof parsed === 'object' && parsed !== null ? parsed : { ...fallback };
+        } catch (error) {
+            return { ...fallback };
+        }
+    }
+    if (typeof value === 'object') {
+        return { ...fallback, ...value };
+    }
+    return { ...fallback };
+};
+
+const ensureSettingsDataDir = () => {
+    if (!fs.existsSync(SETTINGS_DATA_DIR)) {
+        fs.mkdirSync(SETTINGS_DATA_DIR, { recursive: true });
+    }
+};
+
+const loadSettingsStore = () => {
+    try {
+        const raw = fs.readFileSync(SETTINGS_STORE_FILE, 'utf-8');
+        return JSON.parse(raw);
+    } catch (error) {
+        return {};
+    }
+};
+
+const saveSettingsStore = (store) => {
+    ensureSettingsDataDir();
+    fs.writeFileSync(SETTINGS_STORE_FILE, JSON.stringify(store, null, 2));
+};
+
+const getStoredSettings = (userId) => {
+    const store = loadSettingsStore();
+    const record = store[String(userId)];
+    return record && record.settings ? { ...record.settings } : null;
+};
+
+const persistStoredSettings = (userId, settings, defaults) => {
+    const store = loadSettingsStore();
+    store[String(userId)] = {
+        settings: settings,
+        updatedAt: new Date().toISOString(),
+        defaults: defaults
+    };
+    saveSettingsStore(store);
+};
+
+const sanitizeSettingsInput = (updates = {}, defaults = {}) => {
+    const sanitized = {};
+
+    if (updates.mode !== undefined) {
+        sanitized.mode = String(updates.mode);
+    }
+
+    if (updates.max_applications_per_day !== undefined) {
+        sanitized.max_applications_per_day = clampNumber(updates.max_applications_per_day, {
+            min: 1,
+            max: 500,
+            fallback: defaults.max_applications_per_day ?? 10
+        });
+    }
+
+    if (updates.max_applications_per_week !== undefined) {
+        sanitized.max_applications_per_week = clampNumber(updates.max_applications_per_week, {
+            min: 1,
+            max: 2000,
+            fallback: defaults.max_applications_per_week ?? 50
+        });
+    }
+
+    if (updates.scan_frequency_hours !== undefined) {
+        sanitized.scan_frequency_hours = clampNumber(updates.scan_frequency_hours, {
+            min: 1,
+            max: 168,
+            fallback: defaults.scan_frequency_hours ?? 2
+        });
+    }
+
+    if (updates.min_match_score !== undefined) {
+        sanitized.min_match_score = clampNumber(updates.min_match_score, {
+            min: 0,
+            max: 100,
+            fallback: defaults.min_match_score ?? 70
+        });
+    }
+
+    if (updates.enabled !== undefined) {
+        sanitized.enabled = Boolean(updates.enabled);
+    }
+
+    if (updates.is_enabled !== undefined) {
+        sanitized.enabled = Boolean(updates.is_enabled);
+    }
+
+    ['preferred_locations', 'job_types', 'exclude_companies', 'include_companies', 'keywords', 'exclude_keywords'].forEach(field => {
+        if (updates[field] !== undefined) {
+            sanitized[field] = ensureArray(updates[field], []);
+        }
+    });
+
+    if (updates.screening_answers !== undefined) {
+        sanitized.screening_answers = ensureObject(updates.screening_answers, {});
+    }
+
+    return sanitized;
+};
+
+const coerceSettings = (userId, baseSettings = {}, defaults = AutoApplySettings.getDefaultSettings(userId)) => {
+    const combined = {
+        ...defaults,
+        ...baseSettings
+    };
+
+    combined.user_id = userId ?? combined.user_id ?? defaults.user_id ?? null;
+    combined.enabled = combined.enabled !== undefined ? Boolean(combined.enabled) : Boolean(combined.is_enabled ?? defaults.enabled);
+    combined.is_enabled = combined.enabled;
+    combined.mode = combined.mode || defaults.mode;
+    combined.max_applications_per_day = clampNumber(combined.max_applications_per_day, {
+        min: 1,
+        max: 500,
+        fallback: defaults.max_applications_per_day
+    });
+    combined.max_applications_per_week = clampNumber(combined.max_applications_per_week, {
+        min: 1,
+        max: 2000,
+        fallback: defaults.max_applications_per_week
+    });
+    combined.scan_frequency_hours = clampNumber(combined.scan_frequency_hours, {
+        min: 1,
+        max: 168,
+        fallback: defaults.scan_frequency_hours
+    });
+    combined.min_match_score = clampNumber(combined.min_match_score, {
+        min: 0,
+        max: 100,
+        fallback: defaults.min_match_score
+    });
+
+    combined.preferred_locations = ensureArray(combined.preferred_locations, defaults.preferred_locations);
+    combined.job_types = ensureArray(combined.job_types, defaults.job_types);
+    combined.exclude_companies = ensureArray(combined.exclude_companies, defaults.exclude_companies);
+    combined.include_companies = ensureArray(combined.include_companies, defaults.include_companies);
+    combined.keywords = ensureArray(combined.keywords, defaults.keywords);
+    combined.exclude_keywords = ensureArray(combined.exclude_keywords, defaults.exclude_keywords);
+    combined.screening_answers = ensureObject(combined.screening_answers, defaults.screening_answers);
+
+    return combined;
+};
+
+const mergeFallbackSettings = (userId, updates = {}, defaults = AutoApplySettings.getDefaultSettings(userId)) => {
+    const sanitized = sanitizeSettingsInput(updates, defaults);
+    const existing = getStoredSettings(userId) || {};
+    const merged = coerceSettings(userId, { ...existing, ...sanitized }, defaults);
+    merged.updated_at = new Date().toISOString();
+    persistStoredSettings(userId, merged, defaults);
+    return merged;
+};
+
 // Configure multer for file uploads
 const storage = multer.diskStorage({
     destination: function (req, file, cb) {
@@ -413,17 +672,64 @@ router.get('/profile', auth, async (req, res) => {
 
 // Update autoapply settings
 router.put('/settings', auth, async (req, res) => {
+    const userId = req.user.userId || req.user.user_id;
+    const defaults = AutoApplySettings.getDefaultSettings(userId);
+    const updates = req.body || {};
+
+    const respondWithFallback = ({ fallbackMessage, failureMessage } = {}) => {
+        if (!isLocalFallbackAllowed()) {
+            logger.error('Local settings fallback is disabled; refusing to save settings without database connection.');
+            return fallbackNotAllowedResponse(
+                res,
+                failureMessage || 'AutoApply settings could not be saved because the database connection is unavailable. Configure PostgreSQL before continuing.'
+            );
+        }
+
+        const fallbackSettings = mergeFallbackSettings(userId, updates, defaults);
+        return res.json({
+            success: true,
+            settings: fallbackSettings,
+            message: fallbackMessage || 'AutoApply settings saved locally while database is unavailable',
+            storage_mode: 'local-fallback'
+        });
+    };
+
     try {
-        const userId = req.user.userId || req.user.user_id;
-        const settings = await AutoApplySettings.update(userId, req.body);
-        
+        if (!isDatabaseReady()) {
+            const message = 'AutoApply settings saved locally (database offline)';
+            logger.warn('Database not configured, attempting local fallback for settings update');
+            return respondWithFallback({
+                fallbackMessage: message,
+                failureMessage: 'AutoApply settings could not be saved because the database connection is unavailable and local fallback is disabled.'
+            });
+        }
+
+        const updated = await AutoApplySettings.update(userId, updates);
+        const normalized = coerceSettings(userId, updated || updates, defaults);
+        if (isLocalFallbackAllowed()) {
+            persistStoredSettings(userId, normalized, defaults);
+        }
+
         res.json({
             success: true,
-            settings,
-            message: 'AutoApply settings updated successfully'
+            settings: normalized,
+            message: 'AutoApply settings updated successfully',
+            storage_mode: 'database'
         });
     } catch (error) {
         logger.error('Error updating settings:', error);
+
+        if (shouldFallbackToLocal(error)) {
+            if (isLocalFallbackAllowed()) {
+                logger.warn('Falling back to local settings store due to database error');
+            } else {
+                logger.error('Database error encountered but local fallback is disabled; failing settings update.');
+            }
+            return respondWithFallback({
+                failureMessage: 'AutoApply settings could not be saved because the database connection is unavailable and local fallback is disabled.'
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: 'Failed to update settings',
@@ -434,16 +740,82 @@ router.put('/settings', auth, async (req, res) => {
 
 // Get autoapply settings
 router.get('/settings', auth, async (req, res) => {
+    const userId = req.user.userId || req.user.user_id;
+    const defaults = AutoApplySettings.getDefaultSettings(userId);
+
+    const respondWithFallback = ({ fallbackMessage, failureMessage, statusCode = 200 } = {}) => {
+        if (!isLocalFallbackAllowed()) {
+            logger.error('Local settings fallback is disabled; refusing to serve settings without database connection.');
+            return fallbackNotAllowedResponse(
+                res,
+                failureMessage || 'AutoApply settings cannot be loaded because the database connection is unavailable.',
+                503
+            );
+        }
+
+        const stored = getStoredSettings(userId);
+        const fallbackSettings = stored ? coerceSettings(userId, stored, defaults) : coerceSettings(userId, defaults, defaults);
+        if (!stored) {
+            persistStoredSettings(userId, fallbackSettings, defaults);
+        }
+        return res.status(statusCode).json({
+            success: true,
+            settings: fallbackSettings,
+            message: fallbackMessage || 'AutoApply settings loaded from local fallback store',
+            storage_mode: 'local-fallback'
+        });
+    };
+
     try {
-        const userId = req.user.userId || req.user.user_id;
+        if (!isDatabaseReady()) {
+            logger.warn('Database not configured, attempting local fallback for settings retrieval');
+            return respondWithFallback({
+                fallbackMessage: 'AutoApply settings loaded from local fallback (database offline)',
+                failureMessage: 'AutoApply settings cannot be loaded because the database connection is unavailable and local fallback is disabled.',
+                statusCode: 200
+            });
+        }
+
         const settings = await AutoApplySettings.findByUserId(userId);
-        
+
+        if (!settings) {
+            logger.info('No autoapply settings found in database, using defaults');
+            const defaultsNormalized = coerceSettings(userId, defaults, defaults);
+            if (isLocalFallbackAllowed()) {
+                persistStoredSettings(userId, defaultsNormalized, defaults);
+            }
+            return res.json({
+                success: true,
+                settings: defaultsNormalized,
+                message: 'AutoApply settings initialized with defaults',
+                storage_mode: 'database'
+            });
+        }
+
+        const normalized = coerceSettings(userId, settings, defaults);
+        if (isLocalFallbackAllowed()) {
+            persistStoredSettings(userId, normalized, defaults);
+        }
+
         res.json({
             success: true,
-            settings: settings || AutoApplySettings.getDefaultSettings()
+            settings: normalized,
+            storage_mode: 'database'
         });
     } catch (error) {
         logger.error('Error getting settings:', error);
+
+        if (shouldFallbackToLocal(error)) {
+            if (isLocalFallbackAllowed()) {
+                logger.warn('Serving settings from local fallback due to database error');
+            } else {
+                logger.error('Database error encountered but local fallback is disabled; failing settings retrieval.');
+            }
+            return respondWithFallback({
+                failureMessage: 'AutoApply settings cannot be loaded because the database connection is unavailable and local fallback is disabled.'
+            });
+        }
+
         res.status(500).json({
             success: false,
             message: 'Failed to get settings',

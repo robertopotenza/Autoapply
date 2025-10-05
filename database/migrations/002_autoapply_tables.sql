@@ -144,17 +144,3 @@ FROM users u
 LEFT JOIN applications a ON u.user_id = a.user_id
 GROUP BY u.user_id, u.email;
 
-CREATE OR REPLACE VIEW available_jobs AS
-SELECT
-    j.*,
-    CASE 
-        WHEN EXISTS (
-            SELECT 1 FROM applications a 
-            WHERE a.job_id = j.job_id AND a.user_id = $1
-        ) THEN TRUE 
-        ELSE FALSE 
-    END as already_applied
-FROM jobs j
-WHERE j.is_active = TRUE
-    AND (j.application_deadline IS NULL OR j.application_deadline >= CURRENT_DATE)
-ORDER BY j.posted_date DESC, j.discovered_at DESC;
