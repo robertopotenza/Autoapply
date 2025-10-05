@@ -6,6 +6,7 @@
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { Pool } = require('pg');
 require('dotenv').config();
 
@@ -62,8 +63,6 @@ function splitSqlStatements(sql) {
 
 // Helper function to run a migration file
 async function runMigrationFile(pool, migrationPath, label) {
-    const fs = require('fs');
-    
     if (!fs.existsSync(migrationPath)) {
         logger.warn(`⚠️  Migration file not found: ${label}`);
         return;
@@ -107,7 +106,6 @@ async function initializeDatabase() {
         logger.info('✅ Database connected successfully');
 
         // Initialize database schema
-        const fs = require('fs');
         const schemaPath = path.join(__dirname, '../database/schema.sql');
 
         if (fs.existsSync(schemaPath)) {
@@ -169,8 +167,8 @@ app.get('/test-deployment', (req, res) => {
         timestamp: new Date().toISOString(),
         deploymentId: DEPLOYMENT_ID,
         staticFilesPath: path.join(__dirname, '../public'),
-        indexExists: require('fs').existsSync(path.join(__dirname, '../public/index.html')),
-        dashboardExists: require('fs').existsSync(path.join(__dirname, '../public/dashboard.html')),
+        indexExists: fs.existsSync(path.join(__dirname, '../public/index.html')),
+        dashboardExists: fs.existsSync(path.join(__dirname, '../public/dashboard.html')),
         explicitRoutesActive: true
     });
 });
