@@ -314,7 +314,7 @@ router.get('/jobs', auth, async (req, res) => {
                 mode: 'basic'
             });
         } catch (dbError) {
-            if (!databaseConfigured || dbError.message === 'Database not configured') {
+            if (!databaseConfigured || dbError.message.includes('Database not configured')) {
                 logger.warn('Jobs requested but database is not configured. Returning empty list.');
                 return res.json({
                     success: true,
@@ -326,7 +326,7 @@ router.get('/jobs', auth, async (req, res) => {
             throw dbError;
         }
     } catch (error) {
-        const message = error.message === 'Database not configured'
+        const message = error.message && error.message.includes('Database not configured')
             ? 'Jobs are temporarily unavailable while the database is offline.'
             : 'Failed to get jobs';
 

@@ -163,4 +163,40 @@ describe('AutoApply API Endpoints', () => {
       expect(response.body.mode).toBeDefined();
     });
   });
+
+  describe('GET /api/autoapply/jobs', () => {
+    test('should return jobs list when database is working', async () => {
+      const Job = require('../src/models/Job');
+      Job.findByUserId.mockResolvedValueOnce([
+        { id: 1, title: 'Test Job 1', company: 'Test Company 1' },
+        { id: 2, title: 'Test Job 2', company: 'Test Company 2' }
+      ]);
+
+      const response = await request(app)
+        .get('/api/autoapply/jobs')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.jobs).toBeDefined();
+      expect(Array.isArray(response.body.jobs)).toBe(true);
+    });
+
+    test('should handle database not configured error gracefully', async () => {
+      const Job = require('../src/models/Job');
+      Job.findByUserId.mockRejectedValueOnce(
+        new Error('Error finding jobs by user ID: Database not configured')
+      );
+
+      const response = await request(app)
+        .get('/api/autoapply/jobs')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.jobs).toEqual([]);
+      expect(response.body.warning).toContain('Job history is unavailable');
+      expect(response.body.mode).toBe('basic');
+    });
+  });
 });
