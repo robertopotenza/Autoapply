@@ -107,13 +107,8 @@ function normalizeUserData(userData) {
     // Check if this is a nested structure (has preference/personal/eligibility/screening objects)
     const isNestedStructure = userData.preferences || userData.personal || userData.eligibility || userData.screening;
     
-    // If data is nested, handle it separately
-    if (isNestedStructure) {
-        // Will be handled in the nested structure section below
-    } 
-    // If data is already flat with ALL snake_case keys, return as is
-    // Check that NO keys are in camelCase
-    else {
+    // If data is already flat with ALL snake_case keys, return as is (check that NO keys are in camelCase)
+    if (!isNestedStructure) {
         const keys = Object.keys(userData).filter(k => k !== 'user_id' && k !== 'email' && k !== 'created_at');
         const hasCamelCaseKeys = keys.some(key => /[A-Z]/.test(key));
         
@@ -227,8 +222,9 @@ function normalizeUserData(userData) {
             if (fieldMap[key]) {
                 normalized[fieldMap[key]] = value;
             } else {
-                // Otherwise, keep the key as is (already snake_case or unknown field)
-                normalized[key] = value;
+                // For unmapped keys, convert camelCase to snake_case if needed
+                const targetKey = /[A-Z]/.test(key) ? toSnakeCase(key) : key;
+                normalized[targetKey] = value;
             }
         }
     }
@@ -238,11 +234,11 @@ function normalizeUserData(userData) {
 
 function populateFormFields(userData) {
     try {
-        console.log('🔄 Populating form fields with:', userData);
+        console.log('🔄 Populating form fields');
         
         // Normalize the data to flat snake_case format before processing
         const normalizedData = normalizeUserData(userData);
-        console.log('🔄 Normalized data:', normalizedData);
+        console.log('🔄 Data normalized successfully');
         
         // The convertUserDataToFormState function now handles the complex form elements
         // (pills, multi-selects, etc.) directly, so we just need to call it
@@ -1218,7 +1214,7 @@ function updateJobTitlesHiddenInput() {
 
 // Convert user data to form state format
 function convertUserDataToFormState(userData) {
-    console.log('🔄 Converting user data to form state:', userData);
+    console.log('🔄 Converting user data to form state');
     const formData = {};
     
     // userData is now guaranteed to be in flat snake_case format thanks to normalization
@@ -1319,7 +1315,7 @@ function convertUserDataToFormState(userData) {
     // Email field (comes from users table)
     if (userData.email) {
         formData['email'] = userData.email;
-        console.log(`✅ Set email: ${userData.email}`);
+        console.log('✅ Set email');
     }
     
     // Phone field - need to split into country code and number
@@ -1330,11 +1326,11 @@ function convertUserDataToFormState(userData) {
         if (phoneMatch) {
             formData['country-code'] = phoneMatch[1];
             formData['phone'] = phoneMatch[2];
-            console.log(`✅ Set phone: ${phoneMatch[1]} ${phoneMatch[2]}`);
+            console.log('✅ Set phone');
         } else {
             // If no country code, just set the phone number
             formData['phone'] = phone;
-            console.log(`✅ Set phone: ${phone}`);
+            console.log('✅ Set phone');
         }
     }
     
@@ -1441,7 +1437,7 @@ function convertUserDataToFormState(userData) {
         const nationalityArray = Array.isArray(nationality) ? nationality : 
                                 (typeof nationality === 'string' ? JSON.parse(nationality) : []);
         populateMultiSelect('nationalities', nationalityArray);
-        console.log(`✅ Set nationalities: ${nationalityArray.join(', ')}`);
+        console.log('✅ Set nationalities');
     }
     
     // Screening answers
@@ -1522,7 +1518,7 @@ function convertUserDataToFormState(userData) {
     // Date of birth
     if (userData.date_of_birth) {
         formData['date-of-birth'] = userData.date_of_birth;
-        console.log(`✅ Set date of birth: ${userData.date_of_birth}`);
+        console.log('✅ Set date of birth');
     }
     
     // GPA
@@ -1548,25 +1544,25 @@ function convertUserDataToFormState(userData) {
     // Gender identity
     if (userData.gender_identity) {
         formData['gender'] = userData.gender_identity;
-        console.log(`✅ Set gender: ${userData.gender_identity}`);
+        console.log('✅ Set gender');
     }
     
     // Disability status
     if (userData.disability_status) {
         formData['disability'] = userData.disability_status;
-        console.log(`✅ Set disability: ${userData.disability_status}`);
+        console.log('✅ Set disability');
     }
     
     // Military service
     if (userData.military_service) {
         formData['military'] = userData.military_service;
-        console.log(`✅ Set military: ${userData.military_service}`);
+        console.log('✅ Set military');
     }
     
     // Ethnicity
     if (userData.ethnicity) {
         formData['ethnicity'] = userData.ethnicity;
-        console.log(`✅ Set ethnicity: ${userData.ethnicity}`);
+        console.log('✅ Set ethnicity');
     }
     
     // Driving license

@@ -294,7 +294,7 @@ class UserProfile {
   static isProfileComplete(profile) {
     console.log('🔍 Checking profile completeness:', {
       hasProfile: !!profile,
-      profileKeys: profile ? Object.keys(profile) : []
+      profileKeyCount: profile ? Object.keys(profile).length : 0
     });
     
     if (!profile) {
@@ -415,7 +415,7 @@ class UserProfile {
         };
       }
 
-      console.log(`✅ Profile found for user ${userId}:`, profile);
+      console.log(`✅ Profile found for user ${userId}`);
 
       // Calculate completion based on available data
       const sections = {
