@@ -3,21 +3,35 @@ const { logger } = require('../utils/logger');
 
 // Check if database credentials are configured
 const isDatabaseConfigured = () => {
-    return !!(process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE);
+    // Check if we have either individual PG vars or DATABASE_URL
+    const hasIndividualVars = !!(process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE);
+    const hasDatabaseUrl = !!process.env.DATABASE_URL;
+    return hasIndividualVars || hasDatabaseUrl;
 };
 
 // PostgreSQL connection pool (only if configured)
 let pool = null;
 
 if (isDatabaseConfigured()) {
-    pool = new Pool({
-        host: process.env.PGHOST,
-        user: process.env.PGUSER,
-        password: process.env.PGPASSWORD,
-        database: process.env.PGDATABASE,
-        port: process.env.PGPORT || 5432,
-        ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-    });
+    // Prioritize DATABASE_URL if available (for Railway deployment)
+    if (process.env.DATABASE_URL) {
+        pool = new Pool({
+            connectionString: process.env.DATABASE_URL,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+        logger.info('✅ Database configured using DATABASE_URL');
+    } else {
+        // Fall back to individual environment variables
+        pool = new Pool({
+            host: process.env.PGHOST,
+            user: process.env.PGUSER,
+            password: process.env.PGPASSWORD,
+            database: process.env.PGDATABASE,
+            port: process.env.PGPORT || 5432,
+            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+        });
+        logger.info('✅ Database configured using PG environment variables');
+    }
 
     // Test database connection
     pool.on('connect', () => {
@@ -28,7 +42,7 @@ if (isDatabaseConfigured()) {
         logger.error('Unexpected error on idle PostgreSQL client', err);
     });
 } else {
-    logger.warn('PostgreSQL database not configured. Set PGHOST, PGUSER, PGPASSWORD, and PGDATABASE environment variables.');
+    logger.warn('PostgreSQL database not configured. Set DATABASE_URL or (PGHOST, PGUSER, PGPASSWORD, PGDATABASE) environment variables.');
 }
 
 // Query helper function
@@ -83,13 +97,19 @@ async function initializeDatabase() {
         logger.info('Database connection successful');
 
         const schemaPath = path.join(__dirname, '../../database/schema.sql');
+        
+        if (!fs.existsSync(schemaPath)) {
+            logger.warn('Schema file not found at:', schemaPath);
+            return;
+        }
+        
         const schema = fs.readFileSync(schemaPath, 'utf8');
 
         // Execute the entire schema at once
         // PostgreSQL can handle multiple statements in a single query
         await pool.query(schema);
 
-        logger.info('Database tables initialized successfully');
+        logger.info('✅ Database tables initialized successfully');
     } catch (error) {
         logger.error('Error initializing database', error);
 
