@@ -41,7 +41,7 @@ async function checkDatabaseHealth() {
 
         // Test if required tables exist
         console.log('\n📊 Checking Database Schema...');
-        const tables = ['users', 'job_opportunities', 'job_applications', 'user_settings'];
+        const tables = ['users', 'jobs', 'applications', 'autoapply_settings'];
         
         for (const table of tables) {
             try {
