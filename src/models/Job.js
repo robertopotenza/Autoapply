@@ -3,7 +3,7 @@ const db = require('../database/db');
 class Job {
   static async findById(id) {
     try {
-      const query = 'SELECT * FROM jobs WHERE id = $1';
+      const query = 'SELECT * FROM jobs WHERE job_id = $1';
       const result = await db.query(query, [id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -15,9 +15,9 @@ class Job {
     try {
       let query = `
         SELECT j.*, 
-               CASE WHEN a.id IS NOT NULL THEN true ELSE false END as already_applied
+               CASE WHEN a.application_id IS NOT NULL THEN true ELSE false END as already_applied
         FROM jobs j
-        LEFT JOIN applications a ON j.id = a.job_id AND a.user_id = $1
+        LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
         WHERE j.user_id = $1
       `;
       const params = [userId];
@@ -42,7 +42,7 @@ class Job {
       }
 
       if (filters.onlyNew) {
-        query += ` AND a.id IS NULL`;
+        query += ` AND a.application_id IS NULL`;
       }
 
       query += ` ORDER BY j.created_at DESC`;
@@ -64,24 +64,24 @@ class Job {
     try {
       const query = `
         INSERT INTO jobs (
-          user_id, title, company, location, job_type, seniority_level,
-          description, requirements, salary_min, salary_max, 
-          application_url, ats_type, source, external_id
+          user_id, job_title, company_name, location, job_type, seniority_level,
+          job_description, requirements, salary_min, salary_max, 
+          job_url, ats_type, source, external_id
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
         RETURNING *
       `;
       const params = [
         jobData.userId,
-        jobData.title,
-        jobData.company,
+        jobData.title || jobData.job_title,
+        jobData.company || jobData.company_name,
         jobData.location,
         jobData.jobType || 'full-time',
         jobData.seniorityLevel,
-        jobData.description,
+        jobData.description || jobData.job_description,
         jobData.requirements,
         jobData.salaryMin,
         jobData.salaryMax,
-        jobData.applicationUrl,
+        jobData.applicationUrl || jobData.job_url,
         jobData.atsType,
         jobData.source,
         jobData.externalId
@@ -100,7 +100,7 @@ class Job {
         .map((key, index) => `${key} = $${index + 2}`)
         .join(', ');
       
-      const query = `UPDATE jobs SET ${setClause} WHERE id = $1 RETURNING *`;
+      const query = `UPDATE jobs SET ${setClause} WHERE job_id = $1 RETURNING *`;
       const params = [id, ...Object.values(updates)];
       
       const result = await db.query(query, params);
@@ -112,7 +112,7 @@ class Job {
 
   static async delete(id) {
     try {
-      const query = 'DELETE FROM jobs WHERE id = $1 RETURNING *';
+      const query = 'DELETE FROM jobs WHERE job_id = $1 RETURNING *';
       const result = await db.query(query, [id]);
       return result.rows[0] || null;
     } catch (error) {
@@ -124,9 +124,9 @@ class Job {
     try {
       let query = `
         SELECT j.*, 
-               CASE WHEN a.id IS NOT NULL THEN true ELSE false END as already_applied
+               CASE WHEN a.application_id IS NOT NULL THEN true ELSE false END as already_applied
         FROM jobs j
-        LEFT JOIN applications a ON j.id = a.job_id AND a.user_id = $1
+        LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
         WHERE 1=1
       `;
       const params = [userId];
@@ -158,7 +158,7 @@ class Job {
       }
 
       // Only show jobs that haven't been applied to
-      query += ` AND a.id IS NULL`;
+      query += ` AND a.application_id IS NULL`;
       
       query += ` ORDER BY j.created_at DESC LIMIT 50`;
 
@@ -174,10 +174,10 @@ class Job {
       const query = `
         SELECT 
           COUNT(*) as total_jobs,
-          COUNT(CASE WHEN a.id IS NOT NULL THEN 1 END) as applied_jobs,
-          COUNT(CASE WHEN a.id IS NULL THEN 1 END) as available_jobs
+          COUNT(CASE WHEN a.application_id IS NOT NULL THEN 1 END) as applied_jobs,
+          COUNT(CASE WHEN a.application_id IS NULL THEN 1 END) as available_jobs
         FROM jobs j
-        LEFT JOIN applications a ON j.id = a.job_id AND a.user_id = $1
+        LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
         WHERE j.user_id = $1 OR j.user_id IS NULL
       `;
       
