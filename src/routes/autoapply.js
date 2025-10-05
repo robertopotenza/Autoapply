@@ -274,33 +274,66 @@ router.get('/jobs', auth, async (req, res) => {
     try {
         const userId = req.user.userId || req.user.user_id;
         const { page = 1, limit = 10, minScore = 0 } = req.query;
-        
+
+        const numericPage = Math.max(1, parseInt(page, 10) || 1);
+        const numericLimit = Math.min(50, Math.max(1, parseInt(limit, 10) || 10));
+        const numericMinScore = Math.max(0, parseFloat(minScore) || 0);
+
+        const databaseConfigured = typeof db.isDatabaseConfigured === 'function'
+            ? db.isDatabaseConfigured()
+            : !!db.pool;
+
+        if (!databaseConfigured && !orchestrator) {
+            return res.json({
+                success: true,
+                jobs: [],
+                mode: 'basic',
+                warning: 'Job history is unavailable until the database connection is configured. Please contact support to finish setup.'
+            });
+        }
+
         if (orchestrator) {
             const jobs = await orchestrator.getScannedJobs(userId, {
-                page: parseInt(page),
-                limit: parseInt(limit),
-                minScore: parseFloat(minScore)
+                page: numericPage,
+                limit: numericLimit,
+                minScore: numericMinScore
             });
             
-            res.json({
+            return res.json({
                 success: true,
                 jobs,
                 mode: 'enhanced'
             });
-        } else {
-            // Fallback to database query
-            const jobs = await Job.findByUserId(userId, { page, limit });
-            res.json({
+        }
+
+        try {
+            const jobs = await Job.findByUserId(userId, { page: numericPage, limit: numericLimit });
+            return res.json({
                 success: true,
                 jobs,
                 mode: 'basic'
             });
+        } catch (dbError) {
+            if (!databaseConfigured || dbError.message === 'Database not configured') {
+                logger.warn('Jobs requested but database is not configured. Returning empty list.');
+                return res.json({
+                    success: true,
+                    jobs: [],
+                    mode: 'basic',
+                    warning: 'Job history is unavailable until the database connection is configured. Please contact support to finish setup.'
+                });
+            }
+            throw dbError;
         }
     } catch (error) {
+        const message = error.message === 'Database not configured'
+            ? 'Jobs are temporarily unavailable while the database is offline.'
+            : 'Failed to get jobs';
+
         logger.error('Error getting jobs:', error);
         res.status(500).json({
             success: false,
-            message: 'Failed to get jobs',
+            message,
             error: error.message
         });
     }

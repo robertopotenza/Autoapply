@@ -470,6 +470,17 @@
             color: #1f2937;
         }
 
+        .modal-warning {
+            margin-bottom: 1.25rem;
+            padding: 0.9rem 1.1rem;
+            border-radius: 12px;
+            background: #fef3c7;
+            border: 1px solid #f59e0b;
+            color: #92400e;
+            font-size: 0.9rem;
+            line-height: 1.4;
+        }
+
         .grid-2 {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -769,18 +780,27 @@
             `;
         }
 
-        function renderJobsList(jobs) {
+        function renderJobsList(jobs, warningMessage = null) {
             if (!jobs || !jobs.length) {
+                const infoMessage = warningMessage
+                    ? `<p>${escapeHtml(warningMessage)}</p>`
+                    : '<p>Once AutoApply scans new roles, they\'ll appear here automatically.</p>';
+
                 setJobsModalContent(`
                     <div class="modal-empty">
                         <h4>No jobs available yet</h4>
-                        <p>Once AutoApply scans new roles, they'll appear here automatically.</p>
+                        ${infoMessage}
                     </div>
                 `);
                 return;
             }
 
+            const warningBlock = warningMessage
+                ? `<div class="modal-warning">${escapeHtml(warningMessage)}</div>`
+                : '';
+
             setJobsModalContent(`
+                ${warningBlock}
                 <div class="jobs-list">
                     ${jobs.map(renderJobCard).join('')}
                 </div>
@@ -1057,7 +1077,12 @@
                     jobs = result.jobs.data;
                 }
 
-                renderJobsList(jobs);
+                const warningMessage = result.warning || result.notice || null;
+                if (warningMessage) {
+                    showNotification(warningMessage, 'info', 6000);
+                }
+
+                renderJobsList(jobs, warningMessage);
             } catch (error) {
                 console.error('Failed to load jobs:', error);
                 setJobsModalContent(`
