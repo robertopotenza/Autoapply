@@ -35,9 +35,35 @@ The previous naming scheme (`job_opportunities`/`job_applications`) has been dep
 
 ## Running Migrations
 
-### Option 1: Run All Migrations (Recommended)
+### Option 1: Automatic Initialization (Recommended) ✨ NEW
 
-This will run all migrations in the correct order:
+**The database now initializes automatically when the server starts!**
+
+When you run `npm start`, the `initializeDatabase()` function in `src/database/db.js` automatically:
+1. Loads base schema (users, profile, preferences)
+2. Runs migration 002 (jobs & applications tables)
+3. Runs migration 003 (email to profile + password reset)
+4. Runs migration 004 (user_id to jobs table)
+5. Runs migration 005 (enhanced autoapply tables)
+
+**Benefits:**
+- ✅ No manual migration steps needed
+- ✅ Idempotent (safe to run multiple times)
+- ✅ Consistent with deployment scripts
+- ✅ Clear logging of each step
+
+**Verification:**
+```bash
+# Run the verification script to confirm implementation
+node scripts/verify-db-initialization.js
+
+# Check documentation for detailed testing
+cat docs/DATABASE_INITIALIZATION_VERIFICATION.md
+```
+
+### Option 2: Manual Migration Script
+
+You can also run all migrations manually:
 
 ```bash
 node scripts/run-all-migrations.js
@@ -52,7 +78,7 @@ This script:
 6. Runs migration 005 (enhanced autoapply tables)
 7. Verifies all critical tables exist
 
-### Option 2: Run Individual Migrations
+### Option 3: Run Individual Migrations
 
 If you need to run specific migrations:
 
@@ -67,7 +93,7 @@ node scripts/run-migration-003.js
 node scripts/run-migration-005.js
 ```
 
-### Option 3: Using psql directly
+### Option 4: Using psql directly
 
 ```bash
 # Set your DATABASE_URL environment variable
