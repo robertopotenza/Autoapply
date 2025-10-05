@@ -77,10 +77,10 @@ magic_links             -- Secure magic link authentication
 autoapply_sessions      -- Session management and tracking
 
 -- AutoApply Core Tables
-job_opportunities       -- Scanned and matched job positions
-job_applications        -- Application tracking and status
+jobs                     -- Scanned and matched job positions
+applications            -- Application tracking and status
 application_logs        -- Detailed automation logs
-user_settings           -- AutoApply configuration and preferences
+autoapply_settings      -- AutoApply configuration and preferences
 
 -- Enhanced Features
 job_preferences         -- User job matching preferences

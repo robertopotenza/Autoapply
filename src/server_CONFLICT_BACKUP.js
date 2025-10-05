@@ -1,5 +1,15 @@
 <<<<<<< HEAD
 /**
+ * ⚠️ WARNING: THIS IS AN OBSOLETE CONFLICT BACKUP FILE ⚠️
+ * 
+ * DO NOT USE THIS FILE - IT MAY CONTAIN OUTDATED CONFIGURATIONS
+ * 
+ * The correct, active server implementation is in: src/server.js
+ * 
+ * This backup file is kept for reference only and should not be deployed.
+ * 
+ * ---
+ * 
  * Enhanced Auto-Apply Platform Server
  * Integrates existing Apply Autonomously features with new enhanced autoapply functionality
  */

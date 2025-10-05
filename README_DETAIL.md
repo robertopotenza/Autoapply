@@ -30,8 +30,8 @@
 #### ** Database Enhancement**
 - **Schema Extension**: 8 new tables for comprehensive autoapply workflow
 - **Core Tables**:
-  - `job_opportunities` - Scanned and matched positions
-  - `job_applications` - Application tracking and status
+  - `jobs` - Scanned and matched positions
+  - `applications` - Application tracking and status
   - `autoapply_sessions` - Session management
   - `application_logs` - Detailed automation logs
 - **Analytics Tables**: Performance metrics and insights
@@ -158,13 +158,13 @@ job_preferences         -- User job matching preferences
 eligibility_criteria    -- Work authorization requirements
 
 -- Enhanced AutoApply (from local)
-job_opportunities       -- Scanned and matched job positions
-job_applications        -- Application tracking and status
-autoapply_sessions      -- Session management and tracking
-application_logs        -- Detailed automation logs
-user_settings           -- AutoApply configuration
-screening_answers       -- Intelligent screening responses
-application_analytics   -- Performance metrics and insights
+jobs                    -- Scanned and matched job positions
+applications           -- Application tracking and status
+autoapply_sessions     -- Session management and tracking
+application_logs       -- Detailed automation logs
+autoapply_settings     -- AutoApply configuration
+screening_answers      -- Intelligent screening responses
+application_analytics  -- Performance metrics and insights
 ```
 
 ##  Technical Implementation Details

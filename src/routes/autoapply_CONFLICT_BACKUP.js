@@ -1,5 +1,19 @@
 <<<<<<< HEAD
 /**
+ * ⚠️ WARNING: THIS IS AN OBSOLETE CONFLICT BACKUP FILE ⚠️
+ * 
+ * DO NOT USE THIS FILE - IT CONTAINS OUTDATED TABLE REFERENCES
+ * 
+ * This file references obsolete table names:
+ * - job_opportunities (should be: jobs)
+ * - job_applications (should be: applications)
+ * 
+ * The correct, active implementation is in: src/routes/autoapply.js
+ * 
+ * See DATABASE_SCHEMA_UNIFICATION.md for details on the table naming changes.
+ * 
+ * ---
+ * 
  * Enhanced AutoApply API Routes
  * Provides endpoints for job scanning, application automation, and status tracking
  */
