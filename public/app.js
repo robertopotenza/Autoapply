@@ -1022,6 +1022,8 @@ function convertUserDataToFormState(userData) {
         const jobTypesInput = document.getElementById('job-types');
         if (jobTypesInput) {
             jobTypesInput.value = jobTypesArray.map(t => t.trim().toLowerCase()).join(',');
+            // Also update formState.data
+            formData['job-types'] = jobTypesInput.value;
         }
     }
     
@@ -1073,6 +1075,8 @@ function convertUserDataToFormState(userData) {
         const seniorityInput = document.getElementById('seniority-levels');
         if (seniorityInput) {
             seniorityInput.value = seniorityArray.map(s => s.trim().toLowerCase()).join(',');
+            // Also update formData
+            formData['seniority-levels'] = seniorityInput.value;
         }
     }
     
@@ -1130,10 +1134,29 @@ function convertUserDataToFormState(userData) {
         console.log(`✅ Set resume path: ${userData.resume_path}`);
     }
     
-    // Cover letter option
+    // Cover letter option - activate pill buttons
     if (userData.cover_letter_option) {
-        formData['cover-letter-option'] = userData.cover_letter_option;
-        console.log(`✅ Set cover letter option: ${userData.cover_letter_option}`);
+        const coverLetterPill = document.querySelector(`.pill[data-value="${userData.cover_letter_option.toLowerCase()}"]`);
+        if (coverLetterPill && coverLetterPill.closest('.form-group')?.querySelector('#cover-letter-option')) {
+            coverLetterPill.classList.add('active');
+            // Update hidden input
+            const coverLetterInput = document.getElementById('cover-letter-option');
+            if (coverLetterInput) {
+                coverLetterInput.value = userData.cover_letter_option.toLowerCase();
+            }
+            formData['cover-letter-option'] = userData.cover_letter_option.toLowerCase();
+            console.log(`✅ Set cover letter option: ${userData.cover_letter_option}`);
+            
+            // Show/hide upload section based on option
+            const uploadSection = document.getElementById('cover-letter-upload-section');
+            if (uploadSection) {
+                if (userData.cover_letter_option.toLowerCase() === 'upload') {
+                    uploadSection.classList.remove('hidden');
+                } else {
+                    uploadSection.classList.add('hidden');
+                }
+            }
+        }
     }
     
     // Step 4: Eligibility information (flat structure from API)
@@ -1143,9 +1166,40 @@ function convertUserDataToFormState(userData) {
         formData['current-job-title'] = userData.current_job_title || userData.eligibility?.current_job_title || '';
         formData['expected-salary'] = userData.expected_salary || userData.eligibility?.expected_salary || '';
         formData['current-salary'] = userData.current_salary || userData.eligibility?.current_salary || '';
-        formData['availability'] = userData.availability || userData.eligibility?.availability || '';
-        formData['visa-sponsorship'] = userData.visa_sponsorship || userData.eligibility?.visa_sponsorship || '';
         console.log(`✅ Set eligibility fields`);
+    }
+    
+    // Availability - activate pill buttons
+    const availability = userData.availability || userData.eligibility?.availability;
+    if (availability) {
+        const availabilityPill = document.querySelector(`.pill[data-value="${availability.toLowerCase()}"]`);
+        if (availabilityPill && availabilityPill.closest('.form-group')?.querySelector('#availability')) {
+            availabilityPill.classList.add('active');
+            // Update hidden input
+            const availabilityInput = document.getElementById('availability');
+            if (availabilityInput) {
+                availabilityInput.value = availability.toLowerCase();
+            }
+            formData['availability'] = availability.toLowerCase();
+            console.log(`✅ Set availability: ${availability}`);
+        }
+    }
+    
+    // Visa sponsorship - activate pill buttons
+    const visaSponsorship = userData.visa_sponsorship || userData.eligibility?.visa_sponsorship;
+    if (visaSponsorship !== null && visaSponsorship !== undefined) {
+        const visaSponsorshipValue = visaSponsorship ? 'yes' : 'no';
+        const visaPill = document.querySelector(`.pill[data-value="${visaSponsorshipValue}"]`);
+        if (visaPill && visaPill.closest('.form-group')?.querySelector('#visa-sponsorship')) {
+            visaPill.classList.add('active');
+            // Update hidden input
+            const visaInput = document.getElementById('visa-sponsorship');
+            if (visaInput) {
+                visaInput.value = visaSponsorshipValue;
+            }
+            formData['visa-sponsorship'] = visaSponsorshipValue;
+            console.log(`✅ Set visa sponsorship: ${visaSponsorshipValue}`);
+        }
     }
     
     // Eligible countries - populate multi-select
@@ -1179,7 +1233,12 @@ function convertUserDataToFormState(userData) {
         const hybridPill = document.querySelector(`.pill[data-value="${userData.hybrid_preference.toLowerCase()}"]`);
         if (hybridPill && hybridPill.closest('.form-group')?.querySelector('#hybrid-preference')) {
             hybridPill.classList.add('active');
-            formData['hybrid-preference'] = userData.hybrid_preference;
+            // Update hidden input
+            const hybridInput = document.getElementById('hybrid-preference');
+            if (hybridInput) {
+                hybridInput.value = userData.hybrid_preference.toLowerCase();
+            }
+            formData['hybrid-preference'] = userData.hybrid_preference.toLowerCase();
             console.log(`✅ Set hybrid preference: ${userData.hybrid_preference}`);
         }
     }
@@ -1189,7 +1248,12 @@ function convertUserDataToFormState(userData) {
         const travelPill = document.querySelector(`.pill[data-value="${userData.travel.toLowerCase()}"]`);
         if (travelPill && travelPill.closest('.form-group')?.querySelector('#travel-comfortable')) {
             travelPill.classList.add('active');
-            formData['travel-comfortable'] = userData.travel;
+            // Update hidden input
+            const travelInput = document.getElementById('travel-comfortable');
+            if (travelInput) {
+                travelInput.value = userData.travel.toLowerCase();
+            }
+            formData['travel-comfortable'] = userData.travel.toLowerCase();
             console.log(`✅ Set travel: ${userData.travel}`);
         }
     }
@@ -1199,7 +1263,12 @@ function convertUserDataToFormState(userData) {
         const relocationPill = document.querySelector(`.pill[data-value="${userData.relocation.toLowerCase()}"]`);
         if (relocationPill && relocationPill.closest('.form-group')?.querySelector('#relocation-open')) {
             relocationPill.classList.add('active');
-            formData['relocation-open'] = userData.relocation;
+            // Update hidden input
+            const relocationInput = document.getElementById('relocation-open');
+            if (relocationInput) {
+                relocationInput.value = userData.relocation.toLowerCase();
+            }
+            formData['relocation-open'] = userData.relocation.toLowerCase();
             console.log(`✅ Set relocation: ${userData.relocation}`);
         }
     }
@@ -1230,6 +1299,11 @@ function convertUserDataToFormState(userData) {
         const adultPill = document.querySelector(`.pill[data-value="${isAdultValue}"]`);
         if (adultPill && adultPill.closest('.form-group')?.querySelector('#age-18')) {
             adultPill.classList.add('active');
+            // Update hidden input
+            const ageInput = document.getElementById('age-18');
+            if (ageInput) {
+                ageInput.value = isAdultValue;
+            }
             formData['age-18'] = isAdultValue;
             console.log(`✅ Set is adult: ${isAdultValue}`);
         }
