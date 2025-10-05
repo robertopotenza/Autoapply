@@ -521,6 +521,26 @@ async function saveAndExit() {
     // Save current step data to localStorage
     saveStepData();
 
+    // CRITICAL FIX: Explicitly capture screening fields from Step 4 (even if hidden)
+    const step4 = document.querySelector('.form-step[data-step="4"]');
+    if (step4) {
+        const screeningInputs = step4.querySelectorAll('#screening-content input, #screening-content select, #screening-content textarea');
+        screeningInputs.forEach(input => {
+            if (input.type === 'file') return;
+            if (input.type === 'checkbox') {
+                formState.data[input.id] = input.checked;
+            } else if (input.value) {  // Only save if has value
+                formState.data[input.id] = input.value;
+            }
+        });
+        console.log('✅ Captured screening fields:', {
+            experienceSummary: formState.data['experience-summary'],
+            hybridPreference: formState.data['hybrid-preference'],
+            travel: formState.data['travel-comfortable'],
+            relocation: formState.data['relocation-open']
+        });
+    }
+
     // Check if user is authenticated
     const token = localStorage.getItem('authToken');
     if (!token) {
@@ -752,6 +772,26 @@ function loadSavedState() {
 
 async function submitForm() {
     saveStepData();
+
+    // CRITICAL FIX: Explicitly capture screening fields from Step 4 (even if hidden)
+    const step4 = document.querySelector('.form-step[data-step="4"]');
+    if (step4) {
+        const screeningInputs = step4.querySelectorAll('#screening-content input, #screening-content select, #screening-content textarea');
+        screeningInputs.forEach(input => {
+            if (input.type === 'file') return;
+            if (input.type === 'checkbox') {
+                formState.data[input.id] = input.checked;
+            } else if (input.value) {  // Only save if has value
+                formState.data[input.id] = input.value;
+            }
+        });
+        console.log('✅ Captured screening fields for submit:', {
+            experienceSummary: formState.data['experience-summary'],
+            hybridPreference: formState.data['hybrid-preference'],
+            travel: formState.data['travel-comfortable'],
+            relocation: formState.data['relocation-open']
+        });
+    }
 
     // Check if user is authenticated
     const token = localStorage.getItem('authToken');
