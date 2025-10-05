@@ -86,10 +86,10 @@ function addEnhancedHealthCheck(app) {
             const activeUsersQuery = 'SELECT COUNT(*) as active_users FROM user_autoapply_status WHERE is_active = true';
             const activeUsersResult = await pool.query(activeUsersQuery);
             
-            const totalJobsQuery = 'SELECT COUNT(*) as total_jobs FROM job_opportunities WHERE created_at > NOW() - INTERVAL \'24 hours\'';
+            const totalJobsQuery = 'SELECT COUNT(*) as total_jobs FROM jobs WHERE created_at > NOW() - INTERVAL \'24 hours\'';
             const totalJobsResult = await pool.query(totalJobsQuery);
             
-            const totalApplicationsQuery = 'SELECT COUNT(*) as total_applications FROM job_applications WHERE created_at > NOW() - INTERVAL \'24 hours\'';
+            const totalApplicationsQuery = 'SELECT COUNT(*) as total_applications FROM applications WHERE created_at > NOW() - INTERVAL \'24 hours\'';
             const totalApplicationsResult = await pool.query(totalApplicationsQuery);
             
             res.json({
@@ -135,24 +135,28 @@ function addEnhancedDashboardEndpoints(app) {
             ] = await Promise.all([
                 pool.query('SELECT * FROM user_autoapply_stats WHERE user_id = $1', [userId]),
                 pool.query(`
-                    SELECT * FROM job_opportunities 
-                    WHERE user_id = $1 
-                    ORDER BY scanned_at DESC 
+                    SELECT j.*,
+                           j.job_id as id,
+                           j.job_title as title,
+                           j.company_name as company
+                    FROM jobs j
+                    WHERE (j.user_id = $1 OR j.user_id IS NULL)
+                    ORDER BY j.created_at DESC 
                     LIMIT 10
                 `, [userId]),
                 pool.query(`
-                    SELECT ja.*, jo.title, jo.company 
-                    FROM job_applications ja
-                    JOIN job_opportunities jo ON ja.job_id = jo.id
-                    WHERE ja.user_id = $1 
-                    ORDER BY ja.created_at DESC 
+                    SELECT a.*, j.job_title as title, j.company_name as company 
+                    FROM applications a
+                    JOIN jobs j ON a.job_id = j.job_id
+                    WHERE a.user_id = $1 
+                    ORDER BY a.created_at DESC 
                     LIMIT 10
                 `, [userId]),
                 pool.query(`
                     SELECT 
                         DATE(created_at) as date,
                         COUNT(*) as applications
-                    FROM job_applications
+                    FROM applications
                     WHERE user_id = $1 
                     AND created_at > NOW() - INTERVAL '7 days'
                     GROUP BY DATE(created_at)

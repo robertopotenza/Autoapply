@@ -420,14 +420,17 @@ class JobScanner {
      */
     async saveJobsToDatabase(jobs, userId) {
         const insertQuery = `
-            INSERT INTO job_opportunities (
-                user_id, title, company, location, salary, description, url, 
-                source, match_score, match_reasons, scanned_at
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
-            ON CONFLICT (url, user_id) DO UPDATE SET
-                match_score = EXCLUDED.match_score,
-                match_reasons = EXCLUDED.match_reasons,
-                scanned_at = EXCLUDED.scanned_at
+            INSERT INTO jobs (
+                user_id, job_title, company_name, location, job_description, job_url, 
+                source, ats_type, external_id, is_active
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+            ON CONFLICT (job_url) DO UPDATE SET
+                job_title = EXCLUDED.job_title,
+                company_name = EXCLUDED.company_name,
+                location = EXCLUDED.location,
+                job_description = EXCLUDED.job_description,
+                last_checked = NOW()
+            RETURNING job_id
         `;
 
         for (const job of jobs) {
@@ -437,13 +440,12 @@ class JobScanner {
                     job.title,
                     job.company,
                     job.location,
-                    job.salary,
                     job.description,
                     job.url,
-                    job.source,
-                    job.matchScore,
-                    JSON.stringify(job.matchReasons),
-                    job.scannedAt
+                    job.source || 'scanner',
+                    job.atsType || null,
+                    job.externalId || null,
+                    true
                 ]);
             } catch (error) {
                 this.logger.error('Failed to save job to database:', error.message);
@@ -464,9 +466,16 @@ class JobScanner {
      */
     async getJobsForUser(userId, limit = 50) {
         const query = `
-            SELECT * FROM job_opportunities 
-            WHERE user_id = $1 
-            ORDER BY match_score DESC, scanned_at DESC 
+            SELECT j.*,
+                   j.job_id as id,
+                   j.job_title as title,
+                   j.company_name as company,
+                   j.job_description as description,
+                   j.job_url as url
+            FROM jobs j
+            WHERE (j.user_id = $1 OR j.user_id IS NULL)
+            AND j.is_active = true
+            ORDER BY j.created_at DESC 
             LIMIT $2
         `;
         
