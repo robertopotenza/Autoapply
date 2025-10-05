@@ -254,12 +254,12 @@ class Application {
           COUNT(*) as total,
           COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '7 days' THEN 1 END) as this_week,
           COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '1 day' THEN 1 END) as today,
-          COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '${periodDays} days' THEN 1 END) as period_total
+          COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '1 day' * $2 THEN 1 END) as period_total
         FROM applications
         WHERE user_id = $1
       `;
       
-      const result = await db.query(query, [userId]);
+      const result = await db.query(query, [userId, periodDays]);
       return result.rows[0];
     } catch (error) {
       throw new Error(`Error getting application analytics: ${error.message}`);
@@ -275,10 +275,10 @@ class Application {
           COUNT(CASE WHEN status IN ('accepted', 'interviewing') THEN 1 END) as successful
         FROM applications
         WHERE user_id = $1 
-          AND applied_at >= NOW() - INTERVAL '${periodDays} days'
+          AND applied_at >= NOW() - INTERVAL '1 day' * $2
       `;
       
-      const result = await db.query(query, [userId]);
+      const result = await db.query(query, [userId, periodDays]);
       const row = result.rows[0];
       
       if (!row || parseInt(row.total) === 0) {

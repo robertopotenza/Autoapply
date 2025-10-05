@@ -220,10 +220,10 @@ class Job {
         FROM jobs j
         LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
         WHERE (j.user_id = $1 OR j.user_id IS NULL)
-          AND j.created_at >= NOW() - INTERVAL '${periodDays} days'
+          AND j.created_at >= NOW() - INTERVAL '1 day' * $2
       `;
       
-      const result = await db.query(query, [userId]);
+      const result = await db.query(query, [userId, periodDays]);
       return result.rows[0];
     } catch (error) {
       throw new Error(`Error getting job analytics: ${error.message}`);
