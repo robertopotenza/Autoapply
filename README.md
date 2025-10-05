@@ -199,7 +199,73 @@ npm run lint         # Code quality checks
 - End-to-end testing for user workflows
 - Performance testing for job scanning
 
-##  Contributing
+### 🚀 **DEPLOYMENT & CI/CD**
+
+### **Railway Production Deployment**
+
+The Autoapply platform is deployed on Railway with a fully automated CI/CD pipeline:
+
+- **🌐 Live Application**: [https://autoapply-production-1393.up.railway.app](https://autoapply-production-1393.up.railway.app)
+- **📊 Railway Project**: Apply Autonomously (869e01d3-accc-4409-a7b3-5f2970846141)
+- **✅ Status**: Fully operational with 4 microservices
+- **🔄 Auto-Deployment**: GitHub Actions → Railway → Live
+
+### **CI/CD Pipeline Features**
+
+**🔧 GitHub Actions Workflow** (`.github/workflows/deploy.yml`)
+- **Triggers**: Automatic deployment on push to `main` branch and pull requests
+- **Environment**: Ubuntu latest with Node.js 20
+- **Dependencies**: Automated npm installation with caching for faster builds
+- **Testing**: Runs `npm test --if-present` before deployment
+- **Deployment**: Uses Railway CLI with secure token authentication
+- **Verification**: Includes deployment health checks and confirmation
+
+**🏗️ Infrastructure Components**
+- **Main Application**: Autoapply service (Node.js/Express)
+- **Database**: PostgreSQL with automated migrations
+- **Automation Services**: LinkedIn integration, Resume tailor
+- **Authentication**: JWT tokens, magic links, secure sessions
+
+**🔐 Security & Configuration**
+- **Railway Token**: Securely stored in GitHub repository secrets
+- **Environment Variables**: Managed through Railway dashboard
+- **Database**: Automatic backups and scaling
+- **SSL/TLS**: Automatic HTTPS with Railway domains
+
+### **Deployment Process**
+
+1. **Code Push** → Developer pushes to main branch
+2. **CI Trigger** → GitHub Actions workflow starts automatically  
+3. **Build & Test** → Install dependencies, run tests
+4. **Deploy** → Railway CLI deploys to production environment
+5. **Verify** → Health checks confirm successful deployment
+6. **Live** → Application immediately available at production URL
+
+### **Recent Deployments**
+
+- ✅ **Latest**: Railway CI/CD pipeline setup and YAML fixes
+- ✅ **Previous**: Enhanced authentication and database integration
+- ✅ **Status**: All services operational with proper routing
+- ✅ **Performance**: Fast deployment cycles with automated rollback capability
+
+### **Development Workflow**
+
+```bash
+# Local development
+git clone https://github.com/robertopotenza/Autoapply.git
+cd Autoapply
+npm install
+npm run dev
+
+# Deploy to production (automatic via CI/CD)
+git add .
+git commit -m "feat: your feature description"
+git push origin main  # Triggers automatic deployment
+```
+
+For detailed deployment instructions, see [RAILWAY_DEPLOYMENT_SETUP.md](RAILWAY_DEPLOYMENT_SETUP.md).
+
+## Contributing
 
 We welcome contributions! Please see our [Contributing Guidelines](CONTRIBUTING.md) for details on:
 - Code style and standards
