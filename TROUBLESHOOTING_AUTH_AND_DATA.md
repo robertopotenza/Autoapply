@@ -124,7 +124,7 @@ Open the wizard page with DevTools open and look for these logs:
 ✅ API Response: {success: true, data: null, message: "No data found"}
 ⚠️ GET /api/wizard/data returned status 200 but data is null
 💡 This means the user_complete_profile view has no row for this user
-💡 Check server logs for [User.getCompleteProfile] messages
+💡 Check server logs for [User] messages
 💡 Run: node scripts/verify-database.js --user <your-email>
 ```
 **Solution:** Continue to Step 2
@@ -136,17 +136,17 @@ Look for these messages in your server logs:
 **Expected Logs:**
 ```
 [Wizard] Loading existing user data for user 123
-[User.getCompleteProfile] Querying user_complete_profile for user_id: 123
-[User.getCompleteProfile] Found profile data for user_id: 123
+[User] Querying user_complete_profile for user_id: 123
+[User] Found profile data for user_id: 123
 [Wizard] Successfully retrieved complete profile for user 123
 ```
 
 **Problem: No Data in Database**
 ```
 [Wizard] Loading existing user data for user 123
-[User.getCompleteProfile] Querying user_complete_profile for user_id: 123
-[User.getCompleteProfile] No rows found in user_complete_profile for user_id: 123
-[User.getCompleteProfile] Hint: Run 'node scripts/verify-database.js --user <email>' to check DB
+[User] Querying user_complete_profile for user_id: 123
+[User] No rows found in user_complete_profile for user_id: 123
+[User] Hint: Run 'node scripts/verify-database.js --user <email>' to check DB
 [Wizard] No data found in user_complete_profile for user 123
 ```
 **Solution:** Continue to Step 3

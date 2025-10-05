@@ -80,7 +80,7 @@ This document shows the complete flow of authentication and data loading with al
 │ 5. DATABASE QUERY (src/database/models/User.js)                     │
 └─────────────────────────────────────────────────────────────────────┘
                               │
-    [User.getCompleteProfile] Log: "Querying user_complete_profile for user_id: 123"
+    [User] Log: "Querying user_complete_profile for user_id: 123"
                               │
                               ▼
          SELECT * FROM user_complete_profile 
@@ -139,8 +139,7 @@ This document shows the complete flow of authentication and data loading with al
     user_complete_profile                 ▼
     view has no row"            ✅ Log: "Form fields
     💡 Log: "Check server           populated successfully"
-    logs for [User.             Form is now filled
-    getCompleteProfile]"
+    logs for [User]"            Form is now filled
     💡 Log: "Run: node
     scripts/verify-database.js
     --user <email>"
@@ -167,9 +166,9 @@ This document shows the complete flow of authentication and data loading with al
 | Log Message | Meaning | Action Required |
 |-------------|---------|-----------------|
 | [Wizard] Loading existing user data for user 123 | Request received | None - normal flow |
-| [User.getCompleteProfile] Querying... | Database query starting | None - normal flow |
-| [User.getCompleteProfile] Found profile data | Data exists in DB | None - normal flow |
-| [User.getCompleteProfile] No rows found | No data in DB for user | User needs to complete wizard |
+| [User] Querying... | Database query starting | None - normal flow |
+| [User] Found profile data | Data exists in DB | None - normal flow |
+| [User] No rows found | No data in DB for user | User needs to complete wizard |
 | [Wizard] Successfully retrieved complete profile | Success! | None - normal flow |
 | [Wizard] No data found in user_complete_profile | No profile data | User needs to complete wizard |
 
@@ -179,7 +178,7 @@ This document shows the complete flow of authentication and data loading with al
 
 **Symptoms:**
 - Browser console shows: "API request failed: 401 Unauthorized"
-- No server logs for [Wizard] or [User.getCompleteProfile]
+- No server logs for [Wizard] or [User]
 
 **Cause:** Invalid or expired JWT token
 
@@ -234,8 +233,8 @@ To test that all logging is working:
 5. **Check server logs** - should see:
    ```
    [Wizard] Loading existing user data for user 123
-   [User.getCompleteProfile] Querying user_complete_profile for user_id: 123
-   [User.getCompleteProfile] Found profile data for user_id: 123
+   [User] Querying user_complete_profile for user_id: 123
+   [User] Found profile data for user_id: 123
    [Wizard] Successfully retrieved complete profile for user 123
    ```
 
@@ -255,8 +254,8 @@ If you see different logs, refer to the troubleshooting section above.
    - Line 32: Success confirmation
 
 3. **src/database/models/User.js** - Database query logging
-   - Line 63: Query start with user_id
-   - Lines 70-71: No rows found + troubleshooting hint
-   - Line 73: Data found confirmation
+   - Line 65: Query start with user_id (using Logger utility with [User] prefix)
+   - Lines 72-73: No rows found + troubleshooting hint (using Logger utility)
+   - Line 75: Data found confirmation (using Logger utility)
 
 4. **TROUBLESHOOTING_AUTH_AND_DATA.md** - Comprehensive guide created
