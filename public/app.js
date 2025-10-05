@@ -38,15 +38,19 @@ async function loadExistingUserData() {
         
         const token = localStorage.getItem('authToken');
         if (!token) {
-            console.log('❌ No auth token found');
+            console.log('❌ No auth token found in localStorage under key "authToken"');
+            console.log('💡 Make sure you logged in and the token was set correctly');
             return;
         }
 
+        console.log('✅ Auth token found, making request to /api/wizard/data');
         const response = await fetch('/api/wizard/data', {
             headers: {
                 'Authorization': `Bearer ${token}`
             }
         });
+
+        console.log(`📡 Response status: ${response.status} ${response.statusText}`);
 
         if (response.ok) {
             const result = await response.json();
@@ -65,12 +69,22 @@ const screeningContent = document.getElementById('screening-content');
                     screeningContent.classList.remove('hidden');
                     console.log('✅ Auto-expanded screening section for editing');
                 }
+            } else if (result.success && !result.data) {
+                console.log('⚠️ GET /api/wizard/data returned status 200 but data is null');
+                console.log('💡 This means the user_complete_profile view has no row for this user');
+                console.log('💡 Check server logs for [User.getCompleteProfile] messages');
+                console.log('💡 Run: node scripts/verify-database.js --user <your-email>');
+                console.log('Response details:', result);
             } else {
                 console.log('❌ No user data found in response');
                 console.log('Response details:', result);
             }
         } else {
             console.log('❌ API request failed:', response.status, response.statusText);
+            if (response.status === 401) {
+                console.log('💡 Unauthorized - token may be invalid or expired');
+                console.log('💡 Try logging out and logging in again');
+            }
             const errorText = await response.text();
             console.log('Error response:', errorText);
         }

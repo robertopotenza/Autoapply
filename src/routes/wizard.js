@@ -16,10 +16,12 @@ router.use(authenticateToken);
 router.get('/data', async (req, res) => {
     try {
         const userId = req.user.userId;
+        logger.info(`Loading existing user data for user ${userId}`);
 
         const completeProfile = await User.getCompleteProfile(userId);
 
         if (!completeProfile) {
+            logger.warn(`No data found in user_complete_profile for user ${userId}`);
             return res.json({
                 success: true,
                 data: null,
@@ -27,6 +29,7 @@ router.get('/data', async (req, res) => {
             });
         }
 
+        logger.info(`Successfully retrieved complete profile for user ${userId}`);
         res.json({
             success: true,
             data: completeProfile
