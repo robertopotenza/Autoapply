@@ -48,6 +48,45 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Database connection
 let pool = null;
 
+// Helper function to split SQL statements
+function splitSqlStatements(sql) {
+    return sql
+        .replace(/--.*$/gm, '')
+        .split(/;\s*(?:\r?\n|$)/)
+        .map(statement => statement.trim())
+        .filter(statement => statement.length > 0);
+}
+
+// Helper function to run a migration file
+async function runMigrationFile(pool, migrationPath, label) {
+    const fs = require('fs');
+    
+    if (!fs.existsSync(migrationPath)) {
+        logger.warn(`⚠️  Migration file not found: ${label}`);
+        return;
+    }
+
+    logger.info(`🔄 Running migration: ${label}...`);
+    
+    const sql = fs.readFileSync(migrationPath, 'utf8');
+    const statements = splitSqlStatements(sql);
+
+    for (const statement of statements) {
+        try {
+            await pool.query(statement);
+        } catch (error) {
+            // If table already exists, that's OK
+            if (error.code === '42P07') {
+                continue;
+            }
+            logger.error(`❌ Migration ${label} failed on statement`);
+            throw error;
+        }
+    }
+
+    logger.info(`✅ Migration ${label} completed (${statements.length} statements)`);
+}
+
 async function initializeDatabase() {
     try {
         if (!process.env.DATABASE_URL) {
@@ -74,6 +113,26 @@ async function initializeDatabase() {
             logger.info('✅ Database schema initialized successfully');
         } else {
             logger.warn('⚠️  Schema file not found at:', schemaPath);
+        }
+
+        // Run migrations
+        logger.info('🔄 Running database migrations...');
+        const migrationsDir = path.join(__dirname, '../database/migrations');
+        
+        if (fs.existsSync(migrationsDir)) {
+            // Get all migration files in order
+            const migrationFiles = fs.readdirSync(migrationsDir)
+                .filter(file => file.endsWith('.sql'))
+                .sort(); // Sort to ensure correct order
+            
+            for (const migrationFile of migrationFiles) {
+                const migrationPath = path.join(migrationsDir, migrationFile);
+                await runMigrationFile(pool, migrationPath, migrationFile);
+            }
+            
+            logger.info('✅ All migrations completed successfully');
+        } else {
+            logger.warn('⚠️  Migrations directory not found');
         }
 
         return pool;
