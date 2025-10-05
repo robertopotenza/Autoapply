@@ -66,8 +66,8 @@ npm install
 
 ### 2. Database Setup
 The enhanced schema will be automatically applied when you initialize the system. It includes:
-- `job_opportunities` - Stores scanned jobs with match scores
-- `job_applications` - Tracks application attempts and status
+- `jobs` - Stores scanned jobs with match scores
+- `applications` - Tracks application attempts and status
 - `autoapply_sessions` - Manages user autoapply sessions
 - `autoapply_config` - User-specific configuration
 - Additional support tables for templates, logs, and cookies
