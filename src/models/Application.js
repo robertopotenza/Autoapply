@@ -245,6 +245,51 @@ class Application {
       throw new Error(`Error getting pending applications: ${error.message}`);
     }
   }
+
+  static async getAnalytics(userId, period = '30') {
+    try {
+      const periodDays = parseInt(period) || 30;
+      const query = `
+        SELECT 
+          COUNT(*) as total,
+          COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '7 days' THEN 1 END) as this_week,
+          COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '1 day' THEN 1 END) as today,
+          COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '1 day' * $2 THEN 1 END) as period_total
+        FROM applications
+        WHERE user_id = $1
+      `;
+      
+      const result = await db.query(query, [userId, periodDays]);
+      return result.rows[0];
+    } catch (error) {
+      throw new Error(`Error getting application analytics: ${error.message}`);
+    }
+  }
+
+  static async getSuccessRate(userId, period = '30') {
+    try {
+      const periodDays = parseInt(period) || 30;
+      const query = `
+        SELECT 
+          COUNT(*) as total,
+          COUNT(CASE WHEN status IN ('accepted', 'interviewing') THEN 1 END) as successful
+        FROM applications
+        WHERE user_id = $1 
+          AND applied_at >= NOW() - INTERVAL '1 day' * $2
+      `;
+      
+      const result = await db.query(query, [userId, periodDays]);
+      const row = result.rows[0];
+      
+      if (!row || parseInt(row.total) === 0) {
+        return 0;
+      }
+      
+      return Math.round((parseInt(row.successful) / parseInt(row.total)) * 100);
+    } catch (error) {
+      throw new Error(`Error getting success rate: ${error.message}`);
+    }
+  }
 }
 
 module.exports = Application;
