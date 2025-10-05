@@ -11,7 +11,7 @@ The previous naming scheme (`job_opportunities`/`job_applications`) has been dep
 ## Table Naming Convention
 
 ### Core Tables (from migrations 002 and 004)
-- `jobs` - Job postings with user_id support (NULL for global jobs, set for user-specific jobs)
+- `jobs` - Job postings with user_id support (NULL for global jobs, set for user-specific jobs), source, and external_id for deduplication
 - `applications` - Application tracking and status
 - `autoapply_settings` - User autoapply preferences
 - `job_queue` - Application task queue
@@ -122,14 +122,14 @@ export PGPORT="5432"
 - **database/schema.sql**: Creates users, profile, eligibility, screening_answers tables
 
 ### Migration 002
-- **database/migrations/002_autoapply_tables.sql**: Creates jobs, applications, autoapply_settings, job_queue, application_status_history, ats_logs tables
+- **database/migrations/002_autoapply_tables.sql**: Creates jobs (with user_id, source, external_id), applications, autoapply_settings, job_queue, application_status_history, ats_logs tables
 
 ### Migration 003
 - **database/migrations/003_add_email_to_profile.sql**: Adds email column to profile table
 - **database/migrations/003_add_password_reset.sql**: Creates password_reset_tokens table
 
 ### Migration 004
-- **database/migrations/004_add_user_id_to_jobs.sql**: Adds user_id, source, external_id columns to jobs table
+- **database/migrations/004_add_user_id_to_jobs.sql**: Adds user_id, source, external_id columns to jobs table (idempotent - skips if columns exist from migration 002)
 
 ### Migration 005
 - **database/migrations/005_enhanced_autoapply_tables.sql**: Creates enhanced autoapply tables (sessions, config, templates, cookies, logs)

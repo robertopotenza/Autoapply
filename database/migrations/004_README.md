@@ -3,6 +3,8 @@
 ## Overview
 This migration adds an optional `user_id` column to the `jobs` table to support both global and user-specific jobs.
 
+**Note:** As of the latest update, Migration 002 now creates the `jobs` table with the `user_id`, `source`, and `external_id` columns already included. Migration 004 remains in place for backward compatibility and will safely skip adding these columns if they already exist (using `ADD COLUMN IF NOT EXISTS`).
+
 ## Business Logic
 
 ### Two Types of Jobs
