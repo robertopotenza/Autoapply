@@ -137,4 +137,30 @@ describe('AutoApply API Endpoints', () => {
       expect(response.body.applications).toBeDefined();
     });
   });
+
+  describe('POST /api/autoapply/enable', () => {
+    test('should enable autoapply successfully', async () => {
+      const response = await request(app)
+        .post('/api/autoapply/enable')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toContain('AutoApply enabled successfully');
+      expect(response.body.mode).toBeDefined();
+    });
+  });
+
+  describe('POST /api/autoapply/start', () => {
+    test('should start autoapply session successfully', async () => {
+      const response = await request(app)
+        .post('/api/autoapply/start')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toContain('autoapply session started');
+      expect(response.body.mode).toBeDefined();
+    });
+  });
 });
