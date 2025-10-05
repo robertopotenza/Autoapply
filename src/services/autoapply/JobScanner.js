@@ -463,6 +463,18 @@ class JobScanner {
 
     /**
      * Get jobs for a user from database
+     * 
+     * Returns jobs that are either:
+     * 1. User-specific (j.user_id = userId): Jobs created/saved by this specific user
+     * 2. Global (j.user_id IS NULL): Jobs scraped from job boards available to all users
+     * 
+     * Security Note: The "j.user_id IS NULL" condition is intentional and allows users to see
+     * global job postings discovered from job boards. This is the core job discovery feature.
+     * Jobs with null user_id are public job listings from sources like Indeed, LinkedIn, etc.
+     * 
+     * @param {number} userId - The user ID to get jobs for
+     * @param {number} limit - Maximum number of jobs to return (default: 50)
+     * @returns {Promise<Array>} Array of job objects
      */
     async getJobsForUser(userId, limit = 50) {
         const query = `
