@@ -593,6 +593,10 @@ router.get('/jobs', auth, async (req, res) => {
             error.code === 'ECONNREFUSED'
         );
 
+        const databaseConfigured = typeof db.isDatabaseConfigured === 'function'
+            ? db.isDatabaseConfigured()
+            : !!db.pool;
+
         if (isDatabaseError || !databaseConfigured) {
             logger.warn('Database unavailable, returning empty jobs list:', error.message);
             return res.json({
