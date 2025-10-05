@@ -56,6 +56,15 @@ async function loadExistingUserData() {
                 console.log('📊 Populating form with user data...');
                 populateFormFields(result.data);
                 console.log('✅ Form fields populated successfully');
+
+                // FIX #1: Auto-expand screening section when in edit mode
+                const screeningToggle = document.getElementById('screening-toggle');
+const screeningContent = document.getElementById('screening-content');
+                if (screeningToggle && screeningContent) {
+                    screeningToggle.classList.add('active');
+                    screeningContent.classList.remove('hidden');
+                    console.log('✅ Auto-expanded screening section for editing');
+                }
             } else {
                 console.log('❌ No user data found in response');
                 console.log('Response details:', result);
@@ -1270,6 +1279,7 @@ function convertUserDataToFormState(userData) {
         const hybridInput = document.getElementById('hybrid-preference');
         
         if (hybridPill && hybridGroup && hybridInput) {
+            formState.data['hybrid-preference'] = hybridValue; // Ensure formState is updated
             hybridPill.classList.add('active');
             hybridInput.value = hybridValue;
             console.log(`✅ Set hybrid preference: ${userData.hybrid_preference}`);
