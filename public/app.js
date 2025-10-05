@@ -80,13 +80,148 @@ const screeningContent = document.getElementById('screening-content');
     }
 }
 
+// Normalize user data to flat snake_case format
+// Handles flat snake_case, nested structures, or camelCase
+function normalizeUserData(userData) {
+    if (!userData) return {};
+    
+    // Helper function to convert camelCase to snake_case
+    function toSnakeCase(str) {
+        return str.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+    }
+    
+    // If data is already flat with snake_case keys, return as is
+    // Check for presence of snake_case keys like job_types, full_name, etc.
+    const hasSnakeCaseKeys = Object.keys(userData).some(key => key.includes('_'));
+    if (hasSnakeCaseKeys && !userData.preferences && !userData.personal && !userData.eligibility && !userData.screening) {
+        console.log('✅ Data is already in flat snake_case format');
+        return userData;
+    }
+    
+    const normalized = {};
+    
+    // Handle nested structure (legacy format)
+    if (userData.preferences || userData.personal || userData.eligibility || userData.screening) {
+        console.log('🔄 Converting from nested structure to flat format');
+        
+        // Copy top-level fields
+        if (userData.user_id) normalized.user_id = userData.user_id;
+        if (userData.email) normalized.email = userData.email;
+        if (userData.created_at) normalized.created_at = userData.created_at;
+        
+        // Job preferences
+        if (userData.preferences) {
+            normalized.remote_jobs = userData.preferences.remote_jobs || userData.preferences.remoteJobs;
+            normalized.onsite_location = userData.preferences.onsite_location || userData.preferences.onsiteLocation;
+            normalized.job_types = userData.preferences.job_types || userData.preferences.jobTypes;
+            normalized.job_titles = userData.preferences.job_titles || userData.preferences.jobTitles;
+            normalized.seniority_levels = userData.preferences.seniority_levels || userData.preferences.seniorityLevels;
+            normalized.time_zones = userData.preferences.time_zones || userData.preferences.timeZones;
+        }
+        
+        // Personal info
+        if (userData.personal) {
+            normalized.full_name = userData.personal.full_name || userData.personal.fullName;
+            normalized.phone = userData.personal.phone;
+            normalized.country = userData.personal.country;
+            normalized.city = userData.personal.city;
+            normalized.state_region = userData.personal.state_region || userData.personal.stateRegion;
+            normalized.postal_code = userData.personal.postal_code || userData.personal.postalCode;
+            normalized.resume_path = userData.personal.resume_path || userData.personal.resumePath;
+            normalized.cover_letter_option = userData.personal.cover_letter_option || userData.personal.coverLetterOption;
+        }
+        
+        // Eligibility
+        if (userData.eligibility) {
+            normalized.current_job_title = userData.eligibility.current_job_title || userData.eligibility.currentJobTitle;
+            normalized.availability = userData.eligibility.availability;
+            normalized.eligible_countries = userData.eligibility.eligible_countries || userData.eligibility.eligibleCountries;
+            normalized.visa_sponsorship = userData.eligibility.visa_sponsorship !== undefined ? 
+                userData.eligibility.visa_sponsorship : userData.eligibility.visaSponsorship;
+            normalized.nationality = userData.eligibility.nationality;
+            normalized.current_salary = userData.eligibility.current_salary || userData.eligibility.currentSalary;
+            normalized.expected_salary = userData.eligibility.expected_salary || userData.eligibility.expectedSalary;
+        }
+        
+        // Screening
+        if (userData.screening) {
+            normalized.experience_summary = userData.screening.experience_summary || userData.screening.experienceSummary;
+            normalized.hybrid_preference = userData.screening.hybrid_preference || userData.screening.hybridPreference;
+            normalized.travel = userData.screening.travel;
+            normalized.relocation = userData.screening.relocation;
+            normalized.languages = userData.screening.languages;
+            normalized.date_of_birth = userData.screening.date_of_birth || userData.screening.dateOfBirth;
+            normalized.gpa = userData.screening.gpa;
+            normalized.is_adult = userData.screening.is_adult !== undefined ? 
+                userData.screening.is_adult : userData.screening.isAdult;
+            normalized.gender_identity = userData.screening.gender_identity || userData.screening.genderIdentity;
+            normalized.disability_status = userData.screening.disability_status || userData.screening.disabilityStatus;
+            normalized.military_service = userData.screening.military_service || userData.screening.militaryService;
+            normalized.ethnicity = userData.screening.ethnicity;
+            normalized.driving_license = userData.screening.driving_license || userData.screening.drivingLicense;
+        }
+        
+        return normalized;
+    }
+    
+    // Handle mixed camelCase/snake_case flat structure
+    console.log('🔄 Normalizing mixed format to flat snake_case');
+    
+    // Map of camelCase to snake_case field names
+    const fieldMap = {
+        'remoteJobs': 'remote_jobs',
+        'onsiteLocation': 'onsite_location',
+        'jobTypes': 'job_types',
+        'jobTitles': 'job_titles',
+        'seniorityLevels': 'seniority_levels',
+        'timeZones': 'time_zones',
+        'fullName': 'full_name',
+        'resumePath': 'resume_path',
+        'coverLetterOption': 'cover_letter_option',
+        'stateRegion': 'state_region',
+        'postalCode': 'postal_code',
+        'currentJobTitle': 'current_job_title',
+        'eligibleCountries': 'eligible_countries',
+        'visaSponsorship': 'visa_sponsorship',
+        'currentSalary': 'current_salary',
+        'expectedSalary': 'expected_salary',
+        'experienceSummary': 'experience_summary',
+        'hybridPreference': 'hybrid_preference',
+        'dateOfBirth': 'date_of_birth',
+        'isAdult': 'is_adult',
+        'genderIdentity': 'gender_identity',
+        'disabilityStatus': 'disability_status',
+        'militaryService': 'military_service',
+        'drivingLicense': 'driving_license'
+    };
+    
+    // Copy all fields, converting camelCase to snake_case if needed
+    for (const [key, value] of Object.entries(userData)) {
+        if (value !== undefined && value !== null) {
+            // If there's a mapping, use it
+            if (fieldMap[key]) {
+                normalized[fieldMap[key]] = value;
+            } else {
+                // Otherwise, keep the key as is (already snake_case or unknown field)
+                normalized[key] = value;
+            }
+        }
+    }
+    
+    return normalized;
+}
+
 function populateFormFields(userData) {
     try {
         console.log('🔄 Populating form fields with:', userData);
         
+        // Normalize the data to flat snake_case format before processing
+        const normalizedData = normalizeUserData(userData);
+        console.log('🔄 Normalized data:', normalizedData);
+        
         // The convertUserDataToFormState function now handles the complex form elements
         // (pills, multi-selects, etc.) directly, so we just need to call it
-        const formData = convertUserDataToFormState(userData);
+        const formData = convertUserDataToFormState(normalizedData);
         console.log('📝 Converted form data:', formData);
         
         // Populate simple input fields
@@ -1061,8 +1196,7 @@ function convertUserDataToFormState(userData) {
     console.log('🔄 Converting user data to form state:', userData);
     const formData = {};
     
-    // The API returns a flat structure from user_complete_profile view
-    // Handle both nested (old format) and flat (current API) structures for compatibility
+    // userData is now guaranteed to be in flat snake_case format thanks to normalization
     
     // Clear all existing pill selections first to ensure clean state
     console.log('🧹 Clearing existing pill selections...');
@@ -1071,7 +1205,7 @@ function convertUserDataToFormState(userData) {
     });
     
     // Step 1: Job Preferences - Job types (activate pill buttons)
-    const jobTypes = userData.job_types || userData.preferences?.job_types;
+    const jobTypes = userData.job_types;
     if (jobTypes) {
         console.log('📋 Processing job types:', jobTypes);
         const jobTypesArray = Array.isArray(jobTypes) ? jobTypes : (jobTypes || '').split(',').filter(Boolean);
@@ -1090,7 +1224,7 @@ function convertUserDataToFormState(userData) {
     }
     
     // Job titles - populate tags input
-    const jobTitles = userData.job_titles || userData.preferences?.job_titles;
+    const jobTitles = userData.job_titles;
     if (jobTitles) {
         console.log('📋 Processing job titles:', jobTitles);
         const jobTitlesArray = Array.isArray(jobTitles) ? jobTitles : (jobTitles || '').split(',').filter(Boolean);
@@ -1107,7 +1241,7 @@ function convertUserDataToFormState(userData) {
     }
     
     // Remote countries - populate multi-select by directly updating the tags
-    const remoteJobs = userData.remote_jobs || userData.preferences?.remote_jobs;
+    const remoteJobs = userData.remote_jobs;
     if (remoteJobs) {
         console.log('🌍 Processing remote jobs:', remoteJobs);
         const remoteArray = Array.isArray(remoteJobs) ? remoteJobs : (remoteJobs || '').split(',').filter(Boolean);
@@ -1115,14 +1249,14 @@ function convertUserDataToFormState(userData) {
     }
     
     // Onsite location
-    const onsiteLocation = userData.onsite_location || userData.preferences?.onsite_location;
+    const onsiteLocation = userData.onsite_location;
     if (onsiteLocation) {
         formData['onsite-region'] = onsiteLocation;
         console.log(`✅ Set onsite location: ${onsiteLocation}`);
     }
     
     // Step 2: Seniority & Time Zones - Seniority levels (activate pill buttons)
-    const seniorityLevels = userData.seniority_levels || userData.preferences?.seniority_levels;
+    const seniorityLevels = userData.seniority_levels;
     if (seniorityLevels) {
         console.log('📊 Processing seniority levels:', seniorityLevels);
         const seniorityArray = Array.isArray(seniorityLevels) ? seniorityLevels : (seniorityLevels || '').split(',').filter(Boolean);
@@ -1141,19 +1275,19 @@ function convertUserDataToFormState(userData) {
     }
     
     // Time zones
-    const timeZones = userData.time_zones || userData.preferences?.time_zones;
+    const timeZones = userData.time_zones;
     if (timeZones) {
         console.log('🕐 Processing time zones:', timeZones);
         const timeZonesArray = Array.isArray(timeZones) ? timeZones : (timeZones || '').split(',').filter(Boolean);
         populateMultiSelect('timezones', timeZonesArray);
     }
     
-    // Step 3: Personal information (flat structure from API)
+    // Step 3: Personal information
     console.log('👤 Processing personal info');
     
     // Full name
-    if (userData.full_name || userData.personal?.full_name) {
-        formData['full-name'] = userData.full_name || userData.personal?.full_name || '';
+    if (userData.full_name) {
+        formData['full-name'] = userData.full_name;
         console.log(`✅ Set full name: ${formData['full-name']}`);
     }
     
@@ -1164,7 +1298,7 @@ function convertUserDataToFormState(userData) {
     }
     
     // Phone field - need to split into country code and number
-    const phone = userData.phone || userData.personal?.phone || '';
+    const phone = userData.phone || '';
     if (phone) {
         // Extract country code (assumes format like "+1234567890")
         const phoneMatch = phone.match(/^(\+\d{1,3})(.+)$/);
@@ -1181,10 +1315,10 @@ function convertUserDataToFormState(userData) {
     
     // Location fields - use correct IDs matching HTML
     if (userData.city || userData.country || userData.state_region || userData.postal_code) {
-        formData['location-city'] = userData.city || userData.personal?.city || '';
-        formData['location-state'] = userData.state_region || userData.personal?.state_region || '';
-        formData['location-postal'] = userData.postal_code || userData.personal?.postal_code || '';
-        formData['location-country'] = userData.country || userData.personal?.country || '';
+        formData['location-city'] = userData.city || '';
+        formData['location-state'] = userData.state_region || '';
+        formData['location-postal'] = userData.postal_code || '';
+        formData['location-country'] = userData.country || '';
         console.log(`✅ Set location: ${formData['location-country']}, ${formData['location-city']}, ${formData['location-state']}, ${formData['location-postal']}`);
     }
     
@@ -1218,27 +1352,27 @@ function convertUserDataToFormState(userData) {
         }
     }
     
-    // Step 4: Eligibility information (flat structure from API)
+    // Step 4: Eligibility information
     console.log('🎯 Processing eligibility');
     
     // Current job title
-    if (userData.current_job_title || userData.eligibility?.current_job_title) {
-        formData['current-job-title'] = userData.current_job_title || userData.eligibility?.current_job_title || '';
+    if (userData.current_job_title) {
+        formData['current-job-title'] = userData.current_job_title;
         console.log(`✅ Set current job title`);
     }
     
     // Salary fields
-    if (userData.expected_salary || userData.eligibility?.expected_salary) {
-        formData['expected-salary'] = userData.expected_salary || userData.eligibility?.expected_salary || '';
+    if (userData.expected_salary) {
+        formData['expected-salary'] = userData.expected_salary;
         console.log(`✅ Set expected salary`);
     }
-    if (userData.current_salary || userData.eligibility?.current_salary) {
-        formData['current-salary'] = userData.current_salary || userData.eligibility?.current_salary || '';
+    if (userData.current_salary) {
+        formData['current-salary'] = userData.current_salary;
         console.log(`✅ Set current salary`);
     }
     
     // Availability - activate pill buttons
-    const availability = userData.availability || userData.eligibility?.availability;
+    const availability = userData.availability;
     if (availability) {
         const availabilityValue = availability.toLowerCase();
         const availabilityPill = document.querySelector(`.pill[data-value="${availabilityValue}"]`);
@@ -1253,9 +1387,7 @@ function convertUserDataToFormState(userData) {
     }
     
     // Visa sponsorship - activate pill buttons
-    const visaSponsorship = userData.visa_sponsorship !== null && userData.visa_sponsorship !== undefined 
-        ? userData.visa_sponsorship 
-        : userData.eligibility?.visa_sponsorship;
+    const visaSponsorship = userData.visa_sponsorship;
     if (visaSponsorship !== null && visaSponsorship !== undefined) {
         const visaValue = visaSponsorship ? 'yes' : 'no';
         const visaPill = document.querySelector(`.pill[data-value="${visaValue}"]`);
@@ -1270,7 +1402,7 @@ function convertUserDataToFormState(userData) {
     }
     
     // Eligible countries - populate multi-select
-    const eligibleCountries = userData.eligible_countries || userData.eligibility?.eligible_countries;
+    const eligibleCountries = userData.eligible_countries;
     if (eligibleCountries) {
         const countriesArray = Array.isArray(eligibleCountries) ? eligibleCountries : 
                               (typeof eligibleCountries === 'string' ? JSON.parse(eligibleCountries) : []);
@@ -1279,7 +1411,7 @@ function convertUserDataToFormState(userData) {
     }
     
     // Nationality - populate multi-select
-    const nationality = userData.nationality || userData.eligibility?.nationality;
+    const nationality = userData.nationality;
     if (nationality) {
         const nationalityArray = Array.isArray(nationality) ? nationality : 
                                 (typeof nationality === 'string' ? JSON.parse(nationality) : []);
