@@ -355,8 +355,23 @@ function initMultiSelect(baseId, options, maxItems = null) {
         setItems: (items) => {
             selectedItems.clear();
             items.forEach(item => {
-                if (options.includes(item)) {
-                    selectedItems.add(item);
+                // Trim whitespace from item
+                const trimmedItem = typeof item === 'string' ? item.trim() : item;
+                
+                // Try exact match first
+                if (options.includes(trimmedItem)) {
+                    selectedItems.add(trimmedItem);
+                } else {
+                    // Try case-insensitive match
+                    const matchedOption = options.find(opt => 
+                        opt.toLowerCase() === trimmedItem.toLowerCase()
+                    );
+                    if (matchedOption) {
+                        selectedItems.add(matchedOption);
+                        console.log(`📝 Matched "${trimmedItem}" to "${matchedOption}"`);
+                    } else {
+                        console.warn(`⚠️ Could not match item "${trimmedItem}" in ${baseId} options`);
+                    }
                 }
             });
             renderTags();
