@@ -1,5 +1,27 @@
 const db = require('../database/db');
 
+/**
+ * Job Model
+ * 
+ * Manages job postings in the system. Jobs can be either:
+ * 
+ * 1. **Global Jobs** (user_id IS NULL):
+ *    - Jobs scraped from public job boards (Indeed, LinkedIn, Glassdoor, etc.)
+ *    - Available to all users for viewing and application
+ *    - Created by automated job scanning services
+ *    - Core job discovery feature of the platform
+ * 
+ * 2. **User-Specific Jobs** (user_id is set):
+ *    - Jobs manually added or saved by individual users
+ *    - Only visible to the user who created them
+ *    - Used for custom job tracking
+ * 
+ * Security & Privacy:
+ * - The applications table tracks which user applied to which job
+ * - Users can only see their own application history
+ * - Global jobs (user_id IS NULL) are intentionally accessible to all users
+ * - This design enables a shared job marketplace while maintaining application privacy
+ */
 class Job {
   static async findById(id) {
     try {
@@ -188,6 +210,20 @@ class Job {
     }
   }
 
+  /**
+   * Get job statistics for a user
+   * 
+   * Returns statistics for jobs that are either:
+   * 1. User-specific (j.user_id = userId): Jobs created/saved by this specific user
+   * 2. Global (j.user_id IS NULL): Jobs scraped from job boards available to all users
+   * 
+   * Security Note: The "j.user_id IS NULL" condition is intentional and allows users to see
+   * global job postings discovered from job boards. This is the core job discovery feature.
+   * Jobs with null user_id are public job listings from sources like Indeed, LinkedIn, etc.
+   * 
+   * @param {number} userId - The user ID to get statistics for
+   * @returns {Promise<Object>} Statistics object with total_jobs, applied_jobs, available_jobs
+   */
   static async getStatistics(userId) {
     try {
       const query = `
@@ -207,6 +243,25 @@ class Job {
     }
   }
 
+  /**
+   * Get job analytics for a user over a specific time period
+   * 
+   * Returns analytics for jobs that are either:
+   * 1. User-specific (j.user_id = userId): Jobs created/saved by this specific user
+   * 2. Global (j.user_id IS NULL): Jobs scraped from job boards available to all users
+   * 
+   * Security Note: The "j.user_id IS NULL" condition is intentional and allows users to see
+   * analytics for global job postings discovered from job boards. This enables users to track
+   * available opportunities from public sources (Indeed, LinkedIn, Glassdoor, etc.) alongside
+   * their personally saved jobs.
+   * 
+   * Business Logic: Jobs without a user_id are public job listings that any user can view and
+   * apply to. Only the applications table tracks which user applied to which job.
+   * 
+   * @param {number} userId - The user ID to get analytics for
+   * @param {string} period - Number of days to analyze (default: '30')
+   * @returns {Promise<Object>} Analytics object with total, this_week, today, applied, available
+   */
   static async getAnalytics(userId, period = '30') {
     try {
       const periodDays = parseInt(period) || 30;
