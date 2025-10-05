@@ -31,7 +31,15 @@ on:
                                                                                                                                   env:
                                                                                                                                           RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
                                                                                                                                                   
-                                                                                                                                                      - name: Verify deployment
+                                                                                                                                                      - name: Run database migrations
                                                                                                                                                             run: |
-                                                                                                                                                                    echo "Deployment completed successfully"
-                                                                                                                                                                            echo "Application should be available at Railway URL"
+                                                                                                                                                                    echo "Running database migrations..."
+                                                                                                                                                                            npx -y railway run node scripts/run-all-migrations.js
+                                                                                                                                                                                  env:
+                                                                                                                                                                                          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+                                                                                                                                                                  
+                                                                                                                                                                      - name: Verify deployment
+                                                                                                                                                                            run: |
+                                                                                                                                                                                    echo "Deployment completed successfully"
+                                                                                                                                                                                            echo "Application should be available at Railway URL"
+

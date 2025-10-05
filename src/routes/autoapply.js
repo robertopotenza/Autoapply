@@ -846,6 +846,50 @@ router.get('/analytics', auth, async (req, res) => {
         });
     } catch (error) {
         logger.error('Error getting analytics:', error);
+        
+        // Check for missing column errors (e.g., column "user_id" does not exist)
+        const isMissingColumnError = error.message && (
+            error.message.match(/column .* does not exist/i) ||
+            error.message.includes('does not exist')
+        );
+        
+        // Check for other database errors
+        const isDatabaseError = error.message && (
+            error.message.includes('Database not configured') ||
+            error.message.includes('connect ECONNREFUSED') ||
+            error.message.includes('database') ||
+            error.code === 'ECONNREFUSED' ||
+            error.code === '42703' || // PostgreSQL: undefined column
+            error.code === '42P01'    // PostgreSQL: undefined table
+        );
+        
+        if (isMissingColumnError || isDatabaseError) {
+            logger.warn('Database error in analytics, returning empty fallback:', error.message);
+            
+            // Return graceful 200 response with empty analytics
+            return res.status(200).json({
+                success: true,
+                analytics: {
+                    applications: {
+                        total: 0,
+                        this_week: 0,
+                        today: 0,
+                        period_total: 0
+                    },
+                    jobs: {
+                        total: 0,
+                        this_week: 0,
+                        today: 0,
+                        applied: 0,
+                        available: 0
+                    },
+                    success_rate: 0
+                },
+                storage_mode: 'offline',
+                warning: 'Analytics data is temporarily unavailable. Database migration may be required or connection is unavailable.'
+            });
+        }
+        
         res.status(500).json({
             success: false,
             message: 'Failed to get analytics',

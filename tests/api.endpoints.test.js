@@ -286,5 +286,72 @@ describe('AutoApply API Endpoints', () => {
       expect(response.body.message).toBe('Failed to get analytics');
       expect(response.body.error).toBeDefined();
     });
+
+    test('should return fallback analytics when column does not exist', async () => {
+      const Job = require('../src/models/Job');
+      
+      // Mock a PostgreSQL column does not exist error
+      const columnError = new Error('column "user_id" does not exist');
+      columnError.code = '42703';
+      Job.getAnalytics.mockRejectedValueOnce(columnError);
+
+      const response = await request(app)
+        .get('/api/autoapply/analytics')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.analytics).toBeDefined();
+      expect(response.body.analytics.applications).toEqual({
+        total: 0,
+        this_week: 0,
+        today: 0,
+        period_total: 0
+      });
+      expect(response.body.analytics.jobs).toEqual({
+        total: 0,
+        this_week: 0,
+        today: 0,
+        applied: 0,
+        available: 0
+      });
+      expect(response.body.storage_mode).toBe('offline');
+      expect(response.body.warning).toContain('temporarily unavailable');
+    });
+
+    test('should return fallback analytics when database not configured', async () => {
+      const Job = require('../src/models/Job');
+      
+      Job.getAnalytics.mockRejectedValueOnce(
+        new Error('Database not configured')
+      );
+
+      const response = await request(app)
+        .get('/api/autoapply/analytics')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.analytics).toBeDefined();
+      expect(response.body.storage_mode).toBe('offline');
+      expect(response.body.warning).toBeDefined();
+    });
+
+    test('should return fallback analytics on connection refused', async () => {
+      const Application = require('../src/models/Application');
+      
+      const connError = new Error('connect ECONNREFUSED 127.0.0.1:5432');
+      connError.code = 'ECONNREFUSED';
+      Application.getAnalytics.mockRejectedValueOnce(connError);
+
+      const response = await request(app)
+        .get('/api/autoapply/analytics')
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.storage_mode).toBe('offline');
+      expect(response.body.warning).toContain('temporarily unavailable');
+    });
   });
 });
