@@ -81,7 +81,7 @@ async function runMigrationFile(pool, migrationPath, label) {
             if (error.code === '42P07') {
                 continue;
             }
-            logger.error(`❌ Migration ${label} failed on statement`);
+            logger.error(`❌ Migration ${label} failed on statement:\n${statement}`);
             throw error;
         }
     }
