@@ -184,6 +184,39 @@ router.post('/start', auth, async (req, res) => {
     }
 });
 
+// Enable autoapply (alias for /start for backward compatibility)
+router.post('/enable', auth, async (req, res) => {
+    try {
+        const userId = req.user.userId || req.user.user_id;
+        
+        if (orchestrator) {
+            // Use enhanced orchestrator
+            const sessionId = await orchestrator.startSession(userId);
+            
+            res.json({
+                success: true,
+                message: 'AutoApply enabled successfully',
+                sessionId,
+                mode: 'enhanced'
+            });
+        } else {
+            // Fallback to basic functionality
+            res.json({
+                success: true,
+                message: 'AutoApply enabled successfully',
+                mode: 'basic'
+            });
+        }
+    } catch (error) {
+        logger.error('Error enabling autoapply:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to enable AutoApply',
+            error: error.message
+        });
+    }
+});
+
 // Stop autoapply session
 router.post('/stop', auth, async (req, res) => {
     try {
