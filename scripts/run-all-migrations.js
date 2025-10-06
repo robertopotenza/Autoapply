@@ -1,7 +1,12 @@
 #!/usr/bin/env node
 
 // Load environment variables using dotenv-flow for environment detection
-require('dotenv-flow').config();
+// On Railway, environment variables are injected directly
+try {
+    require('dotenv-flow').config({ silent: true });
+} catch (error) {
+    // Using Railway-injected environment variables
+}
 
 const { Pool } = require('pg');
 const fs = require('fs');

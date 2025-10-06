@@ -14,9 +14,9 @@
 
 const { Pool } = require('pg');
 
-// Load environment variables using dotenv-flow
-// This automatically loads the correct .env file based on NODE_ENV
-require('dotenv-flow').config();
+// Note: dotenv-flow should be loaded by the main entry point (server.js)
+// before this module is required. We don't call config() here to avoid
+// double-loading and potential race conditions.
 
 // Determine current environment
 const NODE_ENV = process.env.NODE_ENV || 'development';
@@ -120,8 +120,14 @@ function logConnectionInfo() {
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
 }
 
-// Log configuration on module load
-logConnectionInfo();
+// Log configuration on next tick to avoid blocking module load
+setImmediate(() => {
+    try {
+        logConnectionInfo();
+    } catch (error) {
+        console.error('Warning: Could not log database configuration:', error.message);
+    }
+});
 
 /**
  * Pool event handlers for monitoring and debugging

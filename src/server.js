@@ -5,7 +5,13 @@
 
 // Load environment variables FIRST using dotenv-flow
 // This automatically loads the correct .env file based on NODE_ENV
-require('dotenv-flow').config();
+// On Railway, environment variables are injected directly, so this is optional
+try {
+    require('dotenv-flow').config({ silent: true });
+} catch (error) {
+    // dotenv-flow not available or no .env files found - this is OK on Railway
+    console.log('ℹ️  Using system environment variables (Railway mode)');
+}
 
 const express = require('express');
 const cors = require('cors');
