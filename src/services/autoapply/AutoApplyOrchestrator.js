@@ -323,26 +323,27 @@ class AutoApplyOrchestrator {
 
     async checkProfileCompleteness(userId) {
         const query = `
-            SELECT 
-                p.first_name, p.last_name, p.phone, p.resume_url,
-                e.work_authorization
+            SELECT
+                p.full_name, p.phone, p.resume_path,
+                e.current_job_title, e.availability
             FROM profile p
-            JOIN eligibility e ON p.user_id = e.user_id
+            LEFT JOIN eligibility e ON p.user_id = e.user_id
             WHERE p.user_id = $1
         `;
-        
+
         const result = await this.db.query(query, [userId]);
         const profile = result.rows[0];
 
         if (!profile) {
-            return { isComplete: false, missing: ['profile', 'eligibility'] };
+            return { isComplete: false, missing: ['profile'] };
         }
 
         const missing = [];
-        if (!profile.first_name) missing.push('first name');
-        if (!profile.last_name) missing.push('last name');
+        if (!profile.full_name) missing.push('full name');
         if (!profile.phone) missing.push('phone');
-        if (!profile.work_authorization) missing.push('work authorization');
+        if (!profile.resume_path) missing.push('resume');
+        if (!profile.current_job_title) missing.push('current job title');
+        if (!profile.availability) missing.push('availability');
 
         return {
             isComplete: missing.length === 0,
