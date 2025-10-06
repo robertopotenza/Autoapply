@@ -1,4 +1,4 @@
-﻿/**
+/**
  * Comprehensive Logger Utility for Apply Autonomously Platform
  * Provides structured logging with different levels, contexts, and output formatting
  */
@@ -14,36 +14,49 @@ class Logger {
             INFO: 2,
             DEBUG: 3
         };
-        
-        // Set current log level based on DEBUG_MODE
-        this.currentLevel = this.determineLogLevel();
-        
+
+        // Set current log level based on DEBUG_MODE or LOG_LEVEL
+        this._level = this._getLogLevel();
+
         // Initialize Winston logger if available
         this.winston = null;
         this.initializeWinston();
     }
-    
-    determineLogLevel() {
-        // Check DEBUG_MODE environment variable
-        if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
-            return this.levels.DEBUG;
+
+    _getLogLevel() {
+        if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG === 'true' || process.env.DEBUG_MODE === '1') {
+            return 'DEBUG';
         }
-        
-        // Check LOG_LEVEL environment variable
-        const logLevel = (process.env.LOG_LEVEL || 'INFO').toUpperCase();
-        return this.levels[logLevel] !== undefined ? this.levels[logLevel] : this.levels.INFO;
+        const envLevel = (process.env.LOG_LEVEL || 'INFO').toUpperCase();
+        return this.levels.hasOwnProperty(envLevel) ? envLevel : 'INFO';
     }
-    
+
+    get level() {
+        return this._level;
+    }
+
+    set level(newLevel) {
+        const upperLevel = newLevel.toUpperCase();
+        if (this.levels.hasOwnProperty(upperLevel)) {
+            this._level = upperLevel;
+        }
+    }
+
+    _shouldLog(level) {
+        const levelValue = this.levels[level.toUpperCase()];
+        const currentLevelValue = this.levels[this._level];
+        return levelValue <= currentLevelValue;
+    }
+
     initializeWinston() {
         try {
-            // Determine Winston log level based on DEBUG_MODE
             let winstonLevel = 'info';
             if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
                 winstonLevel = 'debug';
             } else if (process.env.LOG_LEVEL) {
                 winstonLevel = process.env.LOG_LEVEL.toLowerCase();
             }
-            
+
             this.winston = winston.createLogger({
                 level: winstonLevel,
                 format: winston.format.combine(
@@ -64,43 +77,46 @@ class Logger {
                 }));
             }
         } catch (error) {
-            // Fallback to console logging if Winston fails
             console.warn('Winston logger initialization failed, using console logging');
         }
     }
-    
+
     formatMessage(level, message, ...args) {
         const timestamp = new Date().toISOString();
-        const levelStr = level.toUpperCase().padEnd(5);
-        const contextStr = `[${this.context}]`.padEnd(12);
-        
-        let formattedMessage = `${timestamp} ${levelStr} ${contextStr} ${message}`;
-        
+        const logEntry = {
+            timestamp,
+            level: level.toUpperCase(),
+            context: this.context,
+            message
+        };
+
         if (args.length > 0) {
-            const additionalData = args.map(arg => 
-                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-            ).join(' ');
-            formattedMessage += ` ${additionalData}`;
+            for (const arg of args) {
+                if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+                    Object.assign(logEntry, arg);
+                } else {
+                    if (!logEntry.data) {
+                        logEntry.data = [];
+                    }
+                    logEntry.data.push(arg);
+                }
+            }
         }
-        
-        return formattedMessage;
+
+        return JSON.stringify(logEntry);
     }
-    
+
     log(level, message, ...args) {
-        const formattedMessage = this.formatMessage(level, message, ...args);
-        
-        // Check if this level should be logged based on currentLevel
-        const levelValue = this.levels[level.toUpperCase()] || 0;
-        if (levelValue > this.currentLevel) {
-            return; // Skip logging if level is above current threshold
+        if (!this._shouldLog(level)) {
+            return;
         }
-        
-        // Use Winston if available
+
+        const formattedMessage = this.formatMessage(level, message, ...args);
+
         if (this.winston) {
             this.winston.log(level, message, { args, context: this.context });
         }
-        
-        // Always log to console for immediate feedback
+
         switch (level.toLowerCase()) {
             case 'error':
                 console.error(formattedMessage);
@@ -109,7 +125,7 @@ class Logger {
                 console.warn(formattedMessage);
                 break;
             case 'debug':
-                if (process.env.NODE_ENV === 'development' || process.env.DEBUG || process.env.DEBUG_MODE === 'true') {
+                if (process.env.NODE_ENV === 'development' || process.env.DEBUG_MODE === 'true' || process.env.DEBUG === 'true') {
                     console.debug(formattedMessage);
                 }
                 break;
@@ -117,33 +133,33 @@ class Logger {
                 console.log(formattedMessage);
         }
     }
-    
+
     error(message, ...args) {
         this.log('error', message, ...args);
     }
-    
+
     warn(message, ...args) {
         this.log('warn', message, ...args);
     }
-    
+
     info(message, ...args) {
         this.log('info', message, ...args);
     }
-    
+
     debug(message, ...args) {
         this.log('debug', message, ...args);
     }
-    
-    // Utility methods for structured logging
+
+    // Structured logging helpers
     logJobScan(platform, jobCount, duration) {
-        this.info(`Job scan completed`, {
+        this.info('Job scan completed', {
             platform,
             jobCount,
             duration: `${duration}ms`,
             timestamp: new Date().toISOString()
         });
     }
-    
+
     logApplication(jobTitle, company, status) {
         this.info(`Application ${status}`, {
             jobTitle,
@@ -152,7 +168,7 @@ class Logger {
             timestamp: new Date().toISOString()
         });
     }
-    
+
     logUserAction(userId, action, details = {}) {
         this.info(`User action: ${action}`, {
             userId,
@@ -161,9 +177,9 @@ class Logger {
             timestamp: new Date().toISOString()
         });
     }
-    
+
     logAPIRequest(method, endpoint, userId, responseTime) {
-        this.debug(`API Request`, {
+        this.debug('API Request', {
             method,
             endpoint,
             userId,
@@ -171,30 +187,27 @@ class Logger {
             timestamp: new Date().toISOString()
         });
     }
-    
+
     logError(error, context = {}) {
-        this.error(`Error occurred`, {
+        this.error('Error occurred', {
             message: error.message,
             stack: error.stack,
             context,
             timestamp: new Date().toISOString()
         });
     }
-    
-    // Log SQL queries when DEBUG_MODE is enabled
+
     logSQL(query, params = [], duration = null) {
         if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
             const logData = {
                 query: query.trim(),
                 timestamp: new Date().toISOString()
             };
-            
-            // Only log params if they exist and are not sensitive
+
             if (params && params.length > 0) {
-                // Mask potential sensitive data (passwords, tokens, etc.)
-                const maskedParams = params.map((param, index) => {
-                    if (typeof param === 'string' && 
-                        (query.toLowerCase().includes('password') || 
+                const maskedParams = params.map(param => {
+                    if (typeof param === 'string' &&
+                        (query.toLowerCase().includes('password') ||
                          query.toLowerCase().includes('token') ||
                          query.toLowerCase().includes('secret'))) {
                         return '[REDACTED]';
@@ -203,21 +216,21 @@ class Logger {
                 });
                 logData.params = maskedParams;
             }
-            
+
             if (duration !== null) {
                 logData.duration = `${duration}ms`;
             }
-            
+
             this.debug('SQL Query', logData);
         }
     }
 }
 
-// Create default logger instance
+// Default logger instance
 const defaultLogger = new Logger('Default');
 
-// Export both class and default instance
 module.exports = {
     Logger,
     logger: defaultLogger
 };
+
