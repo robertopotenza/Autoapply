@@ -16,7 +16,8 @@
     "test:migrations": "node scripts/test-migration-sequence.js",
     "db:init": "node scripts/init-database.js",
     "db:migrate": "node database/migrations/run.js",
-    "db:seed": "node database/seed.js"
+    "db:seed": "node database/seed.js",
+    "db:check": "node scripts/check-db-connection.js"
   },
   "keywords": [
     "job-application",

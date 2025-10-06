@@ -1,4 +1,6 @@
-const { Pool } = require('pg');
+// Import the shared pool from pool.js
+// This pool is environment-aware and handles SSL configuration automatically
+const pool = require('./pool');
 const { Logger } = require('../utils/logger');
 
 // Create logger instance for database operations
@@ -6,47 +8,15 @@ const logger = new Logger('Database');
 
 // Check if database credentials are configured
 const isDatabaseConfigured = () => {
-    // Check if we have either individual PG vars or DATABASE_URL
-    const hasIndividualVars = !!(process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE);
-    const hasDatabaseUrl = !!process.env.DATABASE_URL;
-    return hasIndividualVars || hasDatabaseUrl;
+    return !!process.env.DATABASE_URL;
 };
 
-// PostgreSQL connection pool (only if configured)
-let pool = null;
-
 if (isDatabaseConfigured()) {
-    // Prioritize DATABASE_URL if available (for Railway deployment)
-    if (process.env.DATABASE_URL) {
-        pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        });
-        logger.info('✅ Database configured using DATABASE_URL');
-    } else {
-        // Fall back to individual environment variables
-        pool = new Pool({
-            host: process.env.PGHOST,
-            user: process.env.PGUSER,
-            password: process.env.PGPASSWORD,
-            database: process.env.PGDATABASE,
-            port: process.env.PGPORT || 5432,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        });
-        logger.info('✅ Database configured using PG environment variables');
-    }
-
-    // Test database connection
-    pool.on('connect', () => {
-        logger.info('Connected to PostgreSQL database');
-    });
-
-    pool.on('error', (err) => {
-        logger.error('Unexpected error on idle PostgreSQL client', err);
-    });
+    logger.info('✅ Database pool initialized via pool.js');
 } else {
-    logger.warn('PostgreSQL database not configured. Set DATABASE_URL or (PGHOST, PGUSER, PGPASSWORD, PGDATABASE) environment variables.');
+    logger.warn('⚠️  DATABASE_URL not set - database features will be unavailable');
 }
+
 
 // Query helper function
 async function query(text, params) {

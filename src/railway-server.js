@@ -80,36 +80,26 @@ app.use((req, res, next) => {
     next();
 });
 
-// Initialize database connection
-let pool = null;
+// Import shared database pool
+const pool = require('./database/pool');
 
 async function initializeDatabase() {
     try {
-        if (process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD) {
-            pool = new Pool({
-                host: process.env.PGHOST,
-                user: process.env.PGUSER,
-                password: process.env.PGPASSWORD,
-                database: process.env.PGDATABASE || 'railway',
-                port: parseInt(process.env.PGPORT) || 5432,
-                ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-                max: 20,
-                idleTimeoutMillis: 30000,
-                connectionTimeoutMillis: 2000,
-            });
-
-            // Test database connection
-            const testResult = await pool.query('SELECT NOW() as timestamp');
-            logger.info(`✅ Database connected successfully: ${testResult.rows[0].timestamp}`);
-            
-            // Add database to request object
-            app.use((req, res, next) => {
-                req.db = pool;
-                next();
-            });
-        } else {
-            logger.warn('⚠️ Database credentials not found - running without database');
+        if (!process.env.DATABASE_URL) {
+            logger.warn('⚠️ DATABASE_URL not found - running without database');
+            return;
         }
+
+        // Use the shared pool from pool.js (already configured with SSL, etc.)
+        // Test database connection
+        const testResult = await pool.query('SELECT NOW() as timestamp');
+        logger.info(`✅ Database connected successfully: ${testResult.rows[0].timestamp}`);
+        
+        // Add database to request object
+        app.use((req, res, next) => {
+            req.db = pool;
+            next();
+        });
     } catch (error) {
         logger.error('❌ Database connection failed:', error.message);
         throw error;

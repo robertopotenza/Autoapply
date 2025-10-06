@@ -113,6 +113,10 @@ application_analytics   -- Performance metrics and insights
 
 3. **Setup Database**
    ```bash
+   # Verify database connection
+   npm run db:check
+   
+   # Run migrations
    npm run db:migrate
    npm run db:seed
    ```
@@ -132,12 +136,19 @@ npm run deploy
 
 For detailed deployment instructions, see [RAILWAY_CONFIG.md](RAILWAY_CONFIG.md) and [SETUP.md](SETUP.md).
 
+For database connection configuration across environments, see [docs/DATABASE_CONNECTION.md](docs/DATABASE_CONNECTION.md).
+
 ##  Configuration
 
 The platform supports comprehensive configuration through both environment variables and the web-based wizard interface:
 
 ### Environment Variables
-- `DATABASE_URL` - PostgreSQL connection string
+- `NODE_ENV` - Environment mode (development/staging/production)
+- `DATABASE_URL` - PostgreSQL connection string (automatically configured per environment)
+  - **Local**: `postgres://user:pass@localhost:5432/autoapply`
+  - **Production (Railway)**: Uses internal endpoint `postgres.railway.internal`
+  - **Staging**: Uses public Railway endpoint for external testing
+
 - `OPENAI_API_KEY` - OpenAI API for intelligent matching
 - `RESEND_API_KEY` - Email service for magic links
 - `JWT_SECRET` - JWT token signing secret

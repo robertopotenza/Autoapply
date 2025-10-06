@@ -96,8 +96,8 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 // Add traceId middleware early - after body parsers, before routes
 app.use(traceIdMiddleware(logger));
 
-// Database connection
-let pool = null;
+// Import shared database pool
+const pool = require('./database/pool');
 
 // Helper function to split SQL statements
 function splitSqlStatements(sql) {
@@ -146,11 +146,7 @@ async function initializeDatabase() {
             return null;
         }
 
-        pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        });
-
+        // Use the shared pool from pool.js (already configured with SSL, etc.)
         // Test connection
         await pool.query('SELECT NOW()');
         logger.info('✅ Database connected successfully');
