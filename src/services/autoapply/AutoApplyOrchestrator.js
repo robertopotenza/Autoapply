@@ -55,7 +55,9 @@ class AutoApplyOrchestrator {
             // Check if user profile is complete
             const profileComplete = await this.checkProfileCompleteness(userId);
             if (!profileComplete.isComplete) {
-                throw new Error(`Profile incomplete. Missing: ${profileComplete.missing.join(', ')}`);
+                const missingFields = profileComplete.missing.join(', ');
+                this.logger.warn(`Profile incomplete for user ${userId}. Missing: ${missingFields}`);
+                throw new Error(`Please complete your profile before starting AutoApply. Missing required fields: ${missingFields}. Go to the wizard to complete your profile.`);
             }
 
             // Start autoapply session
