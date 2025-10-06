@@ -13,10 +13,10 @@ const logger = new Logger('SchemaVerify');
 const requiredColumns = {
     users: ['user_id', 'email', 'password_hash', 'created_at'],
     profile: ['user_id', 'full_name', 'email', 'phone'],
-    job_preferences: ['user_id', 'job_titles', 'locations', 'employment_type'],
-    jobs: ['job_id', 'user_id', 'job_title', 'company_name', 'job_url', 'created_at'],
-    applications: ['application_id', 'user_id', 'job_id', 'status', 'applied_at'],
-    eligibility: ['user_id', 'work_authorization', 'security_clearance'],
+    job_preferences: ['user_id', 'job_titles', 'onsite_location', 'job_types'], // Fixed: onsite_location not locations, job_types not employment_type
+    jobs: ['job_id', 'job_title', 'company_name', 'job_url', 'created_at'], // user_id is nullable for global jobs
+    applications: ['application_id', 'user_id', 'job_id', 'status'], // applied_at is nullable
+    eligibility: ['user_id', 'current_job_title', 'availability'], // Fixed: actual columns from schema
     screening_answers: ['user_id', 'experience_summary', 'languages']
 };
 
