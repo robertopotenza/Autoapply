@@ -431,7 +431,13 @@ async function initializeDatabaseAsync() {
         logger.error('❌ Database initialization failed:', error);
         initializationError = error;
         isInitializing = false;
-        // Don't exit - allow server to continue running without database
+        // Don't exit - allow server to continue running without database.
+        // ⚠️ Implications:
+        //   - Endpoints/features that require database access (e.g., authentication, user management, autoapply features)
+        //     will be unavailable or may return errors until the database is initialized.
+        //   - Health check and static endpoints will continue to function.
+        //   - Dashboard, wizard, and API routes that depend on database queries will fail or be degraded.
+        //   - See documentation for details on which routes require database connectivity.
     }
 }
 
