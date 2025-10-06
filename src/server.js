@@ -18,10 +18,6 @@ if (process.env.SENTRY_DSN) {
         dsn: process.env.SENTRY_DSN,
         environment: process.env.NODE_ENV || 'development',
         tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE ? parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE) : 1.0,
-        // Capture unhandled promise rejections
-        integrations: [
-            new Sentry.Integrations.Http({ tracing: true }),
-        ],
     });
     console.log('✅ Sentry initialized for error tracking');
 }
@@ -60,13 +56,6 @@ app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 }));
-
-// Sentry request handler must be the first middleware
-if (Sentry) {
-    app.use(Sentry.Handlers.requestHandler());
-    // TracingHandler creates a trace for every incoming request
-    app.use(Sentry.Handlers.tracingHandler());
-}
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
@@ -343,17 +332,12 @@ app.get('*', (req, res) => {
 
 // Sentry error handler must be before any other error middleware
 if (Sentry) {
-    app.use(Sentry.Handlers.errorHandler());
+    app.use(Sentry.expressErrorHandler());
 }
 
 // Error handling middleware
 app.use((error, req, res, next) => {
     logger.error('Unhandled error:', error);
-    
-    // Report to Sentry if available
-    if (Sentry) {
-        Sentry.captureException(error);
-    }
     
     res.status(500).json({
         success: false,
