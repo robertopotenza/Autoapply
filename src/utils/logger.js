@@ -15,9 +15,37 @@ class Logger {
             DEBUG: 3
         };
         
+        // Set log level based on DEBUG_MODE env var
+        this._level = this._getLogLevel();
+        
         // Initialize Winston logger if available
         this.winston = null;
         this.initializeWinston();
+    }
+    
+    _getLogLevel() {
+        if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG === 'true') {
+            return 'DEBUG';
+        }
+        const envLevel = (process.env.LOG_LEVEL || 'INFO').toUpperCase();
+        return this.levels.hasOwnProperty(envLevel) ? envLevel : 'INFO';
+    }
+    
+    get level() {
+        return this._level;
+    }
+    
+    set level(newLevel) {
+        const upperLevel = newLevel.toUpperCase();
+        if (this.levels.hasOwnProperty(upperLevel)) {
+            this._level = upperLevel;
+        }
+    }
+    
+    _shouldLog(level) {
+        const levelValue = this.levels[level.toUpperCase()];
+        const currentLevelValue = this.levels[this._level];
+        return levelValue <= currentLevelValue;
     }
     
     initializeWinston() {
@@ -49,22 +77,37 @@ class Logger {
     
     formatMessage(level, message, ...args) {
         const timestamp = new Date().toISOString();
-        const levelStr = level.toUpperCase().padEnd(5);
-        const contextStr = `[${this.context}]`.padEnd(12);
+        const logEntry = {
+            timestamp,
+            level: level.toUpperCase(),
+            context: this.context,
+            message
+        };
         
-        let formattedMessage = `${timestamp} ${levelStr} ${contextStr} ${message}`;
-        
+        // Merge additional context objects
         if (args.length > 0) {
-            const additionalData = args.map(arg => 
-                typeof arg === 'object' ? JSON.stringify(arg, null, 2) : String(arg)
-            ).join(' ');
-            formattedMessage += ` ${additionalData}`;
+            for (const arg of args) {
+                if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+                    Object.assign(logEntry, arg);
+                } else {
+                    // For non-object args, add them as additional data
+                    if (!logEntry.data) {
+                        logEntry.data = [];
+                    }
+                    logEntry.data.push(arg);
+                }
+            }
         }
         
-        return formattedMessage;
+        return JSON.stringify(logEntry);
     }
     
     log(level, message, ...args) {
+        // Check if this log level should be output
+        if (!this._shouldLog(level)) {
+            return;
+        }
+        
         const formattedMessage = this.formatMessage(level, message, ...args);
         
         // Use Winston if available
@@ -81,9 +124,7 @@ class Logger {
                 console.warn(formattedMessage);
                 break;
             case 'debug':
-                if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
-                    console.debug(formattedMessage);
-                }
+                console.debug(formattedMessage);
                 break;
             default:
                 console.log(formattedMessage);

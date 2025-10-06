@@ -1,4 +1,5 @@
 const db = require('../database/db');
+const AppError = require('../utils/AppError');
 
 /**
  * Job Model
@@ -281,7 +282,17 @@ class Job {
       const result = await db.query(query, [userId, periodDays]);
       return result.rows[0];
     } catch (error) {
-      throw new Error(`Error getting job analytics: ${error.message}`);
+      throw AppError.database(
+        'Failed to get job analytics',
+        {
+          module: 'Job',
+          method: 'getAnalytics',
+          userId,
+          period,
+          query: 'job_analytics'
+        },
+        error
+      );
     }
   }
 }
