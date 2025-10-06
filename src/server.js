@@ -19,6 +19,7 @@ const debugResetRoutes = require('./routes/debug-reset');
 
 // Import utilities and middleware
 const { Logger } = require('./utils/logger');
+const { verifySchema } = require('./utils/verifySchema');
 const authenticateToken = require('./middleware/auth').authenticateToken;
 
 // Initialize logger
@@ -134,6 +135,16 @@ async function initializeDatabase() {
             logger.info('✅ All migrations completed successfully');
         } else {
             logger.warn('⚠️  Migrations directory not found');
+        }
+
+        // Verify schema compatibility
+        logger.info('🔍 Verifying schema compatibility...');
+        try {
+            await verifySchema(pool);
+            logger.info('✅ Schema verified — starting server...');
+        } catch (error) {
+            logger.error('❌ Schema verification failed:', error.message);
+            throw error;
         }
 
         return pool;

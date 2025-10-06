@@ -2,44 +2,54 @@ name: Deploy to Railway
 
 on:
   push:
-      branches: [ main ]
-        pull_request:
-            branches: [ main ]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
 
-            jobs:
-              deploy:
-                  runs-on: ubuntu-latest
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-                          steps:
-                              - name: Checkout code
-                                    uses: actions/checkout@v4
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-                                              - name: Setup Node.js
-                                                    uses: actions/setup-node@v4
-                                                          with:
-                                                                  node-version: '20'
-                                                                          cache: 'npm'
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
 
-                                                                                      - name: Install dependencies
-                                                                                            run: npm ci
+      - name: Install dependencies
+        run: npm ci
 
-                                                                                                      - name: Run tests (if available)
-                                                                                                            run: npm test --if-present
-                                                                                                                  
-                                                                                                                      - name: Deploy to Railway
-                                                                                                                            run: npx -y railway up --yes
-                                                                                                                                  env:
-                                                                                                                                          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-                                                                                                                                                  
-                                                                                                                                                      - name: Run database migrations
-                                                                                                                                                            run: |
-                                                                                                                                                                    echo "Running database migrations..."
-                                                                                                                                                                            npx -y railway run node scripts/run-all-migrations.js
-                                                                                                                                                                                  env:
-                                                                                                                                                                                          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
-                                                                                                                                                                  
-                                                                                                                                                                      - name: Verify deployment
-                                                                                                                                                                            run: |
-                                                                                                                                                                                    echo "Deployment completed successfully"
-                                                                                                                                                                                            echo "Application should be available at Railway URL"
+      - name: Run tests (if available)
+        run: npm test --if-present
+      
+      - name: Verify Database Schema
+        run: node tests/verify-database.js
+        continue-on-error: true
+        
+      - name: Deploy to Railway
+        run: npx -y railway up --yes
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          
+      - name: Run database migrations
+        run: |
+          echo "Running database migrations..."
+          npx -y railway run node scripts/run-all-migrations.js
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      
+      - name: Verify Database Schema (Post-Deploy)
+        run: npx -y railway run node tests/verify-database.js
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+          
+      - name: Verify deployment
+        run: |
+          echo "Deployment completed successfully"
+          echo "Application should be available at Railway URL"
+
 

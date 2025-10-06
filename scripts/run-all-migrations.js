@@ -10,12 +10,28 @@ require('dotenv').config();
  * Runs all migrations in order to set up the complete database schema
  */
 
+// Ensure logs directory exists
+const logsDir = path.join(__dirname, '../logs');
+if (!fs.existsSync(logsDir)) {
+    fs.mkdirSync(logsDir, { recursive: true });
+}
+
+const logFilePath = path.join(logsDir, 'migrations.log');
+
+// Helper function to log both to console and file
+function logMessage(message) {
+    const timestamp = new Date().toISOString();
+    const logEntry = `${timestamp} ${message}\n`;
+    console.log(message);
+    fs.appendFileSync(logFilePath, logEntry, 'utf8');
+}
+
 async function runAllMigrations() {
-    console.log('🚀 Starting comprehensive database migration...\n');
+    logMessage('🚀 Starting comprehensive database migration...\n');
     
     if (!process.env.DATABASE_URL && !process.env.PGHOST) {
-        console.log('❌ No database configuration found.');
-        console.log('   Please set DATABASE_URL or PGHOST environment variables.');
+        logMessage('❌ No database configuration found.');
+        logMessage('   Please set DATABASE_URL or PGHOST environment variables.');
         return false;
     }
 
@@ -31,9 +47,20 @@ async function runAllMigrations() {
 
     try {
         // Test connection
-        console.log('🔌 Testing database connection...');
+        logMessage('🔌 Testing database connection...');
         await pool.query('SELECT NOW()');
-        console.log('✅ Database connection successful\n');
+        logMessage('✅ Database connection successful\n');
+
+        // Create schema_migrations table if it doesn't exist
+        logMessage('📋 Creating schema_migrations table if not exists...');
+        await pool.query(`
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                id SERIAL PRIMARY KEY,
+                filename TEXT NOT NULL UNIQUE,
+                applied_at TIMESTAMP DEFAULT NOW()
+            )
+        `);
+        logMessage('✅ schema_migrations table ready\n');
 
         // Migrations to run in order
         const migrations = [
@@ -48,32 +75,61 @@ async function runAllMigrations() {
         // Run each migration
         for (const migration of migrations) {
             const migrationPath = path.join(__dirname, migration.file);
+            const filename = path.basename(migration.file);
+            
+            // Check if migration was already applied
+            const appliedCheck = await pool.query(
+                'SELECT filename FROM schema_migrations WHERE filename = $1',
+                [filename]
+            );
+            
+            if (appliedCheck.rows.length > 0) {
+                logMessage(`⏭️  Skipping ${migration.name} - already applied`);
+                continue;
+            }
             
             // Check if file exists
             if (!fs.existsSync(migrationPath)) {
-                console.log(`⚠️  Skipping ${migration.name} - file not found`);
+                logMessage(`⚠️  Skipping ${migration.name} - file not found`);
                 continue;
             }
 
-            console.log(`📄 Running: ${migration.name}`);
+            const startTime = Date.now();
+            logMessage(`🚀 Running migration ${filename}`);
+            logMessage(`   ${migration.name}`);
             const migrationSQL = fs.readFileSync(migrationPath, 'utf8');
             
             try {
                 await pool.query(migrationSQL);
-                console.log(`✅ Completed: ${migration.name}\n`);
+                const duration = Date.now() - startTime;
+                const completedAt = new Date().toISOString();
+                logMessage(`✅ Completed ${filename} at ${completedAt} (${duration}ms)\n`);
+                
+                // Record the migration
+                await pool.query(
+                    'INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT (filename) DO NOTHING',
+                    [filename]
+                );
             } catch (error) {
                 // Some migrations may fail if tables already exist, which is okay with IF NOT EXISTS
                 if (error.message.includes('already exists')) {
-                    console.log(`ℹ️  ${migration.name} - tables already exist (skipped)\n`);
+                    logMessage(`ℹ️  ${migration.name} - tables already exist (skipped)\n`);
+                    // Still record it as applied
+                    await pool.query(
+                        'INSERT INTO schema_migrations (filename) VALUES ($1) ON CONFLICT (filename) DO NOTHING',
+                        [filename]
+                    );
                 } else {
-                    console.error(`❌ Failed: ${migration.name}`);
-                    console.error(`   Error: ${error.message}\n`);
+                    logMessage(`❌ Migration failed: ${filename}`);
+                    logMessage(`   Error: ${error.message}\n`);
+                    // Don't exit immediately, but track that there was a failure
+                    throw error;
                 }
             }
         }
 
         // Verify critical tables exist
-        console.log('🔍 Verifying database structure...\n');
+        logMessage('🔍 Verifying database structure...\n');
         const criticalTables = [
             'users',
             'job_preferences',
@@ -87,7 +143,7 @@ async function runAllMigrations() {
             'autoapply_config'
         ];
 
-        console.log('📋 Critical tables:');
+        logMessage('📋 Critical tables:');
         let allTablesExist = true;
         for (const table of criticalTables) {
             const result = await pool.query(`
@@ -98,12 +154,12 @@ async function runAllMigrations() {
             `, [table]);
             
             const exists = result.rows[0].exists;
-            console.log(`   ${exists ? '✅' : '❌'} ${table}`);
+            logMessage(`   ${exists ? '✅' : '❌'} ${table}`);
             if (!exists) allTablesExist = false;
         }
 
         // Verify views
-        console.log('\n📊 Database views:');
+        logMessage('\n📊 Database views:');
         const views = ['user_complete_profile', 'user_application_stats', 'user_autoapply_stats'];
         for (const view of views) {
             const result = await pool.query(`
@@ -114,15 +170,15 @@ async function runAllMigrations() {
             `, [view]);
             
             const exists = result.rows[0].exists;
-            console.log(`   ${exists ? '✅' : '⚠️ '} ${view}`);
+            logMessage(`   ${exists ? '✅' : '⚠️ '} ${view}`);
         }
 
-        console.log('\n' + (allTablesExist ? '✅' : '⚠️ ') + ' Database migration completed!\n');
+        logMessage('\n' + (allTablesExist ? '✅' : '⚠️ ') + ' Database migration completed!\n');
         return allTablesExist;
 
     } catch (error) {
-        console.error('❌ Migration failed:', error.message);
-        console.error('Stack trace:', error.stack);
+        logMessage('❌ Migration failed: ' + error.message);
+        logMessage('Stack trace: ' + error.stack);
         return false;
     } finally {
         await pool.end();
@@ -134,15 +190,15 @@ if (require.main === module) {
     runAllMigrations()
         .then(success => {
             if (success) {
-                console.log('✨ All migrations completed successfully!');
+                logMessage('✨ All migrations completed successfully!');
                 process.exit(0);
             } else {
-                console.log('⚠️  Migration completed with warnings. Please review the output above.');
+                logMessage('⚠️  Migration completed with warnings. Please review the output above.');
                 process.exit(1);
             }
         })
         .catch(error => {
-            console.error('Fatal error:', error);
+            logMessage('Fatal error: ' + error.message);
             process.exit(1);
         });
 }
