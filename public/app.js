@@ -792,19 +792,19 @@ async function saveAndExit() {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
-                    experienceSummary: data.experienceSummary || '',
-                    hybridPreference: data.hybridPreference || '',
-                    travel: data.travel || '',
-                    relocation: data.relocation || '',
+                    experienceSummary: data['experience-summary'] || '',
+                    hybridPreference: data['hybrid-preference'] || '',
+                    travel: data['travel-comfortable'] || '',
+                    relocation: data['relocation-open'] || '',
                     languages: data.languages || [],
-                    dateOfBirth: data.dateOfBirth || null,
+                    dateOfBirth: data['date-of-birth'] || null,
                     gpa: data.gpa || null,
-                    isAdult: data.isAdult === 'yes',
-                    genderIdentity: data.gender || '',
-                    disabilityStatus: data.disability || '',
-                    militaryService: data.military || '',
+                    isAdult: data['adult-confirm'] === 'yes' || data.isAdult === 'yes',
+                    genderIdentity: data['gender-identity'] || data.gender || '',
+                    disabilityStatus: data['disability-status'] || data.disability || '',
+                    militaryService: data['military-service'] || data.military || '',
                     ethnicity: data.ethnicity || '',
-                    drivingLicense: data.licenses || ''
+                    drivingLicense: data['driving-license'] || data.licenses || ''
                 })
             });
         }
@@ -1039,19 +1039,19 @@ async function submitForm() {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
-                    experienceSummary: data.experienceSummary || '',
-                    hybridPreference: data.hybridPreference || '',
-                    travel: data.travel || '',
-                    relocation: data.relocation || '',
+                    experienceSummary: data['experience-summary'] || '',
+                    hybridPreference: data['hybrid-preference'] || '',
+                    travel: data['travel-comfortable'] || '',
+                    relocation: data['relocation-open'] || '',
                     languages: data.languages || [],
-                    dateOfBirth: data.dateOfBirth || null,
+                    dateOfBirth: data['date-of-birth'] || null,
                     gpa: data.gpa || null,
-                    isAdult: data.isAdult === 'yes',
-                    genderIdentity: data.gender || '',
-                    disabilityStatus: data.disability || '',
-                    militaryService: data.military || '',
+                    isAdult: data['adult-confirm'] === 'yes' || data.isAdult === 'yes',
+                    genderIdentity: data['gender-identity'] || data.gender || '',
+                    disabilityStatus: data['disability-status'] || data.disability || '',
+                    militaryService: data['military-service'] || data.military || '',
                     ethnicity: data.ethnicity || '',
-                    drivingLicense: data.licenses || ''
+                    drivingLicense: data['driving-license'] || data.licenses || ''
                 })
             });
         }
