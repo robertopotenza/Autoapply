@@ -212,12 +212,18 @@ async function initializeDatabase() {
     }
 }
 
-// Health check endpoint
+// Track initialization state
+let isInitializing = true;
+let initializationError = null;
+
+// Health check endpoint - Always responds 200 to pass Railway health checks
 app.get('/health', (req, res) => {
-    res.json({
+    res.status(200).json({
         status: 'operational',
         timestamp: new Date().toISOString(),
         database: !!pool,
+        initializing: isInitializing,
+        initializationError: initializationError ? initializationError.message : null,
         environment: process.env.NODE_ENV || 'development'
     });
 });
@@ -423,6 +429,8 @@ process.on('SIGINT', async () => {
     process.exit(0);
 });
 
+// Initialize database asynchronously (non-blocking)
+async function initializeDatabaseAsync() {
 // Capture unhandled exceptions and rejections
 process.on('unhandledRejection', (reason, promise) => {
     logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
@@ -448,7 +456,7 @@ process.on('uncaughtException', (error) => {
 // Start server
 async function startServer() {
     try {
-        // Initialize database
+        logger.info('🔄 Starting database initialization...');
         pool = await initializeDatabase();
 
         if (pool) {
@@ -464,12 +472,33 @@ async function startServer() {
             }
         }
 
-        // Start HTTP server
+        isInitializing = false;
+        logger.info('✅ Database initialization completed');
+    } catch (error) {
+        logger.error('❌ Database initialization failed:', error);
+        initializationError = error;
+        isInitializing = false;
+        // Don't exit - allow server to continue running without database.
+        // ⚠️ Implications:
+        //   - Endpoints/features that require database access (e.g., authentication, user management, autoapply features)
+        //     will be unavailable or may return errors until the database is initialized.
+        //   - Health check and static endpoints will continue to function.
+        //   - Dashboard, wizard, and API routes that depend on database queries will fail or be degraded.
+        //   - See documentation for details on which routes require database connectivity.
+    }
+}
+
+// Start server
+async function startServer() {
+    try {
+        // Start HTTP server FIRST (before database initialization)
+        // This allows health checks to pass immediately
         const server = app.listen(PORT, '0.0.0.0', () => {
             logger.info(`🎯 Apply Autonomously server running on port ${PORT}`);
             logger.info(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
             logger.info(`🧙‍♂️ Wizard: http://localhost:${PORT}/wizard`);
             logger.info(`🔌 API: http://localhost:${PORT}/api`);
+            logger.info(`💚 Health: http://localhost:${PORT}/health`);
         });
 
         // Handle server errors
@@ -481,6 +510,10 @@ async function startServer() {
             }
             process.exit(1);
         });
+
+        // Initialize database asynchronously AFTER server is listening
+        // This prevents blocking the health check endpoint
+        initializeDatabaseAsync();
 
         return server;
 
