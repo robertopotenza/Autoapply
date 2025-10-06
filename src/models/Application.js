@@ -1,4 +1,5 @@
 const db = require('../database/db');
+const AppError = require('../utils/AppError');
 
 class Application {
   static async findById(id) {
@@ -85,7 +86,17 @@ class Application {
       const result = await db.query(query, params);
       return result.rows[0];
     } catch (error) {
-      throw new Error(`Error creating application: ${error.message}`);
+      throw AppError.database(
+        'Failed to create application',
+        {
+          module: 'Application',
+          method: 'create',
+          userId: applicationData.userId,
+          jobId: applicationData.jobId,
+          sqlCode: error.code
+        },
+        error
+      );
     }
   }
 

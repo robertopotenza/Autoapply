@@ -25,6 +25,31 @@ const authenticateToken = require('./middleware/auth').authenticateToken;
 // Initialize logger
 const logger = new Logger('Server');
 
+// Global error handlers - must be set up early
+process.on('uncaughtException', (err) => {
+    logger.error('Uncaught Exception', {
+        error: err.message,
+        stack: err.stack,
+        name: err.name,
+        code: err.code
+    });
+    // Give logger time to flush, then exit
+    setTimeout(() => {
+        process.exit(1);
+    }, 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection', {
+        reason: reason instanceof Error ? {
+            message: reason.message,
+            stack: reason.stack,
+            name: reason.name
+        } : reason,
+        promise: promise.toString()
+    });
+});
+
 // Create Express app
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -319,7 +344,22 @@ app.get('*', (req, res) => {
 
 // Error handling middleware
 app.use((error, req, res, next) => {
-    logger.error('Unhandled error:', error);
+    // Log the error with structured context
+    if (error.toJSON && typeof error.toJSON === 'function') {
+        // This is an AppError with structured information
+        logger.error('Request error (AppError)', error.toJSON());
+    } else {
+        // Standard error
+        logger.error('Request error', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            code: error.code,
+            path: req.path,
+            method: req.method
+        });
+    }
+    
     res.status(500).json({
         success: false,
         message: 'Internal server error',
