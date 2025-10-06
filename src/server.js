@@ -16,11 +16,13 @@ const wizardRoutes = require('./routes/wizard');
 const { router: autoApplyRouter, initializeOrchestrator } = require('./routes/autoapply');
 const debugRoutes = require('./routes/debug');
 const debugResetRoutes = require('./routes/debug-reset');
+const diagnosticsRoutes = require('./routes/diagnostics');
 
 // Import utilities and middleware
 const { Logger } = require('./utils/logger');
 const { verifySchema } = require('./utils/verifySchema');
 const authenticateToken = require('./middleware/auth').authenticateToken;
+const traceIdMiddleware = require('./middleware/traceId');
 
 // Initialize logger
 const logger = new Logger('Server');
@@ -46,6 +48,9 @@ app.use(cors({
 }));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Add traceId middleware early - after body parsers, before routes
+app.use(traceIdMiddleware(logger));
 
 // Database connection
 let pool = null;
@@ -190,6 +195,7 @@ app.use('/api/wizard', wizardRoutes);
 app.use('/api/autoapply', autoApplyRouter);
 app.use('/api/debug', debugRoutes);
 app.use('/api/debug-reset', debugResetRoutes);
+app.use('/api/diagnostics', diagnosticsRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));

@@ -15,15 +15,37 @@ class Logger {
             DEBUG: 3
         };
         
+        // Set current log level based on DEBUG_MODE
+        this.currentLevel = this.determineLogLevel();
+        
         // Initialize Winston logger if available
         this.winston = null;
         this.initializeWinston();
     }
     
+    determineLogLevel() {
+        // Check DEBUG_MODE environment variable
+        if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
+            return this.levels.DEBUG;
+        }
+        
+        // Check LOG_LEVEL environment variable
+        const logLevel = (process.env.LOG_LEVEL || 'INFO').toUpperCase();
+        return this.levels[logLevel] !== undefined ? this.levels[logLevel] : this.levels.INFO;
+    }
+    
     initializeWinston() {
         try {
+            // Determine Winston log level based on DEBUG_MODE
+            let winstonLevel = 'info';
+            if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
+                winstonLevel = 'debug';
+            } else if (process.env.LOG_LEVEL) {
+                winstonLevel = process.env.LOG_LEVEL.toLowerCase();
+            }
+            
             this.winston = winston.createLogger({
-                level: process.env.LOG_LEVEL || 'info',
+                level: winstonLevel,
                 format: winston.format.combine(
                     winston.format.timestamp(),
                     winston.format.errors({ stack: true }),
@@ -67,6 +89,12 @@ class Logger {
     log(level, message, ...args) {
         const formattedMessage = this.formatMessage(level, message, ...args);
         
+        // Check if this level should be logged based on currentLevel
+        const levelValue = this.levels[level.toUpperCase()] || 0;
+        if (levelValue > this.currentLevel) {
+            return; // Skip logging if level is above current threshold
+        }
+        
         // Use Winston if available
         if (this.winston) {
             this.winston.log(level, message, { args, context: this.context });
@@ -81,7 +109,7 @@ class Logger {
                 console.warn(formattedMessage);
                 break;
             case 'debug':
-                if (process.env.NODE_ENV === 'development' || process.env.DEBUG) {
+                if (process.env.NODE_ENV === 'development' || process.env.DEBUG || process.env.DEBUG_MODE === 'true') {
                     console.debug(formattedMessage);
                 }
                 break;
@@ -151,6 +179,37 @@ class Logger {
             context,
             timestamp: new Date().toISOString()
         });
+    }
+    
+    // Log SQL queries when DEBUG_MODE is enabled
+    logSQL(query, params = [], duration = null) {
+        if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
+            const logData = {
+                query: query.trim(),
+                timestamp: new Date().toISOString()
+            };
+            
+            // Only log params if they exist and are not sensitive
+            if (params && params.length > 0) {
+                // Mask potential sensitive data (passwords, tokens, etc.)
+                const maskedParams = params.map((param, index) => {
+                    if (typeof param === 'string' && 
+                        (query.toLowerCase().includes('password') || 
+                         query.toLowerCase().includes('token') ||
+                         query.toLowerCase().includes('secret'))) {
+                        return '[REDACTED]';
+                    }
+                    return param;
+                });
+                logData.params = maskedParams;
+            }
+            
+            if (duration !== null) {
+                logData.duration = `${duration}ms`;
+            }
+            
+            this.debug('SQL Query', logData);
+        }
     }
 }
 

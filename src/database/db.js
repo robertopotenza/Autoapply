@@ -1,5 +1,8 @@
 const { Pool } = require('pg');
-const { logger } = require('../utils/logger');
+const { Logger } = require('../utils/logger');
+
+// Create logger instance for database operations
+const logger = new Logger('Database');
 
 // Check if database credentials are configured
 const isDatabaseConfigured = () => {
@@ -54,7 +57,10 @@ async function query(text, params) {
     try {
         const res = await pool.query(text, params);
         const duration = Date.now() - start;
-        logger.debug('Executed query', { text, duration, rows: res.rowCount });
+        
+        // Use the new logSQL method for DEBUG_MODE
+        logger.logSQL(text, params, duration);
+        
         return res;
     } catch (error) {
         logger.error('Database query error', { text, error: error.message });
