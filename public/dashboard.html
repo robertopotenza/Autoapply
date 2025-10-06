@@ -343,6 +343,22 @@
     </div>
 
     <script>
+        // Debug Mode Configuration
+        const DEBUG_MODE = localStorage.getItem('DEBUG_MODE') === 'true' || window.AUTOAPPLY_DEBUG === true;
+
+        // Debug logging helpers
+        function debugLog(...args) {
+            if (DEBUG_MODE) {
+                console.log(...args);
+            }
+        }
+
+        function debugError(...args) {
+            if (DEBUG_MODE) {
+                console.error(...args);
+            }
+        }
+
         // Global state
         let profileData = null;
         let debugMode = new URLSearchParams(window.location.search).has('debug');
@@ -381,7 +397,7 @@
 
                 return data;
             } catch (error) {
-                console.error('API call failed:', endpoint, error);
+                debugError('API call failed:', endpoint, error);
                 throw error;
             }
         }
@@ -412,7 +428,7 @@
                 showContent();
 
             } catch (error) {
-                console.error('Failed to load profile:', error);
+                debugError('Failed to load profile:', error);
                 
                 // Fallback: Use complete profile data
                 const mockProfileData = {
@@ -474,13 +490,13 @@
 
         // Update profile sections
         function updateProfileSections(data) {
-            console.log('🔧 Updating profile sections with data:', data);
+            debugLog('🔧 Updating profile sections with data:', data);
             
             // Check if profile is 100% complete
             const completionPercentage = calculateCompletionPercentage(data);
             const overallComplete = data?.completeness?.complete || completionPercentage === 100;
             
-            console.log('📊 Completion status:', { 
+            debugLog('📊 Completion status:', { 
                 completionPercentage, 
                 overallComplete, 
                 completenessFlag: data?.completeness?.complete 
@@ -514,7 +530,7 @@
                 }
             ];
             
-            console.log('📋 Section completion status:', sections.map(s => ({ title: s.title, isComplete: s.isComplete })));
+            debugLog('📋 Section completion status:', sections.map(s => ({ title: s.title, isComplete: s.isComplete })));
 
             const container = document.getElementById('profile-sections');
             container.innerHTML = sections.map(section => `
@@ -566,29 +582,29 @@
         }
 
         // Edit functions - Navigate to wizard with specific step
-        function editJobPreferences() { 
-            console.log('📝 Opening Work Location & Jobs editor...');
+        function editJobPreferences() {
+            debugLog('📝 Opening Work Location & Jobs editor...');
             localStorage.setItem('wizardStep', '1');
             localStorage.setItem('editMode', 'true');
             window.location.href = '/wizard.html';
         }
         
-        function editSeniority() { 
-            console.log('📝 Opening Seniority & Time Zones editor...');
+        function editSeniority() {
+            debugLog('📝 Opening Seniority & Time Zones editor...');
             localStorage.setItem('wizardStep', '2');
             localStorage.setItem('editMode', 'true');
             window.location.href = '/wizard.html';
         }
         
         function editContact() { 
-            console.log('📝 Opening Resume & Contact editor...');
+            debugLog('📝 Opening Resume & Contact editor...');
             localStorage.setItem('wizardStep', '3');
             localStorage.setItem('editMode', 'true');
             window.location.href = '/wizard.html';
         }
         
-        function editEligibility() { 
-            console.log('📝 Opening Eligibility Details editor...');
+        function editEligibility() {
+            debugLog('📝 Opening Eligibility Details editor...');
             localStorage.setItem('wizardStep', '4');
             localStorage.setItem('editMode', 'true');
             window.location.href = '/wizard.html';
@@ -596,7 +612,7 @@
 
         // Legacy function name support - FIXES "editSection is not defined" ERRORS  
         function editSection(sectionName) {
-            console.log('🔄 Legacy editSection called with:', sectionName);
+            debugLog('🔄 Legacy editSection called with:', sectionName);
             
             switch(sectionName) {
                 case 'jobPreferences':
@@ -707,11 +723,11 @@
                     autoApplyBtn.textContent = '🚀 Start Auto-Applying to Jobs';
                 }
                 
-                console.log('✅ Emergency fix: Forced 100% completion');
+                debugLog('✅ Emergency fix: Forced 100% completion');
             }, 1000);
         });
 
-        console.log('✅ Dashboard JavaScript loaded successfully - all functions available');
+        debugLog('✅ Dashboard JavaScript loaded successfully - all functions available');
     </script>
 </body>
 </html>
