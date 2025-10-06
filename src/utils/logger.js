@@ -93,7 +93,7 @@ class Logger {
             });
         } catch (error) {
             // Fallback to console logging if Winston fails
-            console.warn('Winston logger initialization failed, using console logging:', error.message);
+            console.warn('Winston logger initialization failed, using console logging:', error.message, '\nStack trace:', error.stack);
         }
     }
     
