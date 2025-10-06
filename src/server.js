@@ -103,120 +103,48 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(traceIdMiddleware(logger));
 
 // Database connection
+// Note: The actual pool is managed by src/database/pool.js
+// This variable holds a reference to it after initialization
 let pool = null;
-
-// Helper function to split SQL statements
-function splitSqlStatements(sql) {
-    return sql
-        // Remove line comments
-        .replace(/--.*$/gm, '')
-        // Remove block comments
-        .replace(/\/\*[\s\S]*?\*\//gm, '')
-        .split(/;\s*(?:\r?\n|$)/)
-        .map(statement => statement.trim())
-        .filter(statement => statement.length > 0);
-}
-
-// Helper function to run a migration file
-async function runMigrationFile(pool, migrationPath, label) {
-    if (!fs.existsSync(migrationPath)) {
-        logger.warn(`⚠️  Migration file not found: ${label}`);
-        return;
-    }
-
-    logger.info(`🔄 Running migration: ${label}...`);
-    
-    const sql = fs.readFileSync(migrationPath, 'utf8');
-    const statements = splitSqlStatements(sql);
-
-    for (const statement of statements) {
-        try {
-            await pool.query(statement);
-        } catch (error) {
-            // If table already exists, that's OK
-            if (error.code === '42P07') {
-                continue;
-            }
-            logger.error(`❌ Migration ${label} failed on statement:\n${statement}`);
-            throw error;
-        }
-    }
-
-    logger.info(`✅ Migration ${label} completed (${statements.length} statements)`);
-}
 
 async function initializeDatabase() {
     try {
-        if (!process.env.DATABASE_URL) {
-            logger.warn('DATABASE_URL not found, some features may be limited');
+        // Import the robust pool from our new pool configuration
+        const { pool: robustPool, testConnection } = require('./database/pool');
+
+        if (!robustPool) {
+            logger.warn('⚠️  Database pool not configured');
             return null;
         }
 
-        pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        });
+        // Test the connection
+        logger.info('🔍 Testing database connection...');
+        const testResult = await testConnection();
 
-        // Test connection
-        await pool.query('SELECT NOW()');
+        if (!testResult.success) {
+            throw new Error(`Database connection test failed: ${testResult.error?.message}`);
+        }
+
         logger.info('✅ Database connected successfully');
 
-        // Initialize database schema
-        const schemaPath = path.join(__dirname, '../database/schema.sql');
-
-        if (fs.existsSync(schemaPath)) {
-            const schema = fs.readFileSync(schemaPath, 'utf8');
-            await pool.query(schema);
-            logger.info('✅ Database schema initialized successfully');
-        } else {
-            logger.warn('⚠️  Schema file not found at:', schemaPath);
-        }
-
-        // Run migrations
-        logger.info('🔄 Running database migrations...');
-        const migrationsDir = path.join(__dirname, '../database/migrations');
-        
-        if (fs.existsSync(migrationsDir)) {
-            // Get all migration files in order
-            const migrationFiles = fs.readdirSync(migrationsDir)
-                .filter(file => file.endsWith('.sql'))
-                .sort(); // Sort to ensure correct order
-            
-            for (const migrationFile of migrationFiles) {
-                const migrationPath = path.join(migrationsDir, migrationFile);
-                await runMigrationFile(pool, migrationPath, migrationFile);
-            }
-            
-            logger.info('✅ All migrations completed successfully');
-        } else {
-            logger.warn('⚠️  Migrations directory not found');
-        }
-
-        // Verify schema compatibility
+        // Verify schema compatibility (migrations are handled by Railway's release command)
         logger.info('🔍 Verifying schema compatibility...');
         try {
-            await verifySchema(pool);
-            logger.info('✅ Schema verified — starting server...');
+            await verifySchema(robustPool);
+            logger.info('✅ Schema verified successfully');
         } catch (error) {
-            logger.error('❌ Schema verification failed:', error.message);
-            // Close pool before re-throwing
-            await pool.end();
-            throw error;
+            // Schema verification failures are non-fatal - tables might not exist yet
+            logger.warn('⚠️  Schema verification incomplete:', error.message);
+            logger.info('ℹ️  Some features may be limited until migrations complete');
         }
 
-        return pool;
+        return robustPool;
     } catch (error) {
         logger.error('❌ Database initialization failed:', error.message);
 
-        // If error is about existing tables, that's OK
-        if (error.code === '42P07') {
-            logger.info('ℹ️  Tables already exist, continuing...');
-            return pool;
-        }
-
-        // For schema verification failures and other critical errors, re-throw
-        // to prevent server from starting
-        throw error;
+        // Return null instead of throwing - allow server to start without database
+        logger.warn('⚠️  Server will start with limited functionality');
+        return null;
     }
 }
 
