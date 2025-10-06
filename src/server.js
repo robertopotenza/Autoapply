@@ -17,7 +17,11 @@ if (process.env.SENTRY_DSN) {
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
         environment: process.env.NODE_ENV || 'development',
-        tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE ? parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE) : 1.0,
+        tracesSampleRate: (() => {
+            const rate = process.env.SENTRY_TRACES_SAMPLE_RATE;
+            const parsed = rate !== undefined ? parseFloat(rate) : 1.0;
+            return (!isNaN(parsed) && parsed >= 0 && parsed <= 1) ? parsed : 1.0;
+        })(),
     });
     console.log('✅ Sentry initialized for error tracking');
 }
