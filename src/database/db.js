@@ -1,80 +1,25 @@
-const { Pool } = require('pg');
-const { createLogger, logError } = require('../utils/logger');
+/**
+ * Database connection module
+ *
+ * This module uses the robust pool configuration from src/database/pool.js
+ * which provides environment-aware connection management.
+ */
 
-const logger = createLogger('database');
+const { Logger } = require('../utils/logger');
 
-const TROUBLESHOOT_GUIDE = [
-    '❌ DB Connection Failed',
-    '1️⃣ Check DATABASE_URL in your environment (.env or Railway variables)',
-    '2️⃣ Confirm the Railway/PostgreSQL instance is running',
-    "3️⃣ Run 'psql <connection string>' to verify manual connectivity"
-].join('\n');
+// Import the robust pool configuration
+const { pool: robustPool } = require('./pool');
+
+// Create logger instance for database operations
+const logger = new Logger('Database');
+
+// Use the robust pool (already configured with environment detection)
+const pool = robustPool;
 
 // Check if database credentials are configured
 const isDatabaseConfigured = () => {
-    // Check if we have either individual PG vars or DATABASE_URL
-    const hasIndividualVars = !!(process.env.PGHOST && process.env.PGUSER && process.env.PGPASSWORD && process.env.PGDATABASE);
-    const hasDatabaseUrl = !!process.env.DATABASE_URL;
-    return hasIndividualVars || hasDatabaseUrl;
+    return pool !== null;
 };
-
-// PostgreSQL connection pool (only if configured)
-let pool = null;
-
-function createPool() {
-    if (!isDatabaseConfigured()) {
-        logger.warn('PostgreSQL database not configured. Set DATABASE_URL or (PGHOST, PGUSER, PGPASSWORD, PGDATABASE) environment variables.');
-        return null;
-    }
-
-    try {
-        if (process.env.DATABASE_URL) {
-            const configuredPool = new Pool({
-                connectionString: process.env.DATABASE_URL,
-                ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-            });
-            logger.info('✅ Database configured using DATABASE_URL');
-            return configuredPool;
-        }
-
-        const configuredPool = new Pool({
-            host: process.env.PGHOST,
-            user: process.env.PGUSER,
-            password: process.env.PGPASSWORD,
-            database: process.env.PGDATABASE,
-            port: process.env.PGPORT || 5432,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        });
-        logger.info('✅ Database configured using PG environment variables');
-        return configuredPool;
-    } catch (error) {
-        logError(error, 'database:createPool');
-        console.error(TROUBLESHOOT_GUIDE);
-        return null;
-    }
-}
-
-pool = createPool();
-
-if (pool) {
-    pool.on('connect', () => {
-        logger.info('Connected to PostgreSQL database');
-    });
-
-    pool.on('error', (err) => {
-        logger.logError(err, { stage: 'database', event: 'idle-client-error' });
-    });
-
-    (async () => {
-        try {
-            await pool.query('SELECT 1');
-            logger.info('Database connectivity check succeeded');
-        } catch (error) {
-            logError(error, 'database:connectivity-check');
-            console.error(TROUBLESHOOT_GUIDE);
-        }
-    })();
-}
 
 // Query helper function
 async function query(text, params) {
@@ -85,10 +30,13 @@ async function query(text, params) {
     try {
         const res = await pool.query(text, params);
         const duration = Date.now() - start;
-        logger.debug('Executed query', { text, duration, rows: res.rowCount });
+        
+        // Use the new logSQL method for DEBUG_MODE
+        logger.logSQL(text, params, duration);
+        
         return res;
     } catch (error) {
-        logger.logError(error, { stage: 'database', action: 'query', text });
+        logger.error('Database query error', { text, error: error.message });
         throw error;
     }
 }
@@ -112,6 +60,31 @@ async function transaction(callback) {
     }
 }
 
+// Helper function to run SQL file
+async function runSqlFile(filePath, label) {
+    const fs = require('fs');
+    
+    if (!fs.existsSync(filePath)) {
+        logger.warn(`${label} not found at: ${filePath}`);
+        return false;
+    }
+    
+    try {
+        const sql = fs.readFileSync(filePath, 'utf8');
+        await pool.query(sql);
+        logger.info(`✅ ${label} executed successfully`);
+        return true;
+    } catch (error) {
+        // If tables already exist, that's OK
+        if (error.code === '42P07' || error.message.includes('already exists')) {
+            logger.info(`${label} - tables already exist (skipped)`);
+            return true;
+        }
+        logger.error(`Error executing ${label}:`, error.message);
+        throw error;
+    }
+}
+
 // Initialize database tables
 async function initializeDatabase() {
     if (!pool) {
@@ -127,22 +100,41 @@ async function initializeDatabase() {
         await pool.query('SELECT NOW()');
         logger.info('Database connection successful');
 
+        // 1. Load base schema
         const schemaPath = path.join(__dirname, '../../database/schema.sql');
-        
-        if (!fs.existsSync(schemaPath)) {
-            logger.warn('Schema file not found at:', schemaPath);
-            return;
+        await runSqlFile(schemaPath, 'Base schema');
+
+        // 2. Run migrations to add AutoApply tables and features
+        const migrations = [
+            {
+                path: path.join(__dirname, '../../database/migrations/002_autoapply_tables.sql'),
+                label: 'Migration 002: AutoApply tables (jobs, applications, etc.)'
+            },
+            {
+                path: path.join(__dirname, '../../database/migrations/003_add_email_to_profile.sql'),
+                label: 'Migration 003: Add email to profile'
+            },
+            {
+                path: path.join(__dirname, '../../database/migrations/003_add_password_reset.sql'),
+                label: 'Migration 003b: Password reset tokens'
+            },
+            {
+                path: path.join(__dirname, '../../database/migrations/004_add_user_id_to_jobs.sql'),
+                label: 'Migration 004: Add user_id to jobs'
+            },
+            {
+                path: path.join(__dirname, '../../database/migrations/005_enhanced_autoapply_tables.sql'),
+                label: 'Migration 005: Enhanced autoapply tables'
+            }
+        ];
+
+        for (const migration of migrations) {
+            await runSqlFile(migration.path, migration.label);
         }
-        
-        const schema = fs.readFileSync(schemaPath, 'utf8');
 
-        // Execute the entire schema at once
-        // PostgreSQL can handle multiple statements in a single query
-        await pool.query(schema);
-
-        logger.info('✅ Database tables initialized successfully');
+        logger.info('✅ Database initialization completed successfully');
     } catch (error) {
-        logger.logError(error, { stage: 'initializeDatabase' });
+        logger.error('Error initializing database', error);
 
         // If error is about existing tables, that's OK
         if (error.code === '42P07') {

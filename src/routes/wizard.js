@@ -95,9 +95,21 @@ router.post('/step2', async (req, res) => {
             postalCode: req.body.postalCode || ''
         };
 
+        // Log what data we're actually receiving
+        logger.info(`Step 2 data received for user ${userId}:`, {
+            fullName: data.fullName,
+            phone: data.phone,
+            resumePath: data.resumePath,
+            country: data.country
+        });
+
         const result = await Profile.upsert(userId, data);
 
-        logger.info(`Step 2 saved for user ${userId}`);
+        logger.info(`Step 2 saved for user ${userId}. Result:`, {
+            fullName: result.full_name,
+            phone: result.phone,
+            resumePath: result.resume_path
+        });
 
         res.json({
             success: true,
@@ -129,9 +141,20 @@ router.post('/step3', async (req, res) => {
             expectedSalary: req.body.expectedSalary || null
         };
 
+        // Log what data we're actually receiving
+        logger.info(`Step 3 data received for user ${userId}:`, {
+            currentJobTitle: data.currentJobTitle,
+            availability: data.availability,
+            eligibleCountries: data.eligibleCountries,
+            visaSponsorship: data.visaSponsorship
+        });
+
         const result = await Eligibility.upsert(userId, data);
 
-        logger.info(`Step 3 saved for user ${userId}`);
+        logger.info(`Step 3 saved for user ${userId}. Result:`, {
+            currentJobTitle: result.current_job_title,
+            availability: result.availability
+        });
 
         res.json({
             success: true,

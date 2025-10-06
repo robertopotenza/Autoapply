@@ -319,9 +319,14 @@ class ApplicationAutomator {
      * Fill basic information fields
      */
     async fillBasicInformation(page, user, profile) {
+        // Split full_name into first and last name
+        const nameParts = (profile.full_name || '').trim().split(' ');
+        const firstName = nameParts[0] || '';
+        const lastName = nameParts.slice(1).join(' ') || '';
+
         const fieldMappings = [
-            { selectors: ['input[name*="firstName"], input[name*="first_name"], #firstName, #first-name'], value: profile.first_name },
-            { selectors: ['input[name*="lastName"], input[name*="last_name"], #lastName, #last-name'], value: profile.last_name },
+            { selectors: ['input[name*="firstName"], input[name*="first_name"], #firstName, #first-name'], value: firstName },
+            { selectors: ['input[name*="lastName"], input[name*="last_name"], #lastName, #last-name'], value: lastName },
             { selectors: ['input[name*="email"], input[type="email"], #email'], value: user.email },
             { selectors: ['input[name*="phone"], input[type="tel"], #phone'], value: profile.phone },
             { selectors: ['input[name*="address"], textarea[name*="address"], #address'], value: profile.address },
@@ -427,7 +432,7 @@ Given this form field and user context, provide the most appropriate value:
 
 Field: ${JSON.stringify(field)}
 Job: ${job.title} at ${job.company}
-User: ${profile.first_name} ${profile.last_name}
+User: ${profile.full_name}
 Current Role: ${profile.current_title}
 Experience: ${profile.years_experience} years
 

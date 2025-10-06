@@ -1,66 +1,93 @@
 const express = require('express');
-const os = require('os');
+const fs = require('fs');
+const path = require('path');
+const { Logger } = require('../utils/logger');
+
 const router = express.Router();
+const logger = new Logger('Diagnostics');
 
-const { createLogger, getRecentLogs, logError } = require('../utils/logger');
-
-const diagnosticsLogger = createLogger('diagnostics');
-
-function maskDatabaseUrl(value) {
-    if (!value || typeof value !== 'string') {
-        return value;
-    }
-
-    if (!value.includes('postgres')) {
-        return value;
-    }
-
-    return value.replace(/(postgres(?:ql)?:\/\/)([^:@]+)(?=:[^@]+@)/i, '$1****');
-}
-
-async function checkDatabase(pool) {
-    if (!pool) {
-        return { status: 'disconnected' };
-    }
-
-    try {
-        await pool.query('SELECT 1');
-        return { status: 'connected' };
-    } catch (error) {
-        diagnosticsLogger.logError(error, { stage: 'diagnostics', check: 'database' });
-        return { status: 'error', error: error.message };
-    }
-}
-
+/**
+ * GET /api/diagnostics
+ * Returns diagnostic information about the application state
+ */
 router.get('/', async (req, res) => {
     try {
-        const pool = req.app.locals?.db;
-        const dbStatus = await checkDatabase(pool);
-
-        const payload = {
-            status: dbStatus.status === 'connected' ? 'ok' : 'degraded',
-            db: dbStatus.status,
-            uptime: Math.round(process.uptime()),
-            timestamp: new Date().toISOString(),
-            env: {
-                NODE_ENV: process.env.NODE_ENV || 'development',
-                DEBUG: process.env.DEBUG === 'true',
-                DATABASE_URL: maskDatabaseUrl(process.env.DATABASE_URL),
-                HOSTNAME: os.hostname()
-            },
-            logs: getRecentLogs(20)
-        };
-
-        if (dbStatus.error) {
-            payload.db_error = dbStatus.error;
+        const startTime = process.uptime();
+        
+        // Get environment mode
+        const envMode = process.env.NODE_ENV || 'development';
+        
+        // Get schema version (latest migration filename)
+        let schemaVersion = 'unknown';
+        let activeMigrations = [];
+        
+        try {
+            const migrationsDir = path.join(__dirname, '../../database/migrations');
+            if (fs.existsSync(migrationsDir)) {
+                const migrationFiles = fs.readdirSync(migrationsDir)
+                    .filter(file => file.endsWith('.sql'))
+                    .sort();
+                
+                activeMigrations = migrationFiles;
+                schemaVersion = migrationFiles.length > 0 
+                    ? migrationFiles[migrationFiles.length - 1] 
+                    : 'no-migrations';
+            }
+        } catch (error) {
+            logger.warn('Could not read migrations directory', { error: error.message });
         }
-
-        res.json(payload);
+        
+        // Database connection status
+        let dbConnection = false;
+        let schemaVerification = 'not-checked';
+        
+        const pool = req.app.locals.db;
+        if (pool) {
+            try {
+                await pool.query('SELECT 1');
+                dbConnection = true;
+                
+                // Check if users table exists as a basic schema verification
+                const result = await pool.query(`
+                    SELECT EXISTS (
+                        SELECT FROM information_schema.tables 
+                        WHERE table_schema = 'public' 
+                        AND table_name = 'users'
+                    ) as exists
+                `);
+                
+                schemaVerification = result.rows[0].exists ? 'valid' : 'incomplete';
+            } catch (error) {
+                logger.warn('Database check failed', { error: error.message });
+                dbConnection = false;
+                schemaVerification = 'error';
+            }
+        }
+        
+        const diagnostics = {
+            status: 'operational',
+            uptime_seconds: Math.floor(startTime),
+            schema_version: schemaVersion,
+            envMode,
+            activeMigrations,
+            timestamp: new Date().toISOString(),
+            dbConnection,
+            schemaVerification
+        };
+        
+        // Include traceId if available
+        if (req.traceId) {
+            diagnostics.traceId = req.traceId;
+        }
+        
+        res.json(diagnostics);
     } catch (error) {
-        logError(error, 'route:diagnostics');
+        logger.error('Diagnostics endpoint error', { error: error.message });
         res.status(500).json({
             status: 'error',
-            message: 'Diagnostics check failed'
+            message: 'Failed to gather diagnostics',
+            error: error.message,
+            timestamp: new Date().toISOString()
         });
     }
 });

@@ -1,247 +1,286 @@
-﻿/**
- * Centralized logging utility for Apply Autonomously platform
- * Provides structured info/error logging with file persistence and rotation
+/**
+ * Comprehensive Logger Utility for Apply Autonomously Platform
+ * Provides structured logging with different levels, contexts, and output formatting
  */
 
-const fs = require('fs');
+const winston = require('winston');
 const path = require('path');
-const os = require('os');
+const fs = require('fs');
+require('winston-daily-rotate-file');
 
-const LOG_ROOT = path.resolve(__dirname, '../../logs');
-const INFO_LOG_PATH = path.join(LOG_ROOT, 'info.log');
-const ERROR_LOG_PATH = path.join(LOG_ROOT, 'errors.log');
-const ARCHIVE_DIR = path.join(LOG_ROOT, 'archive');
+class Logger {
+    constructor(context = 'App') {
+        this.context = context;
+        this.levels = {
+            ERROR: 0,
+            WARN: 1,
+            INFO: 2,
+            DEBUG: 3
+        };
 
-const ONE_DAY_MS = 24 * 60 * 60 * 1000;
-const ROTATION_THRESHOLD_DAYS = 7;
+        // Set current log level based on DEBUG_MODE or LOG_LEVEL
+        this._level = this._getLogLevel();
 
-function ensureDirectory(dirPath) {
-    if (!fs.existsSync(dirPath)) {
-        fs.mkdirSync(dirPath, { recursive: true });
-    }
-}
-
-function ensureLogFiles() {
-    ensureDirectory(LOG_ROOT);
-    ensureDirectory(ARCHIVE_DIR);
-
-    if (!fs.existsSync(INFO_LOG_PATH)) {
-        fs.writeFileSync(INFO_LOG_PATH, '', 'utf8');
+        // Initialize Winston logger if available
+        this.winston = null;
+        this.initializeWinston();
     }
 
-    if (!fs.existsSync(ERROR_LOG_PATH)) {
-        fs.writeFileSync(ERROR_LOG_PATH, '', 'utf8');
+    _getLogLevel() {
+        if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG === 'true' || process.env.DEBUG_MODE === '1') {
+            return 'DEBUG';
+        }
+        const envLevel = (process.env.LOG_LEVEL || 'INFO').toUpperCase();
+        return this.levels.hasOwnProperty(envLevel) ? envLevel : 'INFO';
     }
-}
 
-function rotateIfStale(filePath) {
-    try {
-        if (!fs.existsSync(filePath)) {
+    get level() {
+        return this._level;
+    }
+
+    set level(newLevel) {
+        const upperLevel = newLevel.toUpperCase();
+        if (this.levels.hasOwnProperty(upperLevel)) {
+            this._level = upperLevel;
+        }
+    }
+
+    _shouldLog(level) {
+        const levelValue = this.levels[level.toUpperCase()];
+        const currentLevelValue = this.levels[this._level];
+        return levelValue <= currentLevelValue;
+    }
+
+    initializeWinston() {
+        try {
+            // Ensure logs directory exists
+            const logsDir = path.join(process.cwd(), 'logs');
+            if (!fs.existsSync(logsDir)) {
+                fs.mkdirSync(logsDir, { recursive: true });
+            }
+
+            const transports = [];
+
+            // In production, use rotating file transports
+            if (process.env.NODE_ENV === 'production') {
+                // Error log with daily rotation
+                transports.push(
+                    new winston.transports.DailyRotateFile({
+                        filename: path.join(logsDir, 'error-%DATE%.log'),
+                        datePattern: 'YYYY-MM-DD',
+                        level: 'error',
+                        maxSize: '20m',
+                        maxFiles: '14d',
+                        zippedArchive: true
+                    })
+                );
+
+                // Combined log with daily rotation
+                transports.push(
+                    new winston.transports.DailyRotateFile({
+                        filename: path.join(logsDir, 'combined-%DATE%.log'),
+                        datePattern: 'YYYY-MM-DD',
+                        maxSize: '20m',
+                        maxFiles: '30d',
+                        zippedArchive: true
+                    })
+                );
+            } else {
+                // In non-production, use simple file transports
+                transports.push(
+                    new winston.transports.File({ 
+                        filename: path.join(logsDir, 'error.log'), 
+                        level: 'error' 
+                    })
+                );
+                transports.push(
+                    new winston.transports.File({ 
+                        filename: path.join(logsDir, 'combined.log') 
+                    })
+                );
+            }
+
+            // Always add console transport in non-production
+            if (process.env.NODE_ENV !== 'production') {
+                transports.push(
+                    new winston.transports.Console({
+                        format: winston.format.simple()
+                    })
+                );
+            }
+
+            let winstonLevel = 'info';
+            if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
+                winstonLevel = 'debug';
+            } else if (process.env.LOG_LEVEL) {
+                winstonLevel = process.env.LOG_LEVEL.toLowerCase();
+            }
+
+            this.winston = winston.createLogger({
+                level: winstonLevel,
+                format: winston.format.combine(
+                    winston.format.timestamp(),
+                    winston.format.errors({ stack: true }),
+                    winston.format.json()
+                ),
+                defaultMeta: { service: 'apply-autonomously', context: this.context },
+                transports
+            });
+        } catch (error) {
+            // Fallback to console logging if Winston fails
+            console.warn('Winston logger initialization failed, using console logging:', error.message, '\nStack trace:', error.stack);
+            console.warn('Winston logger initialization failed, using console logging');
+        }
+    }
+
+    formatMessage(level, message, ...args) {
+        const timestamp = new Date().toISOString();
+        const logEntry = {
+            timestamp,
+            level: level.toUpperCase(),
+            context: this.context,
+            message
+        };
+
+        if (args.length > 0) {
+            for (const arg of args) {
+                if (typeof arg === 'object' && arg !== null && !Array.isArray(arg)) {
+                    Object.assign(logEntry, arg);
+                } else {
+                    if (!logEntry.data) {
+                        logEntry.data = [];
+                    }
+                    logEntry.data.push(arg);
+                }
+            }
+        }
+
+        return JSON.stringify(logEntry);
+    }
+
+    log(level, message, ...args) {
+        if (!this._shouldLog(level)) {
             return;
         }
 
-        const stats = fs.statSync(filePath);
-        const ageDays = (Date.now() - stats.mtimeMs) / ONE_DAY_MS;
+        const formattedMessage = this.formatMessage(level, message, ...args);
 
-        if (ageDays >= ROTATION_THRESHOLD_DAYS) {
-            const timestamp = new Date(stats.mtimeMs).toISOString().replace(/[:.]/g, '-');
-            const archiveName = `${path.basename(filePath, '.log')}-${timestamp}.log`;
-            const archivePath = path.join(ARCHIVE_DIR, archiveName);
-            fs.renameSync(filePath, archivePath);
-            fs.writeFileSync(filePath, '', 'utf8');
+        if (this.winston) {
+            this.winston.log(level, message, { args, context: this.context });
         }
-    } catch (rotationError) {
-        console.warn('Failed rotating log file', filePath, rotationError);
-    }
-}
 
-function maskSensitive(value) {
-    if (!value) {
-        return value;
-    }
-
-    if (typeof value !== 'string') {
-        return value;
-    }
-
-    if (value.includes('postgresql://') || value.includes('postgres://')) {
-        const [protocol, rest] = value.split('//');
-        if (!rest) {
-            return value;
+        switch (level.toLowerCase()) {
+            case 'error':
+                console.error(formattedMessage);
+                break;
+            case 'warn':
+                console.warn(formattedMessage);
+                break;
+            case 'debug':
+                console.debug(formattedMessage);
+                break;
+            default:
+                console.log(formattedMessage);
         }
-        const redacted = rest.replace(/[^:@/]+(?=@)/, '****');
-        return `${protocol}//${redacted}`;
     }
 
-    return value;
-}
-
-function formatEntry(level, message, source = 'system', metadata = {}) {
-    const payload = {
-        timestamp: new Date().toISOString(),
-        level,
-        source,
-        message,
-        metadata
-    };
-
-    if (payload.metadata && payload.metadata.env) {
-        payload.metadata.env = Object.fromEntries(
-            Object.entries(payload.metadata.env).map(([key, val]) => [key, maskSensitive(val)])
-        );
+    error(message, ...args) {
+        this.log('error', message, ...args);
     }
 
-    return JSON.stringify(payload) + os.EOL;
-}
-
-function appendLog(filePath, entry) {
-    try {
-        rotateIfStale(filePath);
-        fs.appendFileSync(filePath, entry, 'utf8');
-    } catch (writeError) {
-        console.error('Failed writing log entry', writeError);
-    }
-}
-
-function logInfo(message, source = 'system', metadata = {}) {
-    ensureLogFiles();
-    const entry = formatEntry('info', message, source, metadata);
-    appendLog(INFO_LOG_PATH, entry);
-    if (process.env.NODE_ENV !== 'production') {
-        console.log(`[INFO] [${source}] ${message}`);
-    }
-}
-
-function logWarn(message, source = 'system', metadata = {}) {
-    ensureLogFiles();
-    const entry = formatEntry('warn', message, source, metadata);
-    appendLog(INFO_LOG_PATH, entry);
-    if (process.env.NODE_ENV !== 'production') {
-        console.warn(`[WARN] [${source}] ${message}`);
-    }
-}
-
-function serializeError(error) {
-    if (!error) {
-        return { message: 'Unknown error' };
+    warn(message, ...args) {
+        this.log('warn', message, ...args);
     }
 
-    if (error instanceof Error) {
-        return {
+    info(message, ...args) {
+        this.log('info', message, ...args);
+    }
+
+    debug(message, ...args) {
+        this.log('debug', message, ...args);
+    }
+
+    // Structured logging helpers
+    logJobScan(platform, jobCount, duration) {
+        this.info('Job scan completed', {
+            platform,
+            jobCount,
+            duration: `${duration}ms`,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    logApplication(jobTitle, company, status) {
+        this.info(`Application ${status}`, {
+            jobTitle,
+            company,
+            status,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    logUserAction(userId, action, details = {}) {
+        this.info(`User action: ${action}`, {
+            userId,
+            action,
+            details,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    logAPIRequest(method, endpoint, userId, responseTime) {
+        this.debug('API Request', {
+            method,
+            endpoint,
+            userId,
+            responseTime: `${responseTime}ms`,
+            timestamp: new Date().toISOString()
+        });
+    }
+
+    logError(error, context = {}) {
+        this.error('Error occurred', {
             message: error.message,
-            stack: error.stack
-        };
+            stack: error.stack,
+            context,
+            timestamp: new Date().toISOString()
+        });
     }
 
-    if (typeof error === 'object') {
-        return {
-            message: error.message || JSON.stringify(error),
-            stack: error.stack || undefined
-        };
-    }
+    logSQL(query, params = [], duration = null) {
+        if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
+            const logData = {
+                query: query.trim(),
+                timestamp: new Date().toISOString()
+            };
 
-    return {
-        message: String(error)
-    };
-}
+            if (params && params.length > 0) {
+                const maskedParams = params.map(param => {
+                    if (typeof param === 'string' &&
+                        (query.toLowerCase().includes('password') ||
+                         query.toLowerCase().includes('token') ||
+                         query.toLowerCase().includes('secret'))) {
+                        return '[REDACTED]';
+                    }
+                    return param;
+                });
+                logData.params = maskedParams;
+            }
 
-function logError(error, source = 'system', metadata = {}) {
-    ensureLogFiles();
-    const serialized = serializeError(error);
-    const entry = formatEntry('error', serialized.message, source, {
-        ...metadata,
-        stack: serialized.stack,
-        env: {
-            NODE_ENV: process.env.NODE_ENV,
-            RAILWAY_ENVIRONMENT: process.env.RAILWAY_ENVIRONMENT,
-            DATABASE_URL: maskSensitive(process.env.DATABASE_URL)
+            if (duration !== null) {
+                logData.duration = `${duration}ms`;
+            }
+
+            this.debug('SQL Query', logData);
         }
-    });
-    appendLog(ERROR_LOG_PATH, entry);
-    console.error(`[ERROR] [${source}] ${serialized.message}`);
-    if (serialized.stack) {
-        console.error(serialized.stack);
     }
 }
 
-function logDebug(message, source = 'system', metadata = {}) {
-    if (process.env.DEBUG !== 'true' && process.env.NODE_ENV === 'production') {
-        return;
-    }
-    ensureLogFiles();
-    const entry = formatEntry('debug', message, source, metadata);
-    appendLog(INFO_LOG_PATH, entry);
-    console.debug(`[DEBUG] [${source}] ${message}`);
-}
-
-function getRecentLogs(limit = 50) {
-    ensureLogFiles();
-    const files = [INFO_LOG_PATH, ERROR_LOG_PATH];
-    const entries = [];
-
-    files.forEach((filePath) => {
-        try {
-            const content = fs.readFileSync(filePath, 'utf8');
-            const lines = content.trim().split(/\r?\n/).filter(Boolean);
-            const recent = lines.slice(-limit).map((line) => {
-                try {
-                    return JSON.parse(line);
-                } catch (parseError) {
-                    return { raw: line };
-                }
-            });
-            entries.push(...recent);
-        } catch (readError) {
-            console.warn('Failed reading log file', filePath, readError);
-        }
-    });
-
-    return entries
-        .sort((a, b) => new Date(b.timestamp || 0) - new Date(a.timestamp || 0))
-        .slice(0, limit);
-}
-
-class Logger {
-    constructor(source = 'system') {
-        this.source = source;
-    }
-
-    info(message, metadata) {
-        logInfo(message, this.source, metadata);
-    }
-
-    warn(message, metadata) {
-        logWarn(message, this.source, metadata);
-    }
-
-    error(error, metadata) {
-        logError(error, this.source, metadata);
-    }
-
-    debug(message, metadata) {
-        logDebug(message, this.source, metadata);
-    }
-
-    logError(error, metadata) {
-        logError(error, this.source, metadata);
-    }
-}
-
-function createLogger(source) {
-    return new Logger(source);
-}
-
-ensureLogFiles();
+// Default logger instance
+const defaultLogger = new Logger('Default');
 
 module.exports = {
-    logInfo,
-    logError,
-    logWarn,
-    logDebug,
-    getRecentLogs,
-    createLogger,
     Logger,
-    INFO_LOG_PATH,
-    ERROR_LOG_PATH,
-    LOG_ROOT
+    logger: defaultLogger
 };
+

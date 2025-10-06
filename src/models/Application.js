@@ -1,4 +1,5 @@
 const db = require('../database/db');
+const AppError = require('../utils/AppError');
 
 class Application {
   static async findById(id) {
@@ -85,7 +86,17 @@ class Application {
       const result = await db.query(query, params);
       return result.rows[0];
     } catch (error) {
-      throw new Error(`Error creating application: ${error.message}`);
+      throw AppError.database(
+        'Failed to create application',
+        {
+          module: 'Application',
+          method: 'create',
+          userId: applicationData.userId,
+          jobId: applicationData.jobId,
+          sqlCode: error.code
+        },
+        error
+      );
     }
   }
 
@@ -254,7 +265,7 @@ class Application {
           COUNT(*) as total,
           COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '7 days' THEN 1 END) as this_week,
           COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '1 day' THEN 1 END) as today,
-          COUNT(CASE WHEN applied_at >= NOW() - INTERVAL '1 day' * $2 THEN 1 END) as period_total
+          COUNT(CASE WHEN applied_at >= NOW() - make_interval(days => $2) THEN 1 END) as period_total
         FROM applications
         WHERE user_id = $1
       `;
@@ -275,7 +286,7 @@ class Application {
           COUNT(CASE WHEN status IN ('accepted', 'interviewing') THEN 1 END) as successful
         FROM applications
         WHERE user_id = $1 
-          AND applied_at >= NOW() - INTERVAL '1 day' * $2
+          AND applied_at >= NOW() - make_interval(days => $2)
       `;
       
       const result = await db.query(query, [userId, periodDays]);

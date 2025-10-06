@@ -6,7 +6,26 @@
   
   // Configuration
   const API_BASE = window.location.origin + '/api/autoapply';
-  const DEBUG_MODE = true;
+  const DEBUG_MODE = localStorage.getItem('DEBUG_MODE') === 'true' || window.AUTOAPPLY_DEBUG === true;
+  
+  // Debug logging helpers
+  function debugLog(...args) {
+    if (DEBUG_MODE) {
+      console.log(...args);
+    }
+  }
+  
+  function debugError(...args) {
+    if (DEBUG_MODE) {
+      console.error(...args);
+    }
+  }
+  
+  function debugWarn(...args) {
+    if (DEBUG_MODE) {
+      console.warn(...args);
+    }
+  }
   
   // Get auth token (adjust this based on how your app stores tokens)
   function getAuthToken() {
@@ -37,7 +56,7 @@
       
       return await response.json();
     } catch (error) {
-      console.error('API call failed:', endpoint, error);
+      debugError('API call failed:', endpoint, error);
       throw error;
     }
   }
@@ -45,10 +64,10 @@
   // Check profile completeness and update UI
   async function checkProfileStatus() {
     try {
-      console.log('🔍 Checking profile status...');
+      debugLog('🔍 Checking profile status...');
       
       const readiness = await apiCall('/debug/readiness');
-      console.log('Profile readiness:', readiness);
+      debugLog('Profile readiness:', readiness);
       
       const isComplete = readiness.data?.completeness?.complete || false;
       const missingFields = readiness.data?.completeness?.missing;
@@ -64,7 +83,7 @@
       return isComplete;
       
     } catch (error) {
-      console.error('Failed to check profile status:', error);
+      debugError('Failed to check profile status:', error);
       // If API call fails, try the quick fix
       return await tryQuickFix();
     }
@@ -73,10 +92,10 @@
   // Quick profile fix
   async function tryQuickFix() {
     try {
-      console.log('🔧 Attempting quick profile fix...');
+      debugLog('🔧 Attempting quick profile fix...');
       
       const result = await apiCall('/complete-profile', { method: 'POST' });
-      console.log('Quick fix result:', result);
+      debugLog('Quick fix result:', result);
       
       const isComplete = result.data?.profileComplete || false;
       updateAutoApplyButton(isComplete, result.data?.missingFields);
@@ -88,7 +107,7 @@
       return isComplete;
       
     } catch (error) {
-      console.error('Quick fix failed:', error);
+      debugError('Quick fix failed:', error);
       updateAutoApplyButton(false, 'API connection failed');
       return false;
     }
@@ -104,11 +123,11 @@
                            );
     
     if (!autoApplyButton) {
-      console.warn('AutoApply button not found');
+      debugWarn('AutoApply button not found');
       return;
     }
     
-    console.log('Found AutoApply button:', autoApplyButton);
+    debugLog('Found AutoApply button:', autoApplyButton);
     
     if (isComplete) {
       // Enable the button
@@ -141,11 +160,11 @@
   // Start AutoApply process
   async function startAutoApply() {
     try {
-      console.log('🚀 Starting AutoApply...');
+      debugLog('🚀 Starting AutoApply...');
       
       // Enable autoapply
       const result = await apiCall('/enable', { method: 'POST' });
-      console.log('AutoApply enabled:', result);
+      debugLog('AutoApply enabled:', result);
       
       if (result.success) {
         showNotification('AutoApply enabled successfully! We\'ll start applying to matching jobs.', 'success');
@@ -159,7 +178,7 @@
       }
       
     } catch (error) {
-      console.error('Failed to start AutoApply:', error);
+      debugError('Failed to start AutoApply:', error);
       showNotification('Failed to start AutoApply: ' + error.message, 'error');
     }
   }
@@ -214,12 +233,12 @@
       }
     }, 5000);
     
-    console.log(`${type.toUpperCase()}: ${message}`);
+    debugLog(`${type.toUpperCase()}: ${message}`);
   }
   
   // Initialize when DOM is ready
   function initialize() {
-    console.log('🔧 AutoApply Integration Loading...');
+    debugLog('🔧 AutoApply Integration Loading...');
     
     // Add some CSS for better integration
     const style = document.createElement('style');
@@ -233,7 +252,26 @@
     // Check profile status
     checkProfileStatus();
     
-    console.log('✅ AutoApply Integration Loaded');
+    // Expose debug functions
+    window.autoApplyDebug = {
+      checkProfile: checkProfileStatus,
+      quickFix: tryQuickFix,
+      startAutoApply: startAutoApply,
+      enableDebug: () => {
+        localStorage.setItem('DEBUG_MODE', 'true');
+        window.location.reload();
+      },
+      disableDebug: () => {
+        localStorage.removeItem('DEBUG_MODE');
+        window.location.reload();
+      }
+    };
+    
+    debugLog('✅ AutoApply Integration Loaded');
+    
+    if (DEBUG_MODE) {
+      debugLog('🐛 Debug functions available: window.autoApplyDebug');
+    }
   }
   
   // Run when page loads

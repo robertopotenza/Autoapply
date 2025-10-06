@@ -391,7 +391,11 @@ router.post('/upload', auth, upload.fields([
         logger.info(`🎉 Upload successful for user ${userId}: ${Object.keys(uploadedFiles).length} files`);
 
     } catch (error) {
-        logger.error(`❌ Upload failed:`, error);
+        logger.error(`❌ Upload failed:`, {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         
         // Clean up any uploaded files on error
         if (req.files) {
@@ -414,15 +418,17 @@ router.post('/upload', auth, upload.fields([
 router.post('/start', auth, async (req, res) => {
     try {
         const userId = req.user.userId || req.user.user_id;
-        
+
         if (orchestrator) {
             // Use enhanced orchestrator
-            const sessionId = await orchestrator.startSession(userId);
-            
+            const result = await orchestrator.startAutoApplyForUser(userId);
+
             res.json({
                 success: true,
-                message: 'Enhanced autoapply session started',
-                sessionId,
+                message: result.message || 'Enhanced autoapply session started',
+                sessionId: result.sessionId,
+                initialJobs: result.initialJobs,
+                config: result.config,
                 mode: 'enhanced'
             });
         } else {
@@ -434,7 +440,11 @@ router.post('/start', auth, async (req, res) => {
             });
         }
     } catch (error) {
-        logger.error('Error starting autoapply session:', error);
+        logger.error('Error starting autoapply session:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         res.status(500).json({
             success: false,
             message: 'Failed to start autoapply session',
@@ -447,15 +457,17 @@ router.post('/start', auth, async (req, res) => {
 router.post('/enable', auth, async (req, res) => {
     try {
         const userId = req.user.userId || req.user.user_id;
-        
+
         if (orchestrator) {
             // Use enhanced orchestrator
-            const sessionId = await orchestrator.startSession(userId);
-            
+            const result = await orchestrator.startAutoApplyForUser(userId);
+
             res.json({
                 success: true,
-                message: 'AutoApply enabled successfully',
-                sessionId,
+                message: result.message || 'AutoApply enabled successfully',
+                sessionId: result.sessionId,
+                initialJobs: result.initialJobs,
+                config: result.config,
                 mode: 'enhanced'
             });
         } else {
@@ -467,7 +479,11 @@ router.post('/enable', auth, async (req, res) => {
             });
         }
     } catch (error) {
-        logger.error('Error enabling autoapply:', error);
+        logger.error('Error enabling autoapply:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         res.status(500).json({
             success: false,
             message: 'Failed to enable AutoApply',
@@ -490,7 +506,11 @@ router.post('/stop', auth, async (req, res) => {
             message: 'Autoapply session stopped'
         });
     } catch (error) {
-        logger.error('Error stopping autoapply session:', error);
+        logger.error('Error stopping autoapply session:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         res.status(500).json({
             success: false,
             message: 'Failed to stop autoapply session',
@@ -519,7 +539,11 @@ router.get('/status', auth, async (req, res) => {
             });
         }
     } catch (error) {
-        logger.error('Error getting session status:', error);
+        logger.error('Error getting session status:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         res.status(500).json({
             success: false,
             message: 'Failed to get session status',
@@ -609,7 +633,11 @@ router.get('/jobs', auth, async (req, res) => {
         }
 
         const message = 'Failed to get jobs';
-        logger.error('Error getting jobs:', error);
+        logger.error('Error getting jobs:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         res.status(500).json({
             success: false,
             message,
@@ -635,7 +663,11 @@ router.get('/applications', auth, async (req, res) => {
             applications
         });
     } catch (error) {
-        logger.error('Error getting applications:', error);
+        logger.error('Error getting applications:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         res.status(500).json({
             success: false,
             message: 'Failed to get applications',
@@ -665,7 +697,11 @@ router.get('/profile', auth, async (req, res) => {
             completeness: UserProfile.calculateCompleteness(profile)
         });
     } catch (error) {
-        logger.error('Error getting user profile:', error);
+        logger.error('Error getting user profile:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         res.status(500).json({
             success: false,
             message: 'Failed to get user profile',
@@ -721,7 +757,11 @@ router.put('/settings', auth, async (req, res) => {
             storage_mode: 'database'
         });
     } catch (error) {
-        logger.error('Error updating settings:', error);
+        logger.error('Error updating settings:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
 
         if (shouldFallbackToLocal(error)) {
             if (isLocalFallbackAllowed()) {
@@ -807,7 +847,11 @@ router.get('/settings', auth, async (req, res) => {
             storage_mode: 'database'
         });
     } catch (error) {
-        logger.error('Error getting settings:', error);
+        logger.error('Error getting settings:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
 
         if (shouldFallbackToLocal(error)) {
             if (isLocalFallbackAllowed()) {
@@ -845,7 +889,11 @@ router.get('/analytics', auth, async (req, res) => {
             analytics
         });
     } catch (error) {
-        logger.error('Error getting analytics:', error);
+        logger.error('Error getting analytics:', {
+            message: error.message,
+            stack: error.stack,
+            code: error.code
+        });
         
         // Check for missing column errors (e.g., column "user_id" does not exist)
         const isMissingColumnError = error.message && (

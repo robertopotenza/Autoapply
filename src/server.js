@@ -3,12 +3,36 @@
  * Combines enhanced autoapply features with user authentication and management
  */
 
+// Load environment variables FIRST using dotenv-flow
+// This automatically loads the correct .env file based on NODE_ENV
+// On Railway, environment variables are injected directly, so this is optional
+try {
+    require('dotenv-flow').config({ silent: true });
+} catch (error) {
+    // dotenv-flow not available or no .env files found - this is OK on Railway
+    console.log('ℹ️  Using system environment variables (Railway mode)');
+}
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
-const { Pool } = require('pg');
-require('dotenv').config();
+
+// Initialize Sentry for error tracking (if configured)
+let Sentry = null;
+if (process.env.SENTRY_DSN) {
+    Sentry = require('@sentry/node');
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'development',
+        tracesSampleRate: (() => {
+            const rate = process.env.SENTRY_TRACES_SAMPLE_RATE;
+            const parsed = rate !== undefined ? parseFloat(rate) : 1.0;
+            return (!isNaN(parsed) && parsed >= 0 && parsed <= 1) ? parsed : 1.0;
+        })(),
+    });
+    console.log('✅ Sentry initialized for error tracking');
+}
 
 // Import routes
 const authRoutes = require('./routes/auth');
@@ -19,11 +43,38 @@ const debugResetRoutes = require('./routes/debug-reset');
 const diagnosticsRoutes = require('./routes/diagnostics');
 
 // Import utilities and middleware
-const { createLogger, logError } = require('./utils/logger');
-const { verifyDatabaseSchema } = require('../diagnostics/verify-database');
+const { Logger } = require('./utils/logger');
+const { verifySchema } = require('./utils/verifySchema');
+const authenticateToken = require('./middleware/auth').authenticateToken;
+const traceIdMiddleware = require('./middleware/traceId');
 
 // Initialize logger
-const logger = createLogger('server');
+const logger = new Logger('Server');
+
+// Global error handlers - must be set up early
+process.on('uncaughtException', (err) => {
+    logger.error('Uncaught Exception', {
+        error: err.message,
+        stack: err.stack,
+        name: err.name,
+        code: err.code
+    });
+    // Give logger time to flush, then exit
+    setTimeout(() => {
+        process.exit(1);
+    }, 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection', {
+        reason: reason instanceof Error ? {
+            message: reason.message,
+            stack: reason.stack,
+            name: reason.name
+        } : reason,
+        promise: promise.toString()
+    });
+});
 
 // Create Express app
 const app = express();
@@ -44,164 +95,72 @@ app.use(cors({
     origin: process.env.CORS_ORIGIN || '*',
     credentials: true
 }));
+
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-if (process.env.DEBUG === 'true') {
-    app.use((req, res, next) => {
-        console.log(`[DEBUG] ${req.method} ${req.originalUrl}`);
-        next();
-    });
-}
+// Add traceId middleware early - after body parsers, before routes
+app.use(traceIdMiddleware(logger));
 
 // Database connection
+// Note: The actual pool is managed by src/database/pool.js
+// This variable holds a reference to it after initialization
 let pool = null;
-let serverInstance = null;
-let shuttingDown = false;
-
-// Helper function to split SQL statements
-function splitSqlStatements(sql) {
-    return sql
-        // Remove line comments
-        .replace(/--.*$/gm, '')
-        // Remove block comments
-        .replace(/\/\*[\s\S]*?\*\//gm, '')
-        .split(/;\s*(?:\r?\n|$)/)
-        .map(statement => statement.trim())
-        .filter(statement => statement.length > 0);
-}
-
-// Helper function to run a migration file
-async function runMigrationFile(pool, migrationPath, label) {
-    if (!fs.existsSync(migrationPath)) {
-        logger.warn(`⚠️  Migration file not found: ${label}`);
-        return;
-    }
-
-    logger.info(`🔄 Running migration: ${label}...`);
-    
-    const sql = fs.readFileSync(migrationPath, 'utf8');
-    const statements = splitSqlStatements(sql);
-
-    for (const statement of statements) {
-        try {
-            await pool.query(statement);
-        } catch (error) {
-            // If table already exists, that's OK
-            if (error.code === '42P07') {
-                continue;
-            }
-            logger.logError(error, { stage: 'migration', label, statement });
-            throw error;
-        }
-    }
-
-    logger.info(`✅ Migration ${label} completed (${statements.length} statements)`);
-}
 
 async function initializeDatabase() {
     try {
-        if (!process.env.DATABASE_URL) {
-            logger.warn('DATABASE_URL not found, some features may be limited');
+        // Import the robust pool from our new pool configuration
+        const { pool: robustPool, testConnection } = require('./database/pool');
+
+        if (!robustPool) {
+            logger.warn('⚠️  Database pool not configured');
             return null;
         }
 
-        pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        });
+        // Test the connection
+        logger.info('🔍 Testing database connection...');
+        const testResult = await testConnection();
 
-        // Test connection
-        await pool.query('SELECT NOW()');
+        if (!testResult.success) {
+            throw new Error(`Database connection test failed: ${testResult.error?.message}`);
+        }
+
         logger.info('✅ Database connected successfully');
 
-        // Initialize database schema
-        const schemaPath = path.join(__dirname, '../database/schema.sql');
-
-        if (fs.existsSync(schemaPath)) {
-            const schema = fs.readFileSync(schemaPath, 'utf8');
-            await pool.query(schema);
-            logger.info('✅ Database schema initialized successfully');
-        } else {
-            logger.warn('⚠️  Schema file not found at:', schemaPath);
+        // Verify schema compatibility (migrations are handled by Railway's release command)
+        logger.info('🔍 Verifying schema compatibility...');
+        try {
+            await verifySchema(robustPool);
+            logger.info('✅ Schema verified successfully');
+        } catch (error) {
+            // Schema verification failures are non-fatal - tables might not exist yet
+            logger.warn('⚠️  Schema verification incomplete:', error.message);
+            logger.info('ℹ️  Some features may be limited until migrations complete');
         }
 
-        // Run migrations
-        logger.info('🔄 Running database migrations...');
-        const migrationsDir = path.join(__dirname, '../database/migrations');
-        
-        if (fs.existsSync(migrationsDir)) {
-            // Get all migration files in order
-            const migrationFiles = fs.readdirSync(migrationsDir)
-                .filter(file => file.endsWith('.sql'))
-                .sort(); // Sort to ensure correct order
-            
-            for (const migrationFile of migrationFiles) {
-                const migrationPath = path.join(migrationsDir, migrationFile);
-                await runMigrationFile(pool, migrationPath, migrationFile);
-            }
-            
-            logger.info('✅ All migrations completed successfully');
-        } else {
-            logger.warn('⚠️  Migrations directory not found');
-        }
-
-        return pool;
+        return robustPool;
     } catch (error) {
-        logger.logError(error, { stage: 'initializeDatabase' });
+        logger.error('❌ Database initialization failed:', error.message);
 
-        // If error is about existing tables, that's OK
-        if (error.code === '42P07') {
-            logger.info('ℹ️  Tables already exist, continuing...');
-            return pool;
-        }
-
+        // Return null instead of throwing - allow server to start without database
+        logger.warn('⚠️  Server will start with limited functionality');
         return null;
     }
 }
 
-async function shutdownGracefully(reason) {
-    if (shuttingDown) {
-        return;
-    }
+// Track initialization state
+let isInitializing = true;
+let initializationError = null;
 
-    shuttingDown = true;
-
-    const details =
-        typeof reason === 'string'
-            ? { signal: reason }
-            : { message: reason && reason.message ? reason.message : reason };
-
-    logger.warn('Initiating graceful shutdown', details);
-
-    if (serverInstance) {
-        try {
-            await new Promise((resolve) => serverInstance.close(resolve));
-            logger.info('HTTP server closed');
-        } catch (error) {
-            logger.logError(error, { stage: 'shutdown', action: 'close-server' });
-        }
-    }
-
-    if (pool) {
-        try {
-            await pool.end();
-            logger.info('Database connections closed');
-        } catch (error) {
-            logger.logError(error, { stage: 'shutdown', action: 'close-database' });
-        }
-    }
-
-    const exitCode = typeof reason === 'string' ? 0 : 1;
-    process.exit(exitCode);
-}
-
-// Health check endpoint
+// Health check endpoint - Always responds 200 to pass Railway health checks
 app.get('/health', (req, res) => {
-    res.json({
-        status: 'healthy',
-        uptime: Math.round(process.uptime()),
-        db: pool ? 'connected' : 'disconnected'
+    res.status(200).json({
+        status: 'operational',
+        timestamp: new Date().toISOString(),
+        database: !!pool,
+        initializing: isInitializing,
+        initializationError: initializationError ? initializationError.message : null,
+        environment: process.env.NODE_ENV || 'development'
     });
 });
 
@@ -236,7 +195,7 @@ app.get('/', (req, res) => {
         logger.info(`Serving index.html from: ${indexPath}`);
         res.sendFile(indexPath);
     } catch (error) {
-        logger.logError(error, { route: '/', action: 'serve-index' });
+        logger.error('Error serving index.html:', error);
         res.status(500).send('Error loading application');
     }
 });
@@ -249,7 +208,7 @@ app.get('/dashboard', (req, res) => {
         logger.info(`Serving dashboard.html from: ${dashboardPath}`);
         res.sendFile(dashboardPath);
     } catch (error) {
-        logger.logError(error, { route: '/dashboard', action: 'serve-dashboard' });
+        logger.error('Error serving dashboard.html:', error);
         res.status(500).send('Error loading dashboard');
     }
 });
@@ -260,7 +219,7 @@ app.get('/dashboard.html', (req, res) => {
         logger.info(`Serving dashboard.html from: ${dashboardPath}`);
         res.sendFile(dashboardPath);
     } catch (error) {
-        logger.logError(error, { route: '/dashboard.html', action: 'serve-dashboard' });
+        logger.error('Error serving dashboard.html:', error);
         res.status(500).send('Error loading dashboard');
     }
 });
@@ -272,7 +231,7 @@ app.get('/wizard(.html)?', (req, res) => {
         logger.info(`Serving wizard.html from: ${wizardPath}`);
         res.sendFile(wizardPath);
     } catch (error) {
-        logger.logError(error, { route: '/wizard', action: 'serve-wizard' });
+        logger.error('Error serving wizard.html:', error);
         res.status(500).send('Error loading wizard');
     }
 });
@@ -284,7 +243,7 @@ app.get('/login.html', (req, res) => {
         logger.info(`Serving login.html from: ${loginPath}`);
         res.sendFile(loginPath);
     } catch (error) {
-        logger.logError(error, { route: '/login.html', action: 'serve-login' });
+        logger.error('Error serving login.html:', error);
         res.status(500).send('Error loading login');
     }
 });
@@ -296,7 +255,7 @@ app.get('/signup.html', (req, res) => {
         logger.info(`Serving signup.html from: ${signupPath}`);
         res.sendFile(signupPath);
     } catch (error) {
-        logger.logError(error, { route: '/signup.html', action: 'serve-signup' });
+        logger.error('Error serving signup.html:', error);
         res.status(500).send('Error loading signup');
     }
 });
@@ -308,7 +267,7 @@ app.get('/applications(.html)?', (req, res) => {
         logger.info(`Serving applications.html from: ${applicationsPath}`);
         res.sendFile(applicationsPath);
     } catch (error) {
-        logger.logError(error, { route: '/applications', action: 'serve-applications' });
+        logger.error('Error serving applications.html:', error);
         res.status(500).send('Error loading applications');
     }
 });
@@ -320,7 +279,7 @@ app.get('/index.html', (req, res) => {
         logger.info(`Serving index.html from: ${indexPath}`);
         res.sendFile(indexPath);
     } catch (error) {
-        logger.logError(error, { route: '/index.html', action: 'serve-index' });
+        logger.error('Error serving index.html:', error);
         res.status(500).send('Error loading index');
     }
 });
@@ -347,14 +306,35 @@ app.get('*', (req, res) => {
         logger.info(`Catch-all serving index.html for route: ${req.path}`);
         res.sendFile(indexPath);
     } catch (error) {
-        logger.logError(error, { route: req.path, action: 'catch-all' });
+        logger.error('Error in catch-all route:', error);
         res.status(500).send('Error loading application');
     }
 });
 
+// Sentry error handler must be before any other error middleware
+if (Sentry) {
+    app.use(Sentry.expressErrorHandler());
+}
+
 // Error handling middleware
 app.use((error, req, res, next) => {
-    logger.logError(error, { route: req.originalUrl, stage: 'error-middleware' });
+    logger.error('Unhandled error:', error);
+    // Log the error with structured context
+    if (error.toJSON && typeof error.toJSON === 'function') {
+        // This is an AppError with structured information
+        logger.error('Request error (AppError)', error.toJSON());
+    } else {
+        // Standard error
+        logger.error('Request error', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            code: error.code,
+            path: req.path,
+            method: req.method
+        });
+    }
+    
     res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -363,68 +343,103 @@ app.use((error, req, res, next) => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', () => shutdownGracefully('SIGTERM'));
-process.on('SIGINT', () => shutdownGracefully('SIGINT'));
+process.on('SIGTERM', async () => {
+    logger.info('SIGTERM received, shutting down gracefully');
 
-process.on('unhandledRejection', (reason) => {
-    logError(reason instanceof Error ? reason : new Error(String(reason)), 'process:unhandledRejection');
-    shutdownGracefully(reason);
+    if (pool) {
+        await pool.end();
+        logger.info('Database connections closed');
+    }
+
+    process.exit(0);
 });
 
-process.on('uncaughtException', (error) => {
-    logError(error, 'process:uncaughtException');
-    shutdownGracefully(error);
+process.on('SIGINT', async () => {
+    logger.info('SIGINT received, shutting down gracefully');
+
+    if (pool) {
+        await pool.end();
+        logger.info('Database connections closed');
+    }
+
+    process.exit(0);
 });
+
+// Initialize database asynchronously (non-blocking)
+async function initializeDatabaseAsync() {
+    try {
+        logger.info('🔄 Starting database initialization...');
+        pool = await initializeDatabase();
+
+        if (pool) {
+            // Attach database to app for middleware
+            app.locals.db = pool;
+
+            // Initialize enhanced autoapply features if available
+            try {
+                initializeOrchestrator(pool);
+                logger.info('🚀 Enhanced autoapply features initialized');
+            } catch (error) {
+                logger.warn('⚠️  Enhanced autoapply features not available:', error.message);
+            }
+        }
+
+        isInitializing = false;
+        logger.info('✅ Database initialization completed');
+    } catch (error) {
+        logger.error('❌ Database initialization failed:', error);
+        initializationError = error;
+        isInitializing = false;
+        // Don't exit - allow server to continue running without database.
+        // ⚠️ Implications:
+        //   - Endpoints/features that require database access (e.g., authentication, user management, autoapply features)
+        //     will be unavailable or may return errors until the database is initialized.
+        //   - Health check and static endpoints will continue to function.
+        //   - Dashboard, wizard, and API routes that depend on database queries will fail or be degraded.
+        //   - See documentation for details on which routes require database connectivity.
+    }
+}
 
 // Start server
 async function startServer() {
     try {
-        pool = await initializeDatabase();
-
-        if (!pool) {
-            throw new Error('Database initialization failed');
-        }
-
-        await verifyDatabaseSchema({ pool, logger });
-        logger.info('✅ Database schema verified');
-
-        app.locals.db = pool;
-
-        try {
-            initializeOrchestrator(pool);
-            logger.info('🚀 Enhanced autoapply features initialized');
-        } catch (error) {
-            logger.logError(error, { stage: 'initializeOrchestrator' });
-        }
-
-        serverInstance = app.listen(PORT, '0.0.0.0', () => {
+        // Start HTTP server FIRST (before database initialization)
+        // This allows health checks to pass immediately
+        const server = app.listen(PORT, '0.0.0.0', () => {
             logger.info(`🎯 Apply Autonomously server running on port ${PORT}`);
             logger.info(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
             logger.info(`🧙‍♂️ Wizard: http://localhost:${PORT}/wizard`);
             logger.info(`🔌 API: http://localhost:${PORT}/api`);
+            logger.info(`💚 Health: http://localhost:${PORT}/health`);
         });
 
-        serverInstance.on('error', (error) => {
-            if (error && error.code === 'EADDRINUSE') {
-                logger.logError(error, { stage: 'server-listen', code: 'EADDRINUSE', port: PORT });
+        // Handle server errors
+        server.on('error', (error) => {
+            if (error.code === 'EADDRINUSE') {
+                logger.error(`❌ Port ${PORT} is already in use`);
             } else {
-                logger.logError(error, { stage: 'server-listen' });
+                logger.error('❌ Server error:', error);
             }
-            shutdownGracefully(error);
+            process.exit(1);
         });
 
-        return serverInstance;
+        // Initialize database asynchronously AFTER server is listening
+        // This prevents blocking the health check endpoint
+        initializeDatabaseAsync();
+
+        return server;
+
     } catch (error) {
-        logger.logError(error, { stage: 'startServer' });
-        throw error;
+        logger.error('❌ Failed to start server:', error);
+        process.exit(1);
     }
 }
 
 // Start the server
 if (require.main === module) {
-    startServer().catch(async (error) => {
-        logError(error, 'startup');
-        await shutdownGracefully(error);
+    startServer().catch((error) => {
+        logger.error('❌ Fatal error starting server:', error);
+        process.exit(1);
     });
 }
 
