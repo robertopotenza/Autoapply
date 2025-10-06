@@ -10,6 +10,7 @@ const UserProfile = require('../services/UserProfile');
 const AutoApplySettings = require('../models/AutoApplySettings');
 const Application = require('../models/Application');
 const Job = require('../models/Job');
+const AppError = require('../utils/AppError');
 
 // Import enhanced autoapply services if available
 let AutoApplyOrchestrator = null;
@@ -391,11 +392,19 @@ router.post('/upload', auth, upload.fields([
         logger.info(`🎉 Upload successful for user ${userId}: ${Object.keys(uploadedFiles).length} files`);
 
     } catch (error) {
-        logger.error(`❌ Upload failed:`, {
-            message: error.message,
-            stack: error.stack,
-            code: error.code
-        });
+        // Wrap the error in AppError for structured logging
+        const appError = error instanceof AppError ? error : AppError.api(
+            'File upload failed',
+            {
+                module: 'AutoApplyAPI',
+                endpoint: '/upload',
+                userId: req.user?.userId || req.user?.user_id,
+                filesAttempted: req.files ? Object.keys(req.files).length : 0
+            },
+            error
+        );
+        
+        logger.error('Upload failed', appError.toJSON());
         
         // Clean up any uploaded files on error
         if (req.files) {

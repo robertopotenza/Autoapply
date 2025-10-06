@@ -39,33 +39,56 @@ const { Logger } = require('./utils/logger');
 const { verifySchema } = require('./utils/verifySchema');
 const authenticateToken = require('./middleware/auth').authenticateToken;
 const traceIdMiddleware = require('./middleware/traceId');
+const AppError = require('./utils/AppError');
 
 // Initialize logger
 const logger = new Logger('Server');
 
 // Global error handlers - must be set up early
 process.on('uncaughtException', (err) => {
-    logger.error('Uncaught Exception', {
-        error: err.message,
-        stack: err.stack,
-        name: err.name,
-        code: err.code
-    });
-    // Give logger time to flush, then exit
+    // Check if it's an AppError and log with full context
+    if (err instanceof AppError || (err.toJSON && typeof err.toJSON === 'function')) {
+        logger.error('Uncaught Exception (AppError)', err.toJSON());
+    } else {
+        logger.error('Uncaught Exception', {
+            error: err.message,
+            stack: err.stack,
+            name: err.name,
+            code: err.code
+        });
+    }
+    
+    // Send to Sentry if configured
+    if (Sentry) {
+        Sentry.captureException(err);
+    }
+    
+    // Give logger and Sentry time to flush, then exit
     setTimeout(() => {
         process.exit(1);
     }, 1000);
 });
 
 process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection', {
-        reason: reason instanceof Error ? {
-            message: reason.message,
-            stack: reason.stack,
-            name: reason.name
-        } : reason,
-        promise: promise.toString()
-    });
+    // Check if it's an AppError and log with full context
+    if (reason instanceof AppError || (reason && reason.toJSON && typeof reason.toJSON === 'function')) {
+        logger.error('Unhandled Rejection (AppError)', reason.toJSON());
+    } else {
+        logger.error('Unhandled Rejection', {
+            reason: reason instanceof Error ? {
+                message: reason.message,
+                stack: reason.stack,
+                name: reason.name,
+                code: reason.code
+            } : reason,
+            promise: promise.toString()
+        });
+    }
+    
+    // Send to Sentry if configured
+    if (Sentry) {
+        Sentry.captureException(reason);
+    }
 });
 
 // Create Express app
@@ -431,30 +454,8 @@ process.on('SIGINT', async () => {
 
 // Initialize database asynchronously (non-blocking)
 async function initializeDatabaseAsync() {
-// Capture unhandled exceptions and rejections
-process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    
-    if (Sentry) {
-        Sentry.captureException(reason);
-    }
-});
-
-process.on('uncaughtException', (error) => {
-    logger.error('Uncaught Exception:', error);
-    
-    if (Sentry) {
-        Sentry.captureException(error);
-    }
-    
-    // Give Sentry time to send the error before exiting
-    setTimeout(() => {
-        process.exit(1);
-    }, 1000);
-});
-
-// Start server
-async function startServer() {
+    // This function is called after the server starts listening
+    // to initialize the database without blocking the health check endpoint
     try {
         logger.info('🔄 Starting database initialization...');
         pool = await initializeDatabase();

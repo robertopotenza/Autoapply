@@ -180,7 +180,17 @@ class Application {
       const result = await db.query(query, [userId, jobId]);
       return result.rows[0] || null;
     } catch (error) {
-      throw new Error(`Error checking existing application: ${error.message}`);
+      throw AppError.database(
+        'Failed to check existing application',
+        {
+          module: 'Application',
+          method: 'checkExistingApplication',
+          userId,
+          jobId,
+          sqlCode: error.code
+        },
+        error
+      );
     }
   }
 
@@ -227,7 +237,17 @@ class Application {
       const result = await db.query(query, [userId, limit]);
       return result.rows;
     } catch (error) {
-      throw new Error(`Error getting recent applications: ${error.message}`);
+      throw AppError.database(
+        'Failed to get recent applications',
+        {
+          module: 'Application',
+          method: 'getRecentApplications',
+          userId,
+          limit,
+          sqlCode: error.code
+        },
+        error
+      );
     }
   }
 
@@ -273,7 +293,17 @@ class Application {
       const result = await db.query(query, [userId, periodDays]);
       return result.rows[0];
     } catch (error) {
-      throw new Error(`Error getting application analytics: ${error.message}`);
+      throw AppError.database(
+        'Failed to get application analytics',
+        {
+          module: 'Application',
+          method: 'getAnalytics',
+          userId,
+          period,
+          query: 'application_analytics'
+        },
+        error
+      );
     }
   }
 
