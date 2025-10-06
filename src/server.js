@@ -144,6 +144,8 @@ async function initializeDatabase() {
             logger.info('✅ Schema verified — starting server...');
         } catch (error) {
             logger.error('❌ Schema verification failed:', error.message);
+            // Close pool before re-throwing
+            await pool.end();
             throw error;
         }
 
@@ -157,7 +159,9 @@ async function initializeDatabase() {
             return pool;
         }
 
-        return null;
+        // For schema verification failures and other critical errors, re-throw
+        // to prevent server from starting
+        throw error;
     }
 }
 
