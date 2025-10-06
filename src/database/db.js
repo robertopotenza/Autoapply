@@ -1,5 +1,14 @@
 const { Pool } = require('pg');
-const { logger } = require('../utils/logger');
+const { createLogger, logError } = require('../utils/logger');
+
+const logger = createLogger('database');
+
+const TROUBLESHOOT_GUIDE = [
+    '❌ DB Connection Failed',
+    '1️⃣ Check DATABASE_URL in your environment (.env or Railway variables)',
+    '2️⃣ Confirm the Railway/PostgreSQL instance is running',
+    "3️⃣ Run 'psql <connection string>' to verify manual connectivity"
+].join('\n');
 
 // Check if database credentials are configured
 const isDatabaseConfigured = () => {
@@ -12,17 +21,23 @@ const isDatabaseConfigured = () => {
 // PostgreSQL connection pool (only if configured)
 let pool = null;
 
-if (isDatabaseConfigured()) {
-    // Prioritize DATABASE_URL if available (for Railway deployment)
-    if (process.env.DATABASE_URL) {
-        pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        });
-        logger.info('✅ Database configured using DATABASE_URL');
-    } else {
-        // Fall back to individual environment variables
-        pool = new Pool({
+function createPool() {
+    if (!isDatabaseConfigured()) {
+        logger.warn('PostgreSQL database not configured. Set DATABASE_URL or (PGHOST, PGUSER, PGPASSWORD, PGDATABASE) environment variables.');
+        return null;
+    }
+
+    try {
+        if (process.env.DATABASE_URL) {
+            const configuredPool = new Pool({
+                connectionString: process.env.DATABASE_URL,
+                ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+            });
+            logger.info('✅ Database configured using DATABASE_URL');
+            return configuredPool;
+        }
+
+        const configuredPool = new Pool({
             host: process.env.PGHOST,
             user: process.env.PGUSER,
             password: process.env.PGPASSWORD,
@@ -31,18 +46,34 @@ if (isDatabaseConfigured()) {
             ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
         });
         logger.info('✅ Database configured using PG environment variables');
+        return configuredPool;
+    } catch (error) {
+        logError(error, 'database:createPool');
+        console.error(TROUBLESHOOT_GUIDE);
+        return null;
     }
+}
 
-    // Test database connection
+pool = createPool();
+
+if (pool) {
     pool.on('connect', () => {
         logger.info('Connected to PostgreSQL database');
     });
 
     pool.on('error', (err) => {
-        logger.error('Unexpected error on idle PostgreSQL client', err);
+        logger.logError(err, { stage: 'database', event: 'idle-client-error' });
     });
-} else {
-    logger.warn('PostgreSQL database not configured. Set DATABASE_URL or (PGHOST, PGUSER, PGPASSWORD, PGDATABASE) environment variables.');
+
+    (async () => {
+        try {
+            await pool.query('SELECT 1');
+            logger.info('Database connectivity check succeeded');
+        } catch (error) {
+            logError(error, 'database:connectivity-check');
+            console.error(TROUBLESHOOT_GUIDE);
+        }
+    })();
 }
 
 // Query helper function
@@ -57,7 +88,7 @@ async function query(text, params) {
         logger.debug('Executed query', { text, duration, rows: res.rowCount });
         return res;
     } catch (error) {
-        logger.error('Database query error', { text, error: error.message });
+        logger.logError(error, { stage: 'database', action: 'query', text });
         throw error;
     }
 }
@@ -111,7 +142,7 @@ async function initializeDatabase() {
 
         logger.info('✅ Database tables initialized successfully');
     } catch (error) {
-        logger.error('Error initializing database', error);
+        logger.logError(error, { stage: 'initializeDatabase' });
 
         // If error is about existing tables, that's OK
         if (error.code === '42P07') {

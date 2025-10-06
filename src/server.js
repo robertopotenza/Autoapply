@@ -16,13 +16,14 @@ const wizardRoutes = require('./routes/wizard');
 const { router: autoApplyRouter, initializeOrchestrator } = require('./routes/autoapply');
 const debugRoutes = require('./routes/debug');
 const debugResetRoutes = require('./routes/debug-reset');
+const diagnosticsRoutes = require('./routes/diagnostics');
 
 // Import utilities and middleware
-const { Logger } = require('./utils/logger');
-const authenticateToken = require('./middleware/auth').authenticateToken;
+const { createLogger, logError } = require('./utils/logger');
+const { verifyDatabaseSchema } = require('../diagnostics/verify-database');
 
 // Initialize logger
-const logger = new Logger('Server');
+const logger = createLogger('server');
 
 // Create Express app
 const app = express();
@@ -46,8 +47,17 @@ app.use(cors({
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+if (process.env.DEBUG === 'true') {
+    app.use((req, res, next) => {
+        console.log(`[DEBUG] ${req.method} ${req.originalUrl}`);
+        next();
+    });
+}
+
 // Database connection
 let pool = null;
+let serverInstance = null;
+let shuttingDown = false;
 
 // Helper function to split SQL statements
 function splitSqlStatements(sql) {
@@ -81,7 +91,7 @@ async function runMigrationFile(pool, migrationPath, label) {
             if (error.code === '42P07') {
                 continue;
             }
-            logger.error(`❌ Migration ${label} failed on statement:\n${statement}`);
+            logger.logError(error, { stage: 'migration', label, statement });
             throw error;
         }
     }
@@ -138,7 +148,7 @@ async function initializeDatabase() {
 
         return pool;
     } catch (error) {
-        logger.error('❌ Database initialization failed:', error.message);
+        logger.logError(error, { stage: 'initializeDatabase' });
 
         // If error is about existing tables, that's OK
         if (error.code === '42P07') {
@@ -150,13 +160,48 @@ async function initializeDatabase() {
     }
 }
 
+async function shutdownGracefully(reason) {
+    if (shuttingDown) {
+        return;
+    }
+
+    shuttingDown = true;
+
+    const details =
+        typeof reason === 'string'
+            ? { signal: reason }
+            : { message: reason && reason.message ? reason.message : reason };
+
+    logger.warn('Initiating graceful shutdown', details);
+
+    if (serverInstance) {
+        try {
+            await new Promise((resolve) => serverInstance.close(resolve));
+            logger.info('HTTP server closed');
+        } catch (error) {
+            logger.logError(error, { stage: 'shutdown', action: 'close-server' });
+        }
+    }
+
+    if (pool) {
+        try {
+            await pool.end();
+            logger.info('Database connections closed');
+        } catch (error) {
+            logger.logError(error, { stage: 'shutdown', action: 'close-database' });
+        }
+    }
+
+    const exitCode = typeof reason === 'string' ? 0 : 1;
+    process.exit(exitCode);
+}
+
 // Health check endpoint
 app.get('/health', (req, res) => {
     res.json({
-        status: 'operational',
-        timestamp: new Date().toISOString(),
-        database: !!pool,
-        environment: process.env.NODE_ENV || 'development'
+        status: 'healthy',
+        uptime: Math.round(process.uptime()),
+        db: pool ? 'connected' : 'disconnected'
     });
 });
 
@@ -179,6 +224,7 @@ app.use('/api/wizard', wizardRoutes);
 app.use('/api/autoapply', autoApplyRouter);
 app.use('/api/debug', debugRoutes);
 app.use('/api/debug-reset', debugResetRoutes);
+app.use('/api/diagnostics', diagnosticsRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
@@ -190,7 +236,7 @@ app.get('/', (req, res) => {
         logger.info(`Serving index.html from: ${indexPath}`);
         res.sendFile(indexPath);
     } catch (error) {
-        logger.error('Error serving index.html:', error);
+        logger.logError(error, { route: '/', action: 'serve-index' });
         res.status(500).send('Error loading application');
     }
 });
@@ -203,7 +249,7 @@ app.get('/dashboard', (req, res) => {
         logger.info(`Serving dashboard.html from: ${dashboardPath}`);
         res.sendFile(dashboardPath);
     } catch (error) {
-        logger.error('Error serving dashboard.html:', error);
+        logger.logError(error, { route: '/dashboard', action: 'serve-dashboard' });
         res.status(500).send('Error loading dashboard');
     }
 });
@@ -214,7 +260,7 @@ app.get('/dashboard.html', (req, res) => {
         logger.info(`Serving dashboard.html from: ${dashboardPath}`);
         res.sendFile(dashboardPath);
     } catch (error) {
-        logger.error('Error serving dashboard.html:', error);
+        logger.logError(error, { route: '/dashboard.html', action: 'serve-dashboard' });
         res.status(500).send('Error loading dashboard');
     }
 });
@@ -226,7 +272,7 @@ app.get('/wizard(.html)?', (req, res) => {
         logger.info(`Serving wizard.html from: ${wizardPath}`);
         res.sendFile(wizardPath);
     } catch (error) {
-        logger.error('Error serving wizard.html:', error);
+        logger.logError(error, { route: '/wizard', action: 'serve-wizard' });
         res.status(500).send('Error loading wizard');
     }
 });
@@ -238,7 +284,7 @@ app.get('/login.html', (req, res) => {
         logger.info(`Serving login.html from: ${loginPath}`);
         res.sendFile(loginPath);
     } catch (error) {
-        logger.error('Error serving login.html:', error);
+        logger.logError(error, { route: '/login.html', action: 'serve-login' });
         res.status(500).send('Error loading login');
     }
 });
@@ -250,7 +296,7 @@ app.get('/signup.html', (req, res) => {
         logger.info(`Serving signup.html from: ${signupPath}`);
         res.sendFile(signupPath);
     } catch (error) {
-        logger.error('Error serving signup.html:', error);
+        logger.logError(error, { route: '/signup.html', action: 'serve-signup' });
         res.status(500).send('Error loading signup');
     }
 });
@@ -262,7 +308,7 @@ app.get('/applications(.html)?', (req, res) => {
         logger.info(`Serving applications.html from: ${applicationsPath}`);
         res.sendFile(applicationsPath);
     } catch (error) {
-        logger.error('Error serving applications.html:', error);
+        logger.logError(error, { route: '/applications', action: 'serve-applications' });
         res.status(500).send('Error loading applications');
     }
 });
@@ -274,7 +320,7 @@ app.get('/index.html', (req, res) => {
         logger.info(`Serving index.html from: ${indexPath}`);
         res.sendFile(indexPath);
     } catch (error) {
-        logger.error('Error serving index.html:', error);
+        logger.logError(error, { route: '/index.html', action: 'serve-index' });
         res.status(500).send('Error loading index');
     }
 });
@@ -301,14 +347,14 @@ app.get('*', (req, res) => {
         logger.info(`Catch-all serving index.html for route: ${req.path}`);
         res.sendFile(indexPath);
     } catch (error) {
-        logger.error('Error in catch-all route:', error);
+        logger.logError(error, { route: req.path, action: 'catch-all' });
         res.status(500).send('Error loading application');
     }
 });
 
 // Error handling middleware
 app.use((error, req, res, next) => {
-    logger.error('Unhandled error:', error);
+    logger.logError(error, { route: req.originalUrl, stage: 'error-middleware' });
     res.status(500).json({
         success: false,
         message: 'Internal server error',
@@ -317,78 +363,68 @@ app.use((error, req, res, next) => {
 });
 
 // Graceful shutdown
-process.on('SIGTERM', async () => {
-    logger.info('SIGTERM received, shutting down gracefully');
+process.on('SIGTERM', () => shutdownGracefully('SIGTERM'));
+process.on('SIGINT', () => shutdownGracefully('SIGINT'));
 
-    if (pool) {
-        await pool.end();
-        logger.info('Database connections closed');
-    }
-
-    process.exit(0);
+process.on('unhandledRejection', (reason) => {
+    logError(reason instanceof Error ? reason : new Error(String(reason)), 'process:unhandledRejection');
+    shutdownGracefully(reason);
 });
 
-process.on('SIGINT', async () => {
-    logger.info('SIGINT received, shutting down gracefully');
-
-    if (pool) {
-        await pool.end();
-        logger.info('Database connections closed');
-    }
-
-    process.exit(0);
+process.on('uncaughtException', (error) => {
+    logError(error, 'process:uncaughtException');
+    shutdownGracefully(error);
 });
 
 // Start server
 async function startServer() {
     try {
-        // Initialize database
         pool = await initializeDatabase();
 
-        if (pool) {
-            // Attach database to app for middleware
-            app.locals.db = pool;
-
-            // Initialize enhanced autoapply features if available
-            try {
-                initializeOrchestrator(pool);
-                logger.info('🚀 Enhanced autoapply features initialized');
-            } catch (error) {
-                logger.warn('⚠️  Enhanced autoapply features not available:', error.message);
-            }
+        if (!pool) {
+            throw new Error('Database initialization failed');
         }
 
-        // Start HTTP server
-        const server = app.listen(PORT, '0.0.0.0', () => {
+        await verifyDatabaseSchema({ pool, logger });
+        logger.info('✅ Database schema verified');
+
+        app.locals.db = pool;
+
+        try {
+            initializeOrchestrator(pool);
+            logger.info('🚀 Enhanced autoapply features initialized');
+        } catch (error) {
+            logger.logError(error, { stage: 'initializeOrchestrator' });
+        }
+
+        serverInstance = app.listen(PORT, '0.0.0.0', () => {
             logger.info(`🎯 Apply Autonomously server running on port ${PORT}`);
             logger.info(`📊 Dashboard: http://localhost:${PORT}/dashboard`);
             logger.info(`🧙‍♂️ Wizard: http://localhost:${PORT}/wizard`);
             logger.info(`🔌 API: http://localhost:${PORT}/api`);
         });
 
-        // Handle server errors
-        server.on('error', (error) => {
-            if (error.code === 'EADDRINUSE') {
-                logger.error(`❌ Port ${PORT} is already in use`);
+        serverInstance.on('error', (error) => {
+            if (error && error.code === 'EADDRINUSE') {
+                logger.logError(error, { stage: 'server-listen', code: 'EADDRINUSE', port: PORT });
             } else {
-                logger.error('❌ Server error:', error);
+                logger.logError(error, { stage: 'server-listen' });
             }
-            process.exit(1);
+            shutdownGracefully(error);
         });
 
-        return server;
-
+        return serverInstance;
     } catch (error) {
-        logger.error('❌ Failed to start server:', error);
-        process.exit(1);
+        logger.logError(error, { stage: 'startServer' });
+        throw error;
     }
 }
 
 // Start the server
 if (require.main === module) {
-    startServer().catch((error) => {
-        logger.error('❌ Fatal error starting server:', error);
-        process.exit(1);
+    startServer().catch(async (error) => {
+        logError(error, 'startup');
+        await shutdownGracefully(error);
     });
 }
 
