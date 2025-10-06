@@ -28,7 +28,6 @@ jobs:
       
       - name: Verify Database Schema
         run: node tests/verify-database.js
-        continue-on-error: true
         
       - name: Deploy to Railway
         run: npx -y railway up --yes

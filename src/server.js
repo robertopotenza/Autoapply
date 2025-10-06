@@ -32,14 +32,41 @@ const wizardRoutes = require('./routes/wizard');
 const { router: autoApplyRouter, initializeOrchestrator } = require('./routes/autoapply');
 const debugRoutes = require('./routes/debug');
 const debugResetRoutes = require('./routes/debug-reset');
+const diagnosticsRoutes = require('./routes/diagnostics');
 
 // Import utilities and middleware
 const { Logger } = require('./utils/logger');
 const { verifySchema } = require('./utils/verifySchema');
 const authenticateToken = require('./middleware/auth').authenticateToken;
+const traceIdMiddleware = require('./middleware/traceId');
 
 // Initialize logger
 const logger = new Logger('Server');
+
+// Global error handlers - must be set up early
+process.on('uncaughtException', (err) => {
+    logger.error('Uncaught Exception', {
+        error: err.message,
+        stack: err.stack,
+        name: err.name,
+        code: err.code
+    });
+    // Give logger time to flush, then exit
+    setTimeout(() => {
+        process.exit(1);
+    }, 1000);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    logger.error('Unhandled Rejection', {
+        reason: reason instanceof Error ? {
+            message: reason.message,
+            stack: reason.stack,
+            name: reason.name
+        } : reason,
+        promise: promise.toString()
+    });
+});
 
 // Create Express app
 const app = express();
@@ -63,6 +90,9 @@ app.use(cors({
 
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+
+// Add traceId middleware early - after body parsers, before routes
+app.use(traceIdMiddleware(logger));
 
 // Database connection
 let pool = null;
@@ -161,6 +191,8 @@ async function initializeDatabase() {
             logger.info('✅ Schema verified — starting server...');
         } catch (error) {
             logger.error('❌ Schema verification failed:', error.message);
+            // Close pool before re-throwing
+            await pool.end();
             throw error;
         }
 
@@ -174,7 +206,9 @@ async function initializeDatabase() {
             return pool;
         }
 
-        return null;
+        // For schema verification failures and other critical errors, re-throw
+        // to prevent server from starting
+        throw error;
     }
 }
 
@@ -207,6 +241,7 @@ app.use('/api/wizard', wizardRoutes);
 app.use('/api/autoapply', autoApplyRouter);
 app.use('/api/debug', debugRoutes);
 app.use('/api/debug-reset', debugResetRoutes);
+app.use('/api/diagnostics', diagnosticsRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
@@ -342,6 +377,21 @@ if (Sentry) {
 // Error handling middleware
 app.use((error, req, res, next) => {
     logger.error('Unhandled error:', error);
+    // Log the error with structured context
+    if (error.toJSON && typeof error.toJSON === 'function') {
+        // This is an AppError with structured information
+        logger.error('Request error (AppError)', error.toJSON());
+    } else {
+        // Standard error
+        logger.error('Request error', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            code: error.code,
+            path: req.path,
+            method: req.method
+        });
+    }
     
     res.status(500).json({
         success: false,

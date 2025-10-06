@@ -1,20 +1,34 @@
 const { query } = require('../db');
 const bcrypt = require('bcrypt');
 const { Logger } = require('../../utils/logger');
+const AppError = require('../../utils/AppError');
 
 const SALT_ROUNDS = 10;
 const logger = new Logger('User');
 
 class User {
     static async create(email, password) {
-        const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
+        try {
+            const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
-        const result = await query(
-            'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING user_id, email, created_at',
-            [email, passwordHash]
-        );
+            const result = await query(
+                'INSERT INTO users (email, password_hash) VALUES ($1, $2) RETURNING user_id, email, created_at',
+                [email, passwordHash]
+            );
 
-        return result.rows[0];
+            return result.rows[0];
+        } catch (error) {
+            throw AppError.database(
+                'Failed to create user',
+                {
+                    module: 'User',
+                    method: 'create',
+                    email,
+                    sqlCode: error.code
+                },
+                error
+            );
+        }
     }
 
     static async createPasswordless(email) {
@@ -62,20 +76,33 @@ class User {
     }
 
     static async getCompleteProfile(userId) {
-        logger.info(`Querying user_complete_profile for user_id: ${userId}`);
-        const result = await query(
-            'SELECT * FROM user_complete_profile WHERE user_id = $1',
-            [userId]
-        );
+        try {
+            logger.info(`Querying user_complete_profile for user_id: ${userId}`);
+            const result = await query(
+                'SELECT * FROM user_complete_profile WHERE user_id = $1',
+                [userId]
+            );
 
-        if (result.rows.length === 0) {
-            logger.warn(`No rows found in user_complete_profile for user_id: ${userId}`);
-            logger.info(`Hint: Run 'node scripts/verify-database.js --user <email>' to check DB`);
-        } else {
-            logger.info(`Found profile data for user_id: ${userId}`);
+            if (result.rows.length === 0) {
+                logger.warn(`No rows found in user_complete_profile for user_id: ${userId}`);
+                logger.info(`Hint: Run 'node scripts/verify-database.js --user <email>' to check DB`);
+            } else {
+                logger.info(`Found profile data for user_id: ${userId}`);
+            }
+
+            return result.rows[0];
+        } catch (error) {
+            throw AppError.database(
+                'Failed to get user complete profile',
+                {
+                    module: 'User',
+                    method: 'getCompleteProfile',
+                    userId,
+                    sqlCode: error.code
+                },
+                error
+            );
         }
-
-        return result.rows[0];
     }
 }
 
