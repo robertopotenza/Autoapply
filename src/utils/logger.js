@@ -107,6 +107,8 @@ class Logger {
                         format: winston.format.simple()
                     })
                 );
+            }
+
             let winstonLevel = 'info';
             if (process.env.DEBUG_MODE === 'true' || process.env.DEBUG_MODE === '1') {
                 winstonLevel = 'debug';
@@ -175,9 +177,7 @@ class Logger {
                 console.warn(formattedMessage);
                 break;
             case 'debug':
-                if (process.env.NODE_ENV === 'development' || process.env.DEBUG_MODE === 'true' || process.env.DEBUG === 'true') {
-                    console.debug(formattedMessage);
-                }
+                console.debug(formattedMessage);
                 break;
             default:
                 console.log(formattedMessage);
