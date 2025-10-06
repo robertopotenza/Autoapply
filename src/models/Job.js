@@ -275,8 +275,7 @@ class Job {
         FROM jobs j
         LEFT JOIN applications a ON j.job_id = a.job_id AND a.user_id = $1
         WHERE (j.user_id = $1 OR j.user_id IS NULL)
-          -- Filter by dynamic period: INTERVAL '1 day' * $2 calculates period days (e.g., 30 days)
-          AND j.created_at >= NOW() - INTERVAL '1 day' * $2
+          AND j.created_at >= NOW() - make_interval(days => $2)
       `;
       
       const result = await db.query(query, [userId, periodDays]);
