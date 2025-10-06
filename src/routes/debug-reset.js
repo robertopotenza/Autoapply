@@ -1,17 +1,11 @@
 const express = require('express');
 const router = express.Router();
-const { Pool } = require('pg');
+const pool = require('../database/pool');
 
 // Simple debug route to get the latest password reset token
 router.get('/latest-reset/:email', async (req, res) => {
     try {
         const { email } = req.params;
-        
-        // Database connection
-        const pool = new Pool({
-            connectionString: process.env.DATABASE_URL,
-            ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
-        });
 
         // Get the latest password reset token for this email
         const result = await pool.query(`
@@ -21,8 +15,6 @@ router.get('/latest-reset/:email', async (req, res) => {
             ORDER BY created_at DESC 
             LIMIT 1
         `, [email]);
-
-        await pool.end();
 
         if (result.rows.length === 0) {
             return res.json({
