@@ -418,15 +418,17 @@ router.post('/upload', auth, upload.fields([
 router.post('/start', auth, async (req, res) => {
     try {
         const userId = req.user.userId || req.user.user_id;
-        
+
         if (orchestrator) {
             // Use enhanced orchestrator
-            const sessionId = await orchestrator.startSession(userId);
-            
+            const result = await orchestrator.startAutoApplyForUser(userId);
+
             res.json({
                 success: true,
-                message: 'Enhanced autoapply session started',
-                sessionId,
+                message: result.message || 'Enhanced autoapply session started',
+                sessionId: result.sessionId,
+                initialJobs: result.initialJobs,
+                config: result.config,
                 mode: 'enhanced'
             });
         } else {
@@ -455,15 +457,17 @@ router.post('/start', auth, async (req, res) => {
 router.post('/enable', auth, async (req, res) => {
     try {
         const userId = req.user.userId || req.user.user_id;
-        
+
         if (orchestrator) {
             // Use enhanced orchestrator
-            const sessionId = await orchestrator.startSession(userId);
-            
+            const result = await orchestrator.startAutoApplyForUser(userId);
+
             res.json({
                 success: true,
-                message: 'AutoApply enabled successfully',
-                sessionId,
+                message: result.message || 'AutoApply enabled successfully',
+                sessionId: result.sessionId,
+                initialJobs: result.initialJobs,
+                config: result.config,
                 mode: 'enhanced'
             });
         } else {
