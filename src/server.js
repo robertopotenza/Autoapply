@@ -431,30 +431,6 @@ process.on('SIGINT', async () => {
 
 // Initialize database asynchronously (non-blocking)
 async function initializeDatabaseAsync() {
-// Capture unhandled exceptions and rejections
-process.on('unhandledRejection', (reason, promise) => {
-    logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
-    
-    if (Sentry) {
-        Sentry.captureException(reason);
-    }
-});
-
-process.on('uncaughtException', (error) => {
-    logger.error('Uncaught Exception:', error);
-    
-    if (Sentry) {
-        Sentry.captureException(error);
-    }
-    
-    // Give Sentry time to send the error before exiting
-    setTimeout(() => {
-        process.exit(1);
-    }, 1000);
-});
-
-// Start server
-async function startServer() {
     try {
         logger.info('🔄 Starting database initialization...');
         pool = await initializeDatabase();
