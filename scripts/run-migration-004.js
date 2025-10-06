@@ -11,7 +11,7 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+require('dotenv-flow').config();
 
 async function runMigration004() {
     console.log('🚀 Running Migration 004: Add user_id to jobs table\n');

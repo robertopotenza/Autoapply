@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv-flow').config();
 
 /**
  * Verification script to check if all wizard form fields are properly stored in the database

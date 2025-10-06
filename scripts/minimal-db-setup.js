@@ -8,7 +8,7 @@
  */
 
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv-flow').config();
 
 console.log('🚀 Minimal Database Setup Starting...');
 console.log('📅 Timestamp:', new Date().toISOString());

@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-require('dotenv').config();
+require('dotenv-flow').config();
 
 async function initializeDatabase() {
     if (!process.env.DATABASE_URL && !process.env.PGHOST) {

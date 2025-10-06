@@ -14,7 +14,7 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+require('dotenv-flow').config();
 
 console.log('🚀 Railway Database Setup Starting...');
 console.log('📅 Timestamp:', new Date().toISOString());

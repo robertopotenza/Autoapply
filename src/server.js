@@ -3,12 +3,14 @@
  * Combines enhanced autoapply features with user authentication and management
  */
 
+// Load environment variables first using dotenv-flow for environment-specific configs
+require('dotenv-flow').config();
+
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const { Pool } = require('pg');
-require('dotenv').config();
 
 // Initialize Sentry for error tracking (if configured)
 let Sentry = null;

@@ -12,7 +12,7 @@
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
+require('dotenv-flow').config();
 
 const { Logger } = require('../src/utils/logger');
 const logger = new Logger('DatabaseFix');
