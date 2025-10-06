@@ -788,23 +788,24 @@ async function saveAndExit() {
 
         // Save screening answers if any
         if (hasScreeningData(data)) {
+            console.log('📝 Saving screening data:', data);
             await fetch('/api/wizard/screening', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
-                    experienceSummary: data['experience-summary'] || '',
-                    hybridPreference: data['hybrid-preference'] || '',
-                    travel: data['travel-comfortable'] || '',
-                    relocation: data['relocation-open'] || '',
+                    experienceSummary: data.experienceSummary || '',
+                    hybridPreference: data.hybridPreference || '',
+                    travel: data.travel || '',
+                    relocation: data.relocation || '',
                     languages: data.languages || [],
-                    dateOfBirth: data['date-of-birth'] || null,
+                    dateOfBirth: data.dateOfBirth || null,
                     gpa: data.gpa || null,
-                    isAdult: data['adult-confirm'] === 'yes' || data.isAdult === 'yes',
-                    genderIdentity: data['gender-identity'] || data.gender || '',
-                    disabilityStatus: data['disability-status'] || data.disability || '',
-                    militaryService: data['military-service'] || data.military || '',
+                    isAdult: data.isAdult === 'yes',
+                    genderIdentity: data.gender || '',
+                    disabilityStatus: data.disability || '',
+                    militaryService: data.military || '',
                     ethnicity: data.ethnicity || '',
-                    drivingLicense: data['driving-license'] || data.licenses || ''
+                    drivingLicense: data.licenses || ''
                 })
             });
         }
@@ -1035,23 +1036,24 @@ async function submitForm() {
 
         // Save screening answers if any
         if (hasScreeningData(data)) {
+            console.log('📝 Saving screening data:', data);
             await fetch('/api/wizard/screening', {
                 method: 'POST',
                 headers,
                 body: JSON.stringify({
-                    experienceSummary: data['experience-summary'] || '',
-                    hybridPreference: data['hybrid-preference'] || '',
-                    travel: data['travel-comfortable'] || '',
-                    relocation: data['relocation-open'] || '',
+                    experienceSummary: data.experienceSummary || '',
+                    hybridPreference: data.hybridPreference || '',
+                    travel: data.travel || '',
+                    relocation: data.relocation || '',
                     languages: data.languages || [],
-                    dateOfBirth: data['date-of-birth'] || null,
+                    dateOfBirth: data.dateOfBirth || null,
                     gpa: data.gpa || null,
-                    isAdult: data['adult-confirm'] === 'yes' || data.isAdult === 'yes',
-                    genderIdentity: data['gender-identity'] || data.gender || '',
-                    disabilityStatus: data['disability-status'] || data.disability || '',
-                    militaryService: data['military-service'] || data.military || '',
+                    isAdult: data.isAdult === 'yes',
+                    genderIdentity: data.gender || '',
+                    disabilityStatus: data.disability || '',
+                    militaryService: data.military || '',
                     ethnicity: data.ethnicity || '',
-                    drivingLicense: data['driving-license'] || data.licenses || ''
+                    drivingLicense: data.licenses || ''
                 })
             });
         }
@@ -1124,13 +1126,14 @@ function parseCommaSeparated(value) {
 }
 
 function hasScreeningData(data) {
-    // Check for kebab-case field names (as stored in formState.data)
-    return data['experience-summary'] || data['hybrid-preference'] ||
-           data['travel-comfortable'] || data['relocation-open'] ||
-           data.languages?.length > 0 || data['date-of-birth'] ||
-           data.gpa || data['adult-confirm'] || data['gender-identity'] ||
-           data['disability-status'] || data['military-service'] ||
-           data.ethnicity || data['driving-license'];
+    // Check for camelCase field names (as returned by parseFormData())
+    // This function receives PARSED data, not raw formState.data
+    return data.experienceSummary || data.hybridPreference ||
+           data.travel || data.relocation ||
+           data.languages?.length > 0 || data.dateOfBirth ||
+           data.gpa || data.isAdult || data.gender ||
+           data.disability || data.military ||
+           data.ethnicity || data.licenses;
 }
 
 async function uploadFiles(token) {
