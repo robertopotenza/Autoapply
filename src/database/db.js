@@ -81,6 +81,31 @@ async function transaction(callback) {
     }
 }
 
+// Helper function to run SQL file
+async function runSqlFile(filePath, label) {
+    const fs = require('fs');
+    
+    if (!fs.existsSync(filePath)) {
+        logger.warn(`${label} not found at: ${filePath}`);
+        return false;
+    }
+    
+    try {
+        const sql = fs.readFileSync(filePath, 'utf8');
+        await pool.query(sql);
+        logger.info(`✅ ${label} executed successfully`);
+        return true;
+    } catch (error) {
+        // If tables already exist, that's OK
+        if (error.code === '42P07' || error.message.includes('already exists')) {
+            logger.info(`${label} - tables already exist (skipped)`);
+            return true;
+        }
+        logger.error(`Error executing ${label}:`, error.message);
+        throw error;
+    }
+}
+
 // Initialize database tables
 async function initializeDatabase() {
     if (!pool) {
@@ -96,20 +121,39 @@ async function initializeDatabase() {
         await pool.query('SELECT NOW()');
         logger.info('Database connection successful');
 
+        // 1. Load base schema
         const schemaPath = path.join(__dirname, '../../database/schema.sql');
-        
-        if (!fs.existsSync(schemaPath)) {
-            logger.warn('Schema file not found at:', schemaPath);
-            return;
+        await runSqlFile(schemaPath, 'Base schema');
+
+        // 2. Run migrations to add AutoApply tables and features
+        const migrations = [
+            {
+                path: path.join(__dirname, '../../database/migrations/002_autoapply_tables.sql'),
+                label: 'Migration 002: AutoApply tables (jobs, applications, etc.)'
+            },
+            {
+                path: path.join(__dirname, '../../database/migrations/003_add_email_to_profile.sql'),
+                label: 'Migration 003: Add email to profile'
+            },
+            {
+                path: path.join(__dirname, '../../database/migrations/003_add_password_reset.sql'),
+                label: 'Migration 003b: Password reset tokens'
+            },
+            {
+                path: path.join(__dirname, '../../database/migrations/004_add_user_id_to_jobs.sql'),
+                label: 'Migration 004: Add user_id to jobs'
+            },
+            {
+                path: path.join(__dirname, '../../database/migrations/005_enhanced_autoapply_tables.sql'),
+                label: 'Migration 005: Enhanced autoapply tables'
+            }
+        ];
+
+        for (const migration of migrations) {
+            await runSqlFile(migration.path, migration.label);
         }
-        
-        const schema = fs.readFileSync(schemaPath, 'utf8');
 
-        // Execute the entire schema at once
-        // PostgreSQL can handle multiple statements in a single query
-        await pool.query(schema);
-
-        logger.info('✅ Database tables initialized successfully');
+        logger.info('✅ Database initialization completed successfully');
     } catch (error) {
         logger.error('Error initializing database', error);
 
