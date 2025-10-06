@@ -1,8 +1,16 @@
 node_modules/
 .env
+.env.local
+.env*.local
 data/
 logs/*.log
 logs/*.json
 !logs/.gitkeep
 *.log
 .DS_Store
+
+# Keep template environment files
+!.env.development
+!.env.production
+!.env.staging
+!.env.example

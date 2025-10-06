@@ -16,7 +16,10 @@
     "test:migrations": "node scripts/test-migration-sequence.js",
     "db:init": "node scripts/init-database.js",
     "db:migrate": "node database/migrations/run.js",
-    "db:seed": "node database/seed.js"
+    "db:seed": "node database/seed.js",
+    "db:check": "node scripts/check-db-connection.js",
+    "db:migrate-all": "node scripts/run-all-migrations.js",
+    "db:diagnose": "node scripts/diagnose-and-fix-db.js"
   },
   "keywords": [
     "job-application",
@@ -35,6 +38,7 @@
     "cors": "^2.8.5",
     "cron": "^3.1.6",
     "dotenv": "^16.6.1",
+    "dotenv-flow": "^4.1.0",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "multer": "^1.4.5-lts.2",

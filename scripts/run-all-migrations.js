@@ -1,9 +1,11 @@
 #!/usr/bin/env node
 
+// Load environment variables using dotenv-flow for environment detection
+require('dotenv-flow').config();
+
 const { Pool } = require('pg');
 const fs = require('fs');
 const path = require('path');
-require('dotenv').config();
 
 /**
  * Comprehensive database setup script
