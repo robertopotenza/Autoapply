@@ -13,10 +13,20 @@ require('dotenv').config();
 let Sentry = null;
 if (process.env.SENTRY_DSN) {
     Sentry = require('@sentry/node');
+    // Validate tracesSampleRate to be a number between 0 and 1
+    let tracesSampleRate = 1.0;
+    if (process.env.SENTRY_TRACES_SAMPLE_RATE) {
+        const parsedRate = parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE);
+        if (!isNaN(parsedRate) && parsedRate >= 0 && parsedRate <= 1) {
+            tracesSampleRate = parsedRate;
+        } else {
+            console.warn(`[Sentry] Invalid SENTRY_TRACES_SAMPLE_RATE: "${process.env.SENTRY_TRACES_SAMPLE_RATE}". Using default value 1.0.`);
+        }
+    }
     Sentry.init({
         dsn: process.env.SENTRY_DSN,
         environment: process.env.NODE_ENV || 'development',
-        tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE ? parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE) : 1.0,
+        tracesSampleRate: tracesSampleRate,
     });
     console.log('✅ Sentry initialized for error tracking');
 }
