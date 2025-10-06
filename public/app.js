@@ -1124,8 +1124,13 @@ function parseCommaSeparated(value) {
 }
 
 function hasScreeningData(data) {
-    return data.experienceSummary || data.hybridPreference || data.travel ||
-           data.relocation || data.languages?.length > 0;
+    // Check for kebab-case field names (as stored in formState.data)
+    return data['experience-summary'] || data['hybrid-preference'] ||
+           data['travel-comfortable'] || data['relocation-open'] ||
+           data.languages?.length > 0 || data['date-of-birth'] ||
+           data.gpa || data['adult-confirm'] || data['gender-identity'] ||
+           data['disability-status'] || data['military-service'] ||
+           data.ethnicity || data['driving-license'];
 }
 
 async function uploadFiles(token) {
