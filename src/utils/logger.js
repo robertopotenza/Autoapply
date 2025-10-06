@@ -4,6 +4,9 @@
  */
 
 const winston = require('winston');
+const path = require('path');
+const fs = require('fs');
+require('winston-daily-rotate-file');
 
 class Logger {
     constructor(context = 'App') {
@@ -22,6 +25,62 @@ class Logger {
     
     initializeWinston() {
         try {
+            // Ensure logs directory exists
+            const logsDir = path.join(process.cwd(), 'logs');
+            if (!fs.existsSync(logsDir)) {
+                fs.mkdirSync(logsDir, { recursive: true });
+            }
+
+            const transports = [];
+
+            // In production, use rotating file transports
+            if (process.env.NODE_ENV === 'production') {
+                // Error log with daily rotation
+                transports.push(
+                    new winston.transports.DailyRotateFile({
+                        filename: path.join(logsDir, 'error-%DATE%.log'),
+                        datePattern: 'YYYY-MM-DD',
+                        level: 'error',
+                        maxSize: '20m',
+                        maxFiles: '14d',
+                        zippedArchive: true
+                    })
+                );
+
+                // Combined log with daily rotation
+                transports.push(
+                    new winston.transports.DailyRotateFile({
+                        filename: path.join(logsDir, 'combined-%DATE%.log'),
+                        datePattern: 'YYYY-MM-DD',
+                        maxSize: '20m',
+                        maxFiles: '30d',
+                        zippedArchive: true
+                    })
+                );
+            } else {
+                // In non-production, use simple file transports
+                transports.push(
+                    new winston.transports.File({ 
+                        filename: path.join(logsDir, 'error.log'), 
+                        level: 'error' 
+                    })
+                );
+                transports.push(
+                    new winston.transports.File({ 
+                        filename: path.join(logsDir, 'combined.log') 
+                    })
+                );
+            }
+
+            // Always add console transport in non-production
+            if (process.env.NODE_ENV !== 'production') {
+                transports.push(
+                    new winston.transports.Console({
+                        format: winston.format.simple()
+                    })
+                );
+            }
+
             this.winston = winston.createLogger({
                 level: process.env.LOG_LEVEL || 'info',
                 format: winston.format.combine(
@@ -30,20 +89,11 @@ class Logger {
                     winston.format.json()
                 ),
                 defaultMeta: { service: 'apply-autonomously', context: this.context },
-                transports: [
-                    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
-                    new winston.transports.File({ filename: 'logs/combined.log' })
-                ]
+                transports
             });
-
-            if (process.env.NODE_ENV !== 'production') {
-                this.winston.add(new winston.transports.Console({
-                    format: winston.format.simple()
-                }));
-            }
         } catch (error) {
             // Fallback to console logging if Winston fails
-            console.warn('Winston logger initialization failed, using console logging');
+            console.warn('Winston logger initialization failed, using console logging:', error.message);
         }
     }
     

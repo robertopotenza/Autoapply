@@ -9,6 +9,21 @@ const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
 
+// Initialize Sentry for error tracking (if configured)
+let Sentry = null;
+if (process.env.SENTRY_DSN) {
+    Sentry = require('@sentry/node');
+    Sentry.init({
+        dsn: process.env.SENTRY_DSN,
+        environment: process.env.NODE_ENV || 'development',
+        tracesSampleRate: process.env.SENTRY_TRACES_SAMPLE_RATE ? parseFloat(process.env.SENTRY_TRACES_SAMPLE_RATE) : 1.0,
+        integrations: [
+            new Sentry.Integrations.Http({ tracing: true }),
+        ],
+    });
+    console.log('✅ Sentry initialized for error tracking');
+}
+
 // Import routes
 const authRoutes = require('./routes/auth');
 const wizardRoutes = require('./routes/wizard');
@@ -45,6 +60,12 @@ app.use(cors({
         : ['http://localhost:3000', 'http://localhost:8080'],
     credentials: true
 }));
+
+// Sentry request handler must be the first middleware
+if (Sentry) {
+    app.use(Sentry.Handlers.requestHandler());
+    app.use(Sentry.Handlers.tracingHandler());
+}
 
 // Body parsing middleware
 app.use(express.json({ limit: '50mb' }));
@@ -192,9 +213,20 @@ app.use('*', (req, res) => {
     });
 });
 
+// Sentry error handler must be before any other error middleware
+if (Sentry) {
+    app.use(Sentry.Handlers.errorHandler());
+}
+
 // Error handling
 app.use((error, req, res, next) => {
     logger.error('💥 Unhandled error:', error);
+    
+    // Report to Sentry if available
+    if (Sentry) {
+        Sentry.captureException(error);
+    }
+    
     res.status(500).json({
         error: 'Internal server error',
         message: error.message,
@@ -243,6 +275,28 @@ async function startServer() {
                 }
                 process.exit(0);
             });
+        });
+        
+        // Capture unhandled exceptions and rejections
+        process.on('unhandledRejection', (reason, promise) => {
+            logger.error('Unhandled Rejection at:', promise, 'reason:', reason);
+            
+            if (Sentry) {
+                Sentry.captureException(reason);
+            }
+        });
+
+        process.on('uncaughtException', (error) => {
+            logger.error('Uncaught Exception:', error);
+            
+            if (Sentry) {
+                Sentry.captureException(error);
+            }
+            
+            // Give Sentry time to send the error before exiting
+            setTimeout(() => {
+                process.exit(1);
+            }, 1000);
         });
         
         return server;
