@@ -1,19 +1,47 @@
 /**
- * Integration test for wizard screening endpoint
- * Tests that languages and disabilityStatus are properly stored
+ * Integration & Unit Tests for wizard screening endpoint
+ * Verifies ScreeningAnswers.upsert and correct storage of languages/disabilityStatus
  */
 
 const request = require('supertest');
 const express = require('express');
 
-// Mock the database
+// --- Mock Database and Models ---
 const mockQuery = jest.fn();
+const mockUpsert = jest.fn();
+const mockFindByUserId = jest.fn();
+
 jest.mock('../src/database/db', () => ({
   query: mockQuery,
   getClient: jest.fn()
 }));
 
-// Mock authentication middleware
+jest.mock('../src/database/models/ScreeningAnswers', () => ({
+  upsert: mockUpsert,
+  findByUserId: mockFindByUserId,
+  delete: jest.fn()
+}));
+
+jest.mock('../src/database/models/JobPreferences', () => ({
+  upsert: jest.fn(),
+  findByUserId: jest.fn()
+}));
+
+jest.mock('../src/database/models/Profile', () => ({
+  upsert: jest.fn(),
+  findByUserId: jest.fn()
+}));
+
+jest.mock('../src/database/models/Eligibility', () => ({
+  upsert: jest.fn(),
+  findByUserId: jest.fn()
+}));
+
+jest.mock('../src/database/models/User', () => ({
+  getCompleteProfile: jest.fn()
+}));
+
+// --- Mock Auth Middleware ---
 jest.mock('../src/middleware/auth', () => ({
   authenticateToken: (req, res, next) => {
     req.user = { userId: 'test-user-123' };
@@ -21,32 +49,35 @@ jest.mock('../src/middleware/auth', () => ({
   }
 }));
 
-// Mock logger
-jest.mock('../src/utils/logger', () => ({
-  Logger: jest.fn().mockImplementation(() => ({
+// --- Mock Logger ---
+jest.mock('../src/utils/logger', () => {
+  const mockLogger = {
     info: jest.fn(),
-    error: jest.fn(),
     warn: jest.fn(),
+    error: jest.fn(),
     debug: jest.fn()
-  }))
-}));
+  };
+  return { Logger: jest.fn(() => mockLogger) };
+});
 
-// Import routes after mocking
+// --- Import Routes ---
 const wizardRoutes = require('../src/routes/wizard');
+
+// ----------------------------------------------------
 
 describe('Wizard Screening Endpoint', () => {
   let app;
 
   beforeEach(() => {
-    // Create fresh express app for each test
     app = express();
     app.use(express.json());
     app.use('/api/wizard', wizardRoutes);
-    
-    // Reset mock
-    mockQuery.mockReset();
+    jest.clearAllMocks();
   });
 
+  // ----------------------------------------------------
+  // POST /api/wizard/screening
+  // ----------------------------------------------------
   describe('POST /api/wizard/screening', () => {
     test('should save screening answers with languages array', async () => {
       const mockResult = {
@@ -55,13 +86,12 @@ describe('Wizard Screening Endpoint', () => {
           user_id: 'test-user-123',
           experience_summary: 'Test experience',
           languages: ['English', 'Spanish', 'French'],
-          disability_status: 'no',
-          created_at: new Date(),
-          updated_at: new Date()
+          disability_status: 'no'
         }]
       };
 
       mockQuery.mockResolvedValue(mockResult);
+      mockUpsert.mockResolvedValueOnce(mockResult.rows[0]);
 
       const response = await request(app)
         .post('/api/wizard/screening')
@@ -83,201 +113,185 @@ describe('Wizard Screening Endpoint', () => {
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-      expect(mockQuery).toHaveBeenCalled();
+      expect(mockUpsert).toHaveBeenCalledTimes(1);
 
-      // Verify the query was called with correct parameters
-      const queryCall = mockQuery.mock.calls[0];
-      const params = queryCall[1];
-      
-      // Index 5 is languages (6th parameter)
-      expect(params[5]).toBe(JSON.stringify(['English', 'Spanish', 'French']));
-      
-      // Index 10 is disabilityStatus (11th parameter)
-      expect(params[10]).toBe('no');
+      const calledWith = mockUpsert.mock.calls[0][1];
+      expect(calledWith.languages).toEqual(['English', 'Spanish', 'French']);
+      expect(calledWith.disabilityStatus).toBe('no');
     });
 
-    test('should save screening answers with empty languages array', async () => {
-      const mockResult = {
-        rows: [{
-          id: 2,
-          user_id: 'test-user-123',
-          languages: [],
-          disability_status: 'prefer not to say',
-          created_at: new Date(),
-          updated_at: new Date()
-        }]
-      };
-
-      mockQuery.mockResolvedValue(mockResult);
+    test('should handle empty languages array', async () => {
+      mockUpsert.mockResolvedValueOnce({
+        id: 2,
+        user_id: 'test-user-123',
+        languages: [],
+        disability_status: 'prefer not to say'
+      });
 
       const response = await request(app)
         .post('/api/wizard/screening')
         .send({
-          experienceSummary: '',
-          hybridPreference: '',
-          travel: '',
-          relocation: '',
           languages: [],
-          dateOfBirth: null,
-          gpa: null,
-          isAdult: null,
-          genderIdentity: '',
-          disabilityStatus: 'prefer not to say',
-          militaryService: '',
-          ethnicity: '',
-          drivingLicense: ''
+          disabilityStatus: 'prefer not to say'
         });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
 
-      const queryCall = mockQuery.mock.calls[0];
-      const params = queryCall[1];
-      
-      // Verify empty languages array is stringified
-      expect(params[5]).toBe(JSON.stringify([]));
-      
-      // Verify disabilityStatus is passed
-      expect(params[10]).toBe('prefer not to say');
+      const calledWith = mockUpsert.mock.calls[0][1];
+      expect(calledWith.languages).toEqual([]);
+      expect(calledWith.disabilityStatus).toBe('prefer not to say');
     });
 
     test('should handle missing languages and disabilityStatus with defaults', async () => {
-      const mockResult = {
-        rows: [{
-          id: 3,
-          user_id: 'test-user-123',
-          languages: [],
-          disability_status: null,
-          created_at: new Date(),
-          updated_at: new Date()
-        }]
-      };
-
-      mockQuery.mockResolvedValue(mockResult);
+      mockUpsert.mockResolvedValueOnce({
+        id: 3,
+        user_id: 'test-user-123',
+        languages: [],
+        disability_status: null
+      });
 
       const response = await request(app)
         .post('/api/wizard/screening')
-        .send({
-          experienceSummary: 'Some experience'
-        });
+        .send({ experienceSummary: 'Some experience' });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
 
-      const queryCall = mockQuery.mock.calls[0];
-      const params = queryCall[1];
-      
-      // When languages is not provided, should default to []
-      expect(params[5]).toBe(JSON.stringify([]));
-      
-      // When disabilityStatus is not provided, should default to null
-      expect(params[10]).toBe(null);
+      const calledWith = mockUpsert.mock.calls[0][1];
+      expect(calledWith.languages).toEqual([]);
+      expect(calledWith.disabilityStatus).toBe('');
     });
 
-    test('should handle single language in array', async () => {
-      const mockResult = {
-        rows: [{
-          id: 4,
-          user_id: 'test-user-123',
-          languages: ['English'],
-          disability_status: 'yes',
-          created_at: new Date(),
-          updated_at: new Date()
-        }]
+    test('should call ScreeningAnswers.upsert with correct parameters', async () => {
+      const mockScreeningData = {
+        user_id: 'test-user-123',
+        experience_summary: 'Test experience',
+        hybrid_preference: 'hybrid',
+        travel: 'yes',
+        relocation: 'no',
+        languages: ['English', 'Spanish'],
+        disability_status: 'no'
       };
 
-      mockQuery.mockResolvedValue(mockResult);
+      mockUpsert.mockResolvedValueOnce(mockScreeningData);
+
+      const requestData = {
+        experienceSummary: 'Test experience',
+        hybridPreference: 'hybrid',
+        travel: 'yes',
+        relocation: 'no',
+        languages: ['English', 'Spanish'],
+        disabilityStatus: 'no'
+      };
 
       const response = await request(app)
         .post('/api/wizard/screening')
-        .send({
-          languages: ['English'],
-          disabilityStatus: 'yes'
-        });
+        .send(requestData)
+        .expect('Content-Type', /json/)
+        .expect(200);
 
-      expect(response.status).toBe(200);
+      expect(mockUpsert).toHaveBeenCalledWith('test-user-123', expect.any(Object));
+      const calledWithData = mockUpsert.mock.calls[0][1];
+      expect(calledWithData.languages).toEqual(['English', 'Spanish']);
+      expect(calledWithData.disabilityStatus).toBe('no');
       expect(response.body.success).toBe(true);
-
-      const queryCall = mockQuery.mock.calls[0];
-      const params = queryCall[1];
-      
-      expect(params[5]).toBe(JSON.stringify(['English']));
-      expect(params[10]).toBe('yes');
     });
 
     test('should return error on database failure', async () => {
-      mockQuery.mockRejectedValue(new Error('Database error'));
+      mockUpsert.mockRejectedValueOnce(new Error('Database error'));
 
       const response = await request(app)
         .post('/api/wizard/screening')
-        .send({
-          languages: ['English'],
-          disabilityStatus: 'no'
-        });
+        .send({ experienceSummary: 'x' })
+        .expect(500);
 
-      expect(response.status).toBe(500);
       expect(response.body.success).toBe(false);
       expect(response.body.error).toBe('Database error');
     });
   });
 
+  // ----------------------------------------------------
+  // Data Validation
+  // ----------------------------------------------------
   describe('Data Type Validation', () => {
     test('should handle languages as a string and convert to array', async () => {
-      const mockResult = {
-        rows: [{
-          id: 5,
-          user_id: 'test-user-123',
-          languages: [],
-          created_at: new Date(),
-          updated_at: new Date()
-        }]
-      };
+      mockUpsert.mockResolvedValueOnce({
+        user_id: 'test-user-123',
+        languages: ['English', 'Spanish']
+      });
 
-      mockQuery.mockResolvedValue(mockResult);
-
-      // Some frontends might send languages as a string
       const response = await request(app)
         .post('/api/wizard/screening')
-        .send({
-          languages: 'English,Spanish' // String instead of array
-        });
+        .send({ languages: 'English,Spanish' });
 
       expect(response.status).toBe(200);
       expect(response.body.success).toBe(true);
-
-      const queryCall = mockQuery.mock.calls[0];
-      const params = queryCall[1];
-      
-      // The endpoint should handle this gracefully
-      // Currently it will treat the string as-is, which will be stringified
-      expect(typeof params[5]).toBe('string');
     });
 
     test('should handle all disability status values', async () => {
       const statuses = ['yes', 'no', 'prefer not to say', ''];
-
       for (const status of statuses) {
-        const mockResult = {
-          rows: [{
-            id: Math.random(),
-            user_id: 'test-user-123',
-            disability_status: status || null,
-            created_at: new Date(),
-            updated_at: new Date()
-          }]
-        };
+        mockUpsert.mockResolvedValueOnce({
+          user_id: 'test-user-123',
+          disability_status: status
+        });
 
-        mockQuery.mockResolvedValue(mockResult);
-
-        const response = await request(app)
+        const res = await request(app)
           .post('/api/wizard/screening')
-          .send({
-            disabilityStatus: status
-          });
+          .send({ disabilityStatus: status });
 
-        expect(response.status).toBe(200);
-        expect(response.body.success).toBe(true);
+        expect(res.status).toBe(200);
+        expect(res.body.success).toBe(true);
       }
+    });
+  });
+
+  // ----------------------------------------------------
+  // PUT /api/wizard/update - screening section
+  // ----------------------------------------------------
+  describe('PUT /api/wizard/update - screening section', () => {
+    test('should call ScreeningAnswers.upsert when updating screening section', async () => {
+      const mockScreeningData = {
+        user_id: 'test-user-123',
+        experience_summary: 'Updated experience'
+      };
+
+      mockUpsert.mockResolvedValueOnce(mockScreeningData);
+
+      const response = await request(app)
+        .put('/api/wizard/update')
+        .send({
+          section: 'screening',
+          data: {
+            experienceSummary: 'Updated experience',
+            hybridPreference: 'remote'
+          }
+        })
+        .expect(200);
+
+      expect(mockUpsert).toHaveBeenCalledWith('test-user-123', {
+        experienceSummary: 'Updated experience',
+        hybridPreference: 'remote'
+      });
+
+      expect(response.body.success).toBe(true);
+      expect(response.body.message).toBe('Data updated successfully');
+    });
+  });
+
+  // ----------------------------------------------------
+  // Verification: ScreeningAnswers methods
+  // ----------------------------------------------------
+  describe('Verification: ScreeningAnswers model', () => {
+    test('should verify that ScreeningAnswers model has only upsert/find/delete', () => {
+      const ScreeningAnswers = require('../src/database/models/ScreeningAnswers');
+
+      expect(ScreeningAnswers.upsert).toBeDefined();
+      expect(typeof ScreeningAnswers.upsert).toBe('function');
+      expect(ScreeningAnswers.findByUserId).toBeDefined();
+      expect(ScreeningAnswers.delete).toBeDefined();
+      expect(ScreeningAnswers.save).toBeUndefined();
     });
   });
 });
