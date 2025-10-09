@@ -10,15 +10,45 @@ The Admin Dashboard (`/admin/dashboard`) is a secure, real-time system monitorin
 
 ---
 
+## Quick Start
+
+**For users who want to get started immediately:**
+
+1. **Generate an admin token:**
+   ```bash
+   openssl rand -hex 32
+   ```
+
+2. **Add to environment variables:**
+   ```bash
+   # Add to .env file
+   ADMIN_TOKEN=your-generated-token
+   ```
+
+3. **Restart the server:**
+   ```bash
+   npm run dev  # or your production restart command
+   ```
+
+4. **Access the dashboard:**
+   - Navigate to `http://localhost:3000/admin/dashboard`
+   - Enter your admin token when prompted
+   - Start monitoring your system!
+
+**Read the full guide below for detailed setup, features, and troubleshooting.**
+
+---
+
 ## Table of Contents
 
 1. [Prerequisites](#prerequisites)
 2. [Initial Setup](#initial-setup)
 3. [Accessing the Dashboard](#accessing-the-dashboard)
-4. [Dashboard Features](#dashboard-features)
-5. [Security Best Practices](#security-best-practices)
-6. [Troubleshooting](#troubleshooting)
-7. [API Reference](#api-reference)
+4. [Dashboard Layout](#dashboard-layout)
+5. [Dashboard Features](#dashboard-features)
+6. [Security Best Practices](#security-best-practices)
+7. [Troubleshooting](#troubleshooting)
+8. [API Reference](#api-reference)
 
 ---
 
@@ -147,6 +177,55 @@ curl -H "X-Admin-Token: your-token" \
 curl -H "X-Admin-Token: your-token" \
   http://localhost:3000/api/admin/logs?type=combined&lines=100
 ```
+
+---
+
+## Dashboard Layout
+
+When you first access the Admin Dashboard, you'll see a clean, modern interface with the following sections:
+
+### Header
+- **Title**: "AutoApply - Admin Dashboard"
+- **System Status Badge**: Shows overall system health (✅ Healthy, ⚠️ Issues Detected, ❌ Error)
+- **Refresh Button**: Manually reload all dashboard data
+
+### Main Dashboard Cards
+
+The dashboard is organized into several cards displaying different information:
+
+1. **System Health** (Top Left)
+   - Uptime counter
+   - Node.js version
+   - Memory usage metrics
+   - CPU information
+
+2. **Database Status** (Top Center)
+   - Connection status indicator
+   - Schema validation status
+   - Recent database errors (if any)
+
+3. **Configuration** (Top Right)
+   - Toggle switches for runtime settings
+   - Save button to apply changes
+   - Current configuration values
+
+4. **Recent Errors** (Middle)
+   - List of recent error messages
+   - Timestamps and correlation IDs
+   - Error severity indicators
+
+5. **Logs Viewer** (Bottom - Full Width)
+   - Log type selector (Combined/Error)
+   - Line count control
+   - Refresh and auto-refresh controls
+   - Scrollable log display with syntax highlighting
+
+### Color Coding
+
+- **Green/Blue**: Healthy status, informational messages
+- **Yellow/Orange**: Warnings, items requiring attention
+- **Red**: Errors, critical issues
+- **Purple**: Interactive elements, links
 
 ---
 
