@@ -690,6 +690,9 @@ function nextStep() {
 }
 
 async function saveAndExit() {
+    // Save current step data first (don't validate since this is "Save and Exit")
+    saveStepData();
+    
     // CRITICAL: Save ALL steps' data, not just current step
     saveAllStepsData();
 
@@ -799,7 +802,7 @@ async function saveAndExit() {
             });
         }
 
-        showSuccessDialog('Progress saved successfully!', () => {
+        showSuccessDialog('✅ Progress saved successfully! You can continue where you left off next time.', () => {
             // Keep the saved state for when they return
             // localStorage.removeItem('autoApplyFormState'); // Don't remove so they can continue later
             window.location.href = '/dashboard.html';
@@ -970,6 +973,11 @@ function loadSavedState() {
 }
 
 async function submitForm() {
+    // Validate current step before submitting
+    if (!validateCurrentStep()) {
+        return;
+    }
+    
     // CRITICAL: Save ALL steps' data, not just current step
     saveAllStepsData();
 
@@ -1103,7 +1111,7 @@ async function submitForm() {
             });
         }
 
-        showSuccessDialog('Configuration saved successfully!', () => {
+        showSuccessDialog('✅ Profile saved successfully! All your job preferences and profile information have been saved.', () => {
             localStorage.removeItem('autoApplyFormState');
             window.location.href = '/dashboard.html';
         });
