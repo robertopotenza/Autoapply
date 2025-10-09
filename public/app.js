@@ -788,27 +788,69 @@ async function saveAndExit() {
         }
 
         // Save screening answers if any
+        console.log('🔍 [SAVE_AND_EXIT] Checking for screening data...');
         if (hasScreeningData(data)) {
-            console.log('📝 Saving screening data:', data);
-            await fetch('/api/wizard/screening', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    experienceSummary: data.experienceSummary || '',
-                    hybridPreference: data.hybridPreference || '',
-                    travel: data.travel || '',
-                    relocation: data.relocation || '',
-                    languages: data.languages || [],
-                    dateOfBirth: data.dateOfBirth || null,
-                    gpa: data.gpa || null,
-                    isAdult: data.isAdult === 'yes',
-                    genderIdentity: data.gender || '',
-                    disabilityStatus: data.disability || '',
-                    militaryService: data.military || '',
-                    ethnicity: data.ethnicity || '',
-                    drivingLicense: data.licenses || ''
-                })
+            console.log('📝 [SCREENING FETCH - SAVE_AND_EXIT] Detected screening data - preparing to save');
+            console.log('📊 [SCREENING FETCH - SAVE_AND_EXIT] hasScreeningData returned true');
+            console.log('🔍 [SCREENING FETCH - SAVE_AND_EXIT] Screening data details:', {
+                experienceSummary: data.experienceSummary || '(empty)',
+                hybridPreference: data.hybridPreference || '(empty)',
+                travel: data.travel || '(empty)',
+                relocation: data.relocation || '(empty)',
+                languages: data.languages || [],
+                dateOfBirth: data.dateOfBirth || null,
+                gpa: data.gpa || null,
+                isAdult: data.isAdult,
+                gender: data.gender || '(empty)',
+                disability: data.disability || '(empty)',
+                military: data.military || '(empty)',
+                ethnicity: data.ethnicity || '(empty)',
+                licenses: data.licenses || '(empty)'
             });
+
+            const screeningPayload = {
+                experienceSummary: data.experienceSummary || '',
+                hybridPreference: data.hybridPreference || '',
+                travel: data.travel || '',
+                relocation: data.relocation || '',
+                languages: data.languages || [],
+                dateOfBirth: data.dateOfBirth || null,
+                gpa: data.gpa || null,
+                isAdult: data.isAdult === 'yes',
+                genderIdentity: data.gender || '',
+                disabilityStatus: data.disability || '',
+                militaryService: data.military || '',
+                ethnicity: data.ethnicity || '',
+                drivingLicense: data.licenses || ''
+            };
+
+            console.log('📤 [SCREENING FETCH - SAVE_AND_EXIT] Sending POST request to /api/wizard/screening');
+            console.log('📦 [SCREENING FETCH - SAVE_AND_EXIT] Payload:', JSON.stringify(screeningPayload, null, 2));
+            console.log('⏱️ [SCREENING FETCH - SAVE_AND_EXIT] Timestamp:', new Date().toISOString());
+
+            try {
+                const screeningResponse = await fetch('/api/wizard/screening', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(screeningPayload)
+                });
+
+                console.log('✅ [SCREENING FETCH - SAVE_AND_EXIT] Response received - Status:', screeningResponse.status, screeningResponse.statusText);
+
+                if (screeningResponse.ok) {
+                    const screeningResult = await screeningResponse.json();
+                    console.log('✅ [SCREENING FETCH - SAVE_AND_EXIT] Success response:', screeningResult);
+                } else {
+                    const errorText = await screeningResponse.text();
+                    console.error('❌ [SCREENING FETCH - SAVE_AND_EXIT] Error response:', errorText);
+                }
+            } catch (error) {
+                console.error('❌ [SCREENING FETCH - SAVE_AND_EXIT] Fetch failed with exception:', error);
+                console.error('❌ [SCREENING FETCH - SAVE_AND_EXIT] Error details:', error.message, error.stack);
+            }
+        } else {
+            console.log('⚠️ [SCREENING FETCH - SAVE_AND_EXIT] No screening data detected - skipping screening save');
+            console.log('🔍 [SCREENING FETCH - SAVE_AND_EXIT] hasScreeningData returned false for data:', data);
         }
 
         showSuccessDialog('Progress saved successfully! You can continue where you left off next time.', () => {
@@ -1131,27 +1173,69 @@ async function submitForm() {
         });
 
         // Save screening answers if any
+        console.log('🔍 [SUBMIT_FORM] Checking for screening data...');
         if (hasScreeningData(data)) {
-            console.log('📝 Saving screening data:', data);
-            await fetch('/api/wizard/screening', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    experienceSummary: data.experienceSummary || '',
-                    hybridPreference: data.hybridPreference || '',
-                    travel: data.travel || '',
-                    relocation: data.relocation || '',
-                    languages: data.languages || [],
-                    dateOfBirth: data.dateOfBirth || null,
-                    gpa: data.gpa || null,
-                    isAdult: data.isAdult === 'yes',
-                    genderIdentity: data.gender || '',
-                    disabilityStatus: data.disability || '',
-                    militaryService: data.military || '',
-                    ethnicity: data.ethnicity || '',
-                    drivingLicense: data.licenses || ''
-                })
+            console.log('📝 [SCREENING FETCH - SUBMIT_FORM] Detected screening data - preparing to save');
+            console.log('📊 [SCREENING FETCH - SUBMIT_FORM] hasScreeningData returned true');
+            console.log('🔍 [SCREENING FETCH - SUBMIT_FORM] Screening data details:', {
+                experienceSummary: data.experienceSummary || '(empty)',
+                hybridPreference: data.hybridPreference || '(empty)',
+                travel: data.travel || '(empty)',
+                relocation: data.relocation || '(empty)',
+                languages: data.languages || [],
+                dateOfBirth: data.dateOfBirth || null,
+                gpa: data.gpa || null,
+                isAdult: data.isAdult,
+                gender: data.gender || '(empty)',
+                disability: data.disability || '(empty)',
+                military: data.military || '(empty)',
+                ethnicity: data.ethnicity || '(empty)',
+                licenses: data.licenses || '(empty)'
             });
+
+            const screeningPayload = {
+                experienceSummary: data.experienceSummary || '',
+                hybridPreference: data.hybridPreference || '',
+                travel: data.travel || '',
+                relocation: data.relocation || '',
+                languages: data.languages || [],
+                dateOfBirth: data.dateOfBirth || null,
+                gpa: data.gpa || null,
+                isAdult: data.isAdult === 'yes',
+                genderIdentity: data.gender || '',
+                disabilityStatus: data.disability || '',
+                militaryService: data.military || '',
+                ethnicity: data.ethnicity || '',
+                drivingLicense: data.licenses || ''
+            };
+
+            console.log('📤 [SCREENING FETCH - SUBMIT_FORM] Sending POST request to /api/wizard/screening');
+            console.log('📦 [SCREENING FETCH - SUBMIT_FORM] Payload:', JSON.stringify(screeningPayload, null, 2));
+            console.log('⏱️ [SCREENING FETCH - SUBMIT_FORM] Timestamp:', new Date().toISOString());
+
+            try {
+                const screeningResponse = await fetch('/api/wizard/screening', {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify(screeningPayload)
+                });
+
+                console.log('✅ [SCREENING FETCH - SUBMIT_FORM] Response received - Status:', screeningResponse.status, screeningResponse.statusText);
+
+                if (screeningResponse.ok) {
+                    const screeningResult = await screeningResponse.json();
+                    console.log('✅ [SCREENING FETCH - SUBMIT_FORM] Success response:', screeningResult);
+                } else {
+                    const errorText = await screeningResponse.text();
+                    console.error('❌ [SCREENING FETCH - SUBMIT_FORM] Error response:', errorText);
+                }
+            } catch (error) {
+                console.error('❌ [SCREENING FETCH - SUBMIT_FORM] Fetch failed with exception:', error);
+                console.error('❌ [SCREENING FETCH - SUBMIT_FORM] Error details:', error.message, error.stack);
+            }
+        } else {
+            console.log('⚠️ [SCREENING FETCH - SUBMIT_FORM] No screening data detected - skipping screening save');
+            console.log('🔍 [SCREENING FETCH - SUBMIT_FORM] hasScreeningData returned false for data:', data);
         }
 
         showSuccessDialog('✅ Profile saved successfully! All your job preferences and profile information have been saved.', () => {
@@ -1227,7 +1311,23 @@ function parseFormData() {
         licenses: data['no-license'] === true ? 'No driver\'s license' : (data['licenses'] || ''),
         noLicense: data['no-license'] || false
     };
-    
+
+    console.log('📊 [parseFormData] Screening data extracted:', {
+        experienceSummary: parsed.experienceSummary || '(empty)',
+        hybridPreference: parsed.hybridPreference || '(empty)',
+        travel: parsed.travel || '(empty)',
+        relocation: parsed.relocation || '(empty)',
+        languages: parsed.languages,
+        dateOfBirth: parsed.dateOfBirth || '(empty)',
+        gpa: parsed.gpa || '(empty)',
+        isAdult: parsed.isAdult || '(empty)',
+        gender: parsed.gender || '(empty)',
+        disability: parsed.disability || '(empty)',
+        military: parsed.military || '(empty)',
+        ethnicity: parsed.ethnicity || '(empty)',
+        licenses: parsed.licenses || '(empty)'
+    });
+
     console.log('📊 parseFormData() - Parsed data (Step 2 & 3):', {
         step2: {
             fullName: parsed.fullName,
@@ -1255,12 +1355,32 @@ function parseCommaSeparated(value) {
 function hasScreeningData(data) {
     // Check for camelCase field names (as returned by parseFormData())
     // This function receives PARSED data, not raw formState.data
-    return data.experienceSummary || data.hybridPreference ||
+    console.log('🔍 [hasScreeningData] Evaluating screening data presence...');
+    console.log('📋 [hasScreeningData] Checking fields:', {
+        experienceSummary: !!data.experienceSummary,
+        hybridPreference: !!data.hybridPreference,
+        travel: !!data.travel,
+        relocation: !!data.relocation,
+        'languages.length': data.languages?.length || 0,
+        dateOfBirth: !!data.dateOfBirth,
+        gpa: !!data.gpa,
+        isAdult: !!data.isAdult,
+        gender: !!data.gender,
+        disability: !!data.disability,
+        military: !!data.military,
+        ethnicity: !!data.ethnicity,
+        licenses: !!data.licenses
+    });
+
+    const hasData = data.experienceSummary || data.hybridPreference ||
            data.travel || data.relocation ||
            data.languages?.length > 0 || data.dateOfBirth ||
            data.gpa || data.isAdult || data.gender ||
            data.disability || data.military ||
            data.ethnicity || data.licenses;
+
+    console.log(`✅ [hasScreeningData] Result: ${hasData ? 'TRUE - screening data found' : 'FALSE - no screening data'}`);
+    return hasData;
 }
 
 async function uploadFiles(token) {
