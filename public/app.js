@@ -1024,9 +1024,6 @@ async function submitForm() {
     }
 
     try {
-        // Parse form data into structured objects
-        const data = parseFormData();
-
         // Save each step to the API
         const headers = {
             'Authorization': `Bearer ${token}`,
@@ -1035,6 +1032,10 @@ async function submitForm() {
 
         // Upload files first if any
         await uploadFiles(token);
+
+        // Parse form data into structured objects AFTER uploading files
+        // so that resumePath and coverLetterPath are included
+        const data = parseFormData();
 
         // Save step 1 (Job Preferences)
         await fetch('/api/wizard/step1', {
