@@ -1,3 +1,7 @@
+// @ai-meta: e2e-test
+// @ai-meta: endpoint-test (POST /api/wizard/screening)
+// @ai-meta: data-flow-test
+
 /**
  * End-to-End Simulation Test for Screening Form Data Flow
  * 

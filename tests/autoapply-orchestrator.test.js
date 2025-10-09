@@ -1,3 +1,6 @@
+// @ai-meta: unit-test
+// @ai-meta: orchestrator-test
+
 /**
  * Tests for AutoApplyOrchestrator parameter flexibility
  */

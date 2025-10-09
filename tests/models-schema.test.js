@@ -1,3 +1,6 @@
+// @ai-meta: schema-test
+// @ai-meta: model-compatibility-test
+
 /**
  * Test to verify legacy models use correct schema column names
  */

@@ -2,6 +2,8 @@
 
  **Advanced AI-Powered Job Application Automation Platform**
 
+[![Weekly Schema Health](https://github.com/robertopotenza/Autoapply/actions/workflows/schema-health-check.yml/badge.svg)](https://github.com/robertopotenza/Autoapply/actions/workflows/schema-health-check.yml)
+
 ##  Overview
 
 Apply Autonomously is a comprehensive job application automation platform that intelligently scans job boards, matches opportunities to user preferences, and automates the application process. Built with Node.js, PostgreSQL, AI-powered form filling, secure authentication, and an intuitive user onboarding system.
