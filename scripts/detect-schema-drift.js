@@ -27,6 +27,62 @@ const path = require('path');
 
 const logger = new Logger('SchemaDrift');
 
+/**
+ * PostgreSQL type equivalence mapping
+ * Maps canonical type names to their equivalent variations
+ */
+const PG_TYPE_EQUIVALENTS = {
+    'character varying': ['varchar', 'character varying'],
+    'varchar': ['varchar', 'character varying'],
+    'integer': ['int', 'integer', 'int4'],
+    'int': ['int', 'integer', 'int4'],
+    'int4': ['int', 'integer', 'int4'],
+    'bigint': ['bigint', 'int8'],
+    'int8': ['bigint', 'int8'],
+    'smallint': ['smallint', 'int2'],
+    'int2': ['smallint', 'int2'],
+    'boolean': ['boolean', 'bool'],
+    'bool': ['boolean', 'bool'],
+    'timestamp without time zone': ['timestamp', 'timestamp without time zone'],
+    'timestamp': ['timestamp', 'timestamp without time zone'],
+    'timestamp with time zone': ['timestamptz', 'timestamp with time zone'],
+    'timestamptz': ['timestamptz', 'timestamp with time zone'],
+    'double precision': ['double precision', 'float8'],
+    'float8': ['double precision', 'float8'],
+    'real': ['real', 'float4'],
+    'float4': ['real', 'float4']
+};
+
+/**
+ * Normalize PostgreSQL type name for comparison
+ * Handles type equivalence (varchar vs character varying, int vs integer, etc.)
+ * @param {string} typeName - The type name to normalize
+ * @returns {string[]} - Array of equivalent type names
+ */
+function normalizePostgresType(typeName) {
+    // Remove length/precision specifications: varchar(255) -> varchar
+    const baseType = typeName.split('(')[0].trim().toLowerCase();
+    
+    // Return equivalent types if mapping exists, otherwise return original
+    return PG_TYPE_EQUIVALENTS[baseType] || [baseType];
+}
+
+/**
+ * Check if two PostgreSQL types are equivalent
+ * @param {string} actualType - The actual type from database
+ * @param {string} expectedType - The expected type from schema
+ * @returns {boolean} - True if types are equivalent
+ */
+function areTypesEquivalent(actualType, expectedType) {
+    const actualEquivalents = normalizePostgresType(actualType);
+    const expectedEquivalents = normalizePostgresType(expectedType);
+    
+    // Check if any equivalent of actual type matches any equivalent of expected type
+    return actualEquivalents.some(actual => 
+        expectedEquivalents.includes(actual)
+    );
+}
+
 // Expected schema definition
 const EXPECTED_SCHEMA = {
     tables: [
@@ -159,8 +215,8 @@ class SchemaDriftDetector {
                         message: `Column '${expectedTable.name}.${expectedColumn.name}' does not exist`
                     });
                 } else {
-                    // Check data type mismatch
-                    if (!actualColumn.data_type.startsWith(expectedColumn.type.split('(')[0])) {
+                    // Check data type mismatch using type equivalence
+                    if (!areTypesEquivalent(actualColumn.data_type, expectedColumn.type)) {
                         this.drift.push({
                             type: 'column_type_mismatch',
                             severity: 'medium',
@@ -353,4 +409,8 @@ if (require.main === module) {
     main();
 }
 
-module.exports = SchemaDriftDetector;
+module.exports = {
+    SchemaDriftDetector,
+    areTypesEquivalent,
+    normalizePostgresType
+};

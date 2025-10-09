@@ -51,10 +51,16 @@ jobs:
         run: |
           # Check if anomalies file exists and has critical issues
           if [ -f reports/performance-report.json ]; then
-            ANOMALY_COUNT=$(jq '.totalAnomalies' reports/performance-report.json)
+            ANOMALY_COUNT=$(jq '.totalAnomalies // 0' reports/performance-report.json)
+            
+            # Validate that jq returned a valid number
+            if [ -z "$ANOMALY_COUNT" ] || [ "$ANOMALY_COUNT" = "null" ]; then
+              ANOMALY_COUNT=0
+            fi
+            
             echo "anomaly_count=$ANOMALY_COUNT" >> $GITHUB_OUTPUT
             
-            if [ "$ANOMALY_COUNT" -gt 10 ]; then
+            if [ "$ANOMALY_COUNT" -gt 10 ] 2>/dev/null; then
               echo "critical=true" >> $GITHUB_OUTPUT
             else
               echo "critical=false" >> $GITHUB_OUTPUT
