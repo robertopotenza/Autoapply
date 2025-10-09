@@ -308,6 +308,11 @@ View and monitor system logs in real-time:
 - **Combined Logs**: All application logs (info, warn, error)
 - **Error Logs**: Only error-level logs
 
+**Log File Format**
+- **Development**: Simple log files (`combined.log`, `error.log`)
+- **Production**: Date-stamped files (`combined-YYYY-MM-DD.log`, `error-YYYY-MM-DD.log`)
+- The dashboard automatically detects and displays the correct log file based on `NODE_ENV`
+
 **Line Count Control**
 - Choose between 50 to 500 lines
 - Default: 50 lines
@@ -495,9 +500,11 @@ Track recent system errors:
    - Verify logging is enabled
    - Check `PERF_LOG_ENABLED` and log level settings
 
-3. **Wrong log path**
-   - Verify log file location: `logs/combined.log` or `logs/error.log`
-   - Check if custom log path is configured
+3. **Wrong log path or file naming**
+   - In **development**: Logs are at `logs/combined.log` and `logs/error.log`
+   - In **production**: Logs are date-stamped like `logs/combined-YYYY-MM-DD.log` and `logs/error-YYYY-MM-DD.log`
+   - The dashboard automatically detects and uses the correct format based on `NODE_ENV`
+   - If logs aren't showing, check that log files exist in the expected format for your environment
 
 ### Performance Issues
 

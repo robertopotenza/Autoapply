@@ -133,8 +133,8 @@ router.get('/status', adminAccessControl, async (req, res) => {
         // Get recent errors from logs
         const recentErrors = [];
         try {
-            const errorLogPath = path.join(__dirname, '../../logs/error.log');
-            if (fs.existsSync(errorLogPath)) {
+            const errorLogPath = findLogFile('error');
+            if (errorLogPath && fs.existsSync(errorLogPath)) {
                 const content = fs.readFileSync(errorLogPath, 'utf8');
                 const lines = content.split('\n').filter(line => line.trim()).slice(-10);
                 
@@ -296,9 +296,9 @@ router.get('/logs', adminAccessControl, (req, res) => {
         const type = req.query.type || 'combined';
         const lines = Math.min(parseInt(req.query.lines || '50', 10), 500);
         
-        const logPath = path.join(__dirname, '../../logs', `${type}.log`);
+        const logPath = findLogFile(type);
         
-        if (!fs.existsSync(logPath)) {
+        if (!logPath || !fs.existsSync(logPath)) {
             return res.json({
                 logs: [],
                 message: 'Log file not found'
@@ -332,6 +332,38 @@ router.get('/logs', adminAccessControl, (req, res) => {
         });
     }
 });
+
+/**
+ * Helper function to find the correct log file path
+ * In production, logs are date-stamped (e.g., error-2025-10-09.log)
+ * In development, logs are simple (e.g., error.log)
+ */
+function findLogFile(type) {
+    const logsDir = path.join(__dirname, '../../logs');
+    
+    // In development, use simple log files
+    if (process.env.NODE_ENV !== 'production') {
+        return path.join(logsDir, `${type}.log`);
+    }
+    
+    // In production, find the most recent date-stamped log file
+    try {
+        const files = fs.readdirSync(logsDir);
+        const pattern = new RegExp(`^${type}-\\d{4}-\\d{2}-\\d{2}\\.log$`);
+        const matchingFiles = files.filter(file => pattern.test(file));
+        
+        if (matchingFiles.length === 0) {
+            return null;
+        }
+        
+        // Sort by date (newest first) and return the most recent
+        matchingFiles.sort().reverse();
+        return path.join(logsDir, matchingFiles[0]);
+    } catch (error) {
+        logger.error('Error finding log file', { error: error.message, type });
+        return null;
+    }
+}
 
 /**
  * Helper function to format uptime
