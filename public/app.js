@@ -953,6 +953,8 @@ function saveStepData() {
     const currentStepEl = document.querySelector(`.form-step[data-step="${formState.currentStep}"]`);
     const inputs = currentStepEl.querySelectorAll('input, select, textarea');
 
+    console.log(`💾 [saveStepData] Saving data for step ${formState.currentStep}`);
+
     inputs.forEach(input => {
         if (input.type === 'file') return;
 
@@ -960,6 +962,14 @@ function saveStepData() {
             formState.data[input.id] = input.checked;
         } else {
             formState.data[input.id] = input.value;
+        }
+
+        // Log screening-related fields
+        const screeningFields = ['experience-summary', 'hybrid-preference', 'travel-comfortable',
+                                'relocation-open', 'languages-input', 'date-of-birth', 'gpa',
+                                'age-18', 'gender', 'disability', 'military', 'ethnicity', 'licenses'];
+        if (input.id && screeningFields.includes(input.id)) {
+            console.log(`  📝 [saveStepData] Screening field [${input.id}] = "${input.value || input.checked}"`);
         }
     });
 
@@ -1713,12 +1723,29 @@ function convertUserDataToFormState(userData) {
     
     // Screening answers
     console.log('📝 Processing screening answers');
-    
+    console.log('🔍 [SCREENING DATA LOAD] Raw screening data from database:', {
+        experience_summary: userData.experience_summary || '(empty)',
+        hybrid_preference: userData.hybrid_preference || '(empty)',
+        travel: userData.travel || '(empty)',
+        relocation: userData.relocation || '(empty)',
+        languages: userData.languages || '(empty)',
+        date_of_birth: userData.date_of_birth || '(empty)',
+        gpa: userData.gpa || '(empty)',
+        is_adult: userData.is_adult,
+        gender_identity: userData.gender_identity || '(empty)',
+        disability_status: userData.disability_status || '(empty)',
+        military_service: userData.military_service || '(empty)',
+        ethnicity: userData.ethnicity || '(empty)',
+        driving_license: userData.driving_license || '(empty)'
+    });
+
     // Check if there's any screening data to show
-    const hasScreeningData = userData.experience_summary || userData.hybrid_preference || 
-                            userData.travel || userData.relocation || userData.languages || 
+    const hasScreeningData = userData.experience_summary || userData.hybrid_preference ||
+                            userData.travel || userData.relocation || userData.languages ||
                             userData.date_of_birth || userData.gpa || userData.is_adult !== null;
-    
+
+    console.log(`🔍 [SCREENING DATA LOAD] Has screening data: ${hasScreeningData ? 'YES' : 'NO'}`);
+
     // Expand screening section if there's data
     if (hasScreeningData) {
         const screeningToggle = document.getElementById('screening-toggle');
