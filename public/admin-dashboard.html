@@ -582,7 +582,7 @@
         // Update config
         async function updateConfig(key, value) {
             try {
-                const token = localStorage.getItem('adminToken');
+                const token = localStorage.getItem('ADMIN_TOKEN');
                 const res = await fetch('/api/admin/config/update', {
                     method: 'POST',
                     headers: {
@@ -623,7 +623,7 @@
             
             configPollingInterval = setInterval(async () => {
                 try {
-                    const token = localStorage.getItem('adminToken');
+                    const token = localStorage.getItem('ADMIN_TOKEN');
                     const res = await fetch('/api/admin/config/current', {
                         headers: { 'X-Admin-Token': token }
                     });
