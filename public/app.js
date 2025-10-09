@@ -363,6 +363,10 @@ function initializeForm() {
                     // Ensure formState.data is updated for hidden input fields
                     if (window.formState && hiddenInput.id) {
                         window.formState.data[hiddenInput.id] = hiddenInput.value;
+                        // Special case: gender should also update genderIdentity
+                        if (hiddenInput.id === 'gender') {
+                            window.formState.data['genderIdentity'] = hiddenInput.value;
+                        }
                     }
                 });
             });
