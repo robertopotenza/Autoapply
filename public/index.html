@@ -119,6 +119,24 @@
     </style>
 </head>
 <body>
+    <script>
+        /**
+         * Handle admin dashboard access with token prompt
+         */
+        function accessAdminDashboard() {
+            // Prompt user for admin token
+            const token = prompt('Enter Admin Token:');
+            
+            // Validate token - must not be empty
+            if (!token || token.trim() === '') {
+                alert('Error: Admin token cannot be empty. Please enter a valid token.');
+                return;
+            }
+            
+            // Redirect to admin dashboard with token as query parameter
+            window.location.href = `/admin/dashboard?token=${encodeURIComponent(token.trim())}`;
+        }
+    </script>
     <div class="landing-container">
         <div class="hero">
             <h1>🚀 Auto-Apply</h1>
@@ -127,6 +145,13 @@
             <div class="cta-buttons">
                 <a href="/signup.html" class="cta-btn cta-primary">Get Started Free</a>
                 <a href="/login.html" class="cta-btn cta-secondary">Sign In</a>
+            </div>
+            
+            <!-- Admin Dashboard Access -->
+            <div style="margin-top: 3rem;">
+                <button onclick="accessAdminDashboard()" class="cta-btn" style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.4); font-size: 0.875rem; padding: 0.75rem 1.5rem;">
+                    🔐 Admin Dashboard
+                </button>
             </div>
         </div>
 
