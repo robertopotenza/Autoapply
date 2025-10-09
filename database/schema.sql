@@ -1,5 +1,28 @@
 -- Auto-Apply Platform Database Schema
 -- PostgreSQL Database on Railway
+--
+-- SCHEMA ARCHITECTURE OVERVIEW:
+-- ==============================
+-- This schema uses a NORMALIZED design with separate tables for different data domains:
+--
+-- WIZARD DATA TABLES (write operations):
+--   1. job_preferences   - Step 1: Remote/onsite, job types, titles, seniority
+--   2. profile          - Step 2: Name, contact, resume, location
+--   3. eligibility      - Step 3: Job title, availability, visa, salary
+--   4. screening_answers - Screening: Languages, demographics, preferences
+--
+-- UNIFIED READ INTERFACE:
+--   - user_complete_profile (VIEW) - Aggregates all wizard data via JOINs
+--   - This is a VIEW, not a table - it doesn't store data
+--   - Provides convenient read-only access to complete user profiles
+--
+-- DATA FLOW:
+--   WRITE: App → Model.upsert() → Individual TABLE
+--   READ:  App → User.getCompleteProfile() → user_complete_profile VIEW → Individual TABLES
+--
+-- See SCHEMA_ARCHITECTURE.md and FAQ_SCREENING_DATA.md for detailed documentation.
+--
+-- ==============================
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
@@ -116,7 +139,32 @@ CREATE INDEX IF NOT EXISTS idx_profile_email ON profile(email);
 CREATE INDEX IF NOT EXISTS idx_eligibility_user_id ON eligibility(user_id);
 CREATE INDEX IF NOT EXISTS idx_screening_answers_user_id ON screening_answers(user_id);
 
--- Create a view for complete user profile
+-- =============================================================================
+-- user_complete_profile VIEW
+-- =============================================================================
+-- IMPORTANT: This is a VIEW (not a table). It does NOT store data.
+-- 
+-- Purpose: Provides a unified read interface for complete user profiles by
+--          aggregating data from multiple normalized tables via LEFT JOINs.
+--
+-- Data Sources:
+--   - users (u)              : Base user information
+--   - job_preferences (jp)   : Wizard Step 1 data
+--   - profile (p)           : Wizard Step 2 data
+--   - eligibility (e)       : Wizard Step 3 data
+--   - screening_answers (sa): Screening questions data
+--
+-- Usage:
+--   READ:  SELECT * FROM user_complete_profile WHERE user_id = ?
+--   WRITE: You CANNOT write to this VIEW. Write to the individual tables instead.
+--
+-- Example: When you see "languages" in this VIEW, the data is actually stored
+--          in the screening_answers table. The VIEW just makes it appear as
+--          part of a unified structure.
+--
+-- See: SCHEMA_ARCHITECTURE.md for detailed architecture documentation
+--      FAQ_SCREENING_DATA.md for common questions about data storage
+-- =============================================================================
 CREATE OR REPLACE VIEW user_complete_profile AS
 SELECT
     u.user_id,
