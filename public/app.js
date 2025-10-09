@@ -1,3 +1,13 @@
+    // Ensure gender <select> updates both gender and genderIdentity
+    const genderSelect = document.getElementById('gender');
+    if (genderSelect) {
+        genderSelect.addEventListener('change', (e) => {
+            if (window.formState) {
+                window.formState.data['gender'] = e.target.value;
+                window.formState.data['genderIdentity'] = e.target.value;
+            }
+        });
+    }
 // State Management
 const formState = {
     currentStep: 1,
