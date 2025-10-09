@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Screening Data Debug Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+        }
+        h2 {
+            color: #555;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        .info {
+            background-color: #e7f3ff;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .warning {
+            background-color: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-left: 4px solid #dc3545;
+            padding: 15px;
+            margin: 15px 0;
+        }
+        code {
+            background-color: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+        }
+        pre {
+            background-color: #f4f4f4;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        ol, ul {
+            line-height: 1.8;
+        }
+        .button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        .button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔍 Screening Data Capture Debug Test</h1>
+    
+    <div class="test-section">
+        <h2>📋 Purpose</h2>
+        <div class="info">
+            <p>This document helps you test and debug why the <code>/api/wizard/screening</code> POST request is not being triggered during form submission.</p>
+            <p><strong>Issue:</strong> The <code>screening_answers</code> table remains empty because the frontend is not calling the screening API.</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>🔧 What Changed</h2>
+        <p>We added comprehensive debugging logs to help identify the issue:</p>
+        <ul>
+            <li><strong>Raw Data Logging:</strong> Shows formState.data for all screening fields before parsing</li>
+            <li><strong>Enhanced hasScreeningData():</strong> Detailed breakdown of which fields pass/fail the check</li>
+            <li><strong>API Call Decision Logging:</strong> Clear indication of whether screening data will be sent or skipped</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>🧪 Testing Steps</h2>
+        <ol>
+            <li><strong>Open the wizard form</strong> in your application</li>
+            <li><strong>Open Browser Developer Tools</strong> (F12 or right-click → Inspect)</li>
+            <li><strong>Navigate to the Console tab</strong></li>
+            <li><strong>Clear the console</strong> to start fresh</li>
+            <li><strong>Fill out the wizard form:</strong>
+                <ul>
+                    <li>Complete required fields in Steps 1-3</li>
+                    <li>Navigate to Step 4 (Job & Eligibility Details)</li>
+                    <li><strong>IMPORTANT:</strong> Click to expand "Additional Screening Questions (Optional)"</li>
+                    <li>Fill in at least one screening field (e.g., GPA = 3.5, or select languages)</li>
+                </ul>
+            </li>
+            <li><strong>Submit the form</strong></li>
+            <li><strong>Check the console output</strong> (see below for what to look for)</li>
+        </ol>
+    </div>
+
+    <div class="test-section">
+        <h2>📊 Console Output to Check</h2>
+        
+        <h3>1. Data Collection Phase</h3>
+        <pre>🔍 saveAllStepsData() - Collecting data from all steps...
+  Step 1: Found X inputs
+  Step 2: Found X inputs
+  Step 3: Found X inputs
+  Step 4: Found X inputs
+📦 Final formState.data keys: [...]</pre>
+        <div class="warning">
+            <strong>Check:</strong> Are screening field IDs present in the keys list?<br>
+            Expected: <code>experience-summary</code>, <code>hybrid-preference</code>, <code>travel-comfortable</code>, <code>relocation-open</code>, <code>languages-input</code>, <code>gpa</code>, etc.
+        </div>
+
+        <h3>2. Raw Screening Data</h3>
+        <pre>🔍 parseFormData() - Raw screening fields in formState.data:
+{
+  'experience-summary': '...',
+  'hybrid-preference': '...',
+  'languages-input': 'English,Spanish',
+  'gpa': '3.5',
+  ...
+}</pre>
+        <div class="warning">
+            <strong>Check:</strong> Do the values match what you entered in the form?
+        </div>
+
+        <h3>3. Screening Data Validation</h3>
+        <pre>🔍 hasScreeningData() check:
+{
+  hasData: true,
+  checks: {
+    experienceSummary: false,
+    hybridPreference: false,
+    travel: false,
+    relocation: false,
+    languages: true,
+    dateOfBirth: false,
+    gpa: true,
+    ...
+  },
+  rawValues: {
+    experienceSummary: '',
+    languages: ['English', 'Spanish'],
+    gpa: 3.5,
+    ...
+  }
+}</pre>
+        <div class="success">
+            <strong>Good:</strong> If <code>hasData: true</code>, the screening API will be called!
+        </div>
+        <div class="error">
+            <strong>Bad:</strong> If <code>hasData: false</code>, no screening data was detected. Check which specific fields are false.
+        </div>
+
+        <h3>4. API Call Decision</h3>
+        <p><strong>If screening data exists:</strong></p>
+        <pre>✅ [submitForm] hasScreeningData returned TRUE - sending screening data to API
+📤 [submitForm] Screening payload to be sent: { ... }</pre>
+        
+        <p><strong>If no screening data:</strong></p>
+        <pre>❌ [submitForm] hasScreeningData returned FALSE - skipping screening API call
+💡 No screening data was filled in, so /api/wizard/screening will not be called</pre>
+    </div>
+
+    <div class="test-section">
+        <h2>🐛 Common Issues & Solutions</h2>
+        
+        <h3>Issue 1: Screening section not expanded</h3>
+        <div class="error">
+            <strong>Symptom:</strong> Screening fields are missing from formState.data<br>
+            <strong>Solution:</strong> Click the "Additional Screening Questions (Optional)" header to expand the section BEFORE filling in fields
+        </div>
+
+        <h3>Issue 2: Hidden inputs not updating</h3>
+        <div class="error">
+            <strong>Symptom:</strong> Pill selections (hybrid, travel, relocation) show as empty<br>
+            <strong>Solution:</strong> Check that pill click handlers are updating the hidden input fields correctly
+        </div>
+
+        <h3>Issue 3: Multi-select not working</h3>
+        <div class="error">
+            <strong>Symptom:</strong> Languages array is empty despite selections<br>
+            <strong>Solution:</strong> Verify the multi-select component is updating <code>languages-input</code> field with comma-separated values
+        </div>
+
+        <h3>Issue 4: Field ID mismatch</h3>
+        <div class="error">
+            <strong>Symptom:</strong> Data exists but parseFormData() doesn't find it<br>
+            <strong>Solution:</strong> Check that HTML IDs match the keys used in parseFormData():
+            <ul>
+                <li>HTML: <code>id="experience-summary"</code> → JS: <code>data['experience-summary']</code></li>
+                <li>HTML: <code>id="travel-comfortable"</code> → JS: <code>data['travel-comfortable']</code></li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>✅ Expected Results</h2>
+        <div class="success">
+            <p><strong>When screening data IS filled in:</strong></p>
+            <ul>
+                <li>Console shows <code>hasData: true</code></li>
+                <li>Console shows "✅ hasScreeningData returned TRUE"</li>
+                <li>Console shows "📤 Screening payload to be sent"</li>
+                <li>Network tab shows POST to <code>/api/wizard/screening</code> with status 200</li>
+                <li>Database has a new row in <code>screening_answers</code> table</li>
+            </ul>
+        </div>
+        
+        <div class="info">
+            <p><strong>When screening data is NOT filled in (expected behavior):</strong></p>
+            <ul>
+                <li>Console shows <code>hasData: false</code></li>
+                <li>Console shows "❌ hasScreeningData returned FALSE"</li>
+                <li>No POST to <code>/api/wizard/screening</code> (this is correct!)</li>
+                <li>Database has no row in <code>screening_answers</code> for this user (correct)</li>
+            </ul>
+            <p>This is <strong>WORKING AS INTENDED</strong> - screening questions are optional!</p>
+        </div>
+    </div>
+
+    <div class="test-section">
+        <h2>📝 Test Results Template</h2>
+        <p>Copy this template and fill it out with your test results:</p>
+        <pre>
+## Test Results
+
+**Date:** [DATE]
+**Tester:** [NAME]
+**Browser:** [Chrome/Firefox/Safari] [VERSION]
+
+### Test 1: With Screening Data
+- [ ] Expanded screening section
+- [ ] Filled in fields: [LIST WHICH FIELDS]
+- [ ] Console showed hasData: [true/false]
+- [ ] API call was: [made/skipped]
+- [ ] Database row: [created/not created]
+
+### Test 2: Without Screening Data
+- [ ] Did NOT expand screening section
+- [ ] Console showed hasData: [true/false]
+- [ ] API call was: [made/skipped]
+- [ ] Database row: [created/not created]
+
+### Issues Found
+[DESCRIBE ANY ISSUES]
+
+### Console Output
+```
+[PASTE RELEVANT CONSOLE OUTPUT]
+```
+        </pre>
+    </div>
+
+    <div class="test-section">
+        <h2>🔗 Related Documentation</h2>
+        <ul>
+            <li><a href="../../SCREENING_DATA_DEBUG_GUIDE.md">SCREENING_DATA_DEBUG_GUIDE.md</a> - Detailed debugging guide</li>
+            <li><a href="../../QUICK_START_SCREENING_VERIFICATION.md">QUICK_START_SCREENING_VERIFICATION.md</a> - Quick start guide</li>
+            <li><a href="../../SCREENING_ANSWERS_TROUBLESHOOT_REPORT.md">SCREENING_ANSWERS_TROUBLESHOOT_REPORT.md</a> - Troubleshooting report</li>
+        </ul>
+    </div>
+
+    <div class="test-section">
+        <h2>💻 Manual API Test (if needed)</h2>
+        <p>If the frontend debugging is unclear, test the backend directly:</p>
+        <pre>curl -X POST http://localhost:3000/api/wizard/screening \
+  -H "Authorization: Bearer YOUR_AUTH_TOKEN" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "languages": ["English", "Spanish"],
+    "gpa": 3.5,
+    "hybridPreference": "hybrid",
+    "travel": "yes",
+    "relocation": "no"
+  }'</pre>
+        <p>Expected response: <code>{"success": true, "message": "Screening answers saved successfully"}</code></p>
+    </div>
+
+    <script>
+        // Add copy buttons to pre elements
+        document.addEventListener('DOMContentLoaded', function() {
+            const preElements = document.querySelectorAll('pre');
+            preElements.forEach(function(pre) {
+                const button = document.createElement('button');
+                button.className = 'button';
+                button.textContent = 'Copy';
+                button.style.float = 'right';
+                button.onclick = function() {
+                    navigator.clipboard.writeText(pre.textContent);
+                    button.textContent = 'Copied!';
+                    setTimeout(() => button.textContent = 'Copy', 2000);
+                };
+                pre.parentNode.insertBefore(button, pre);
+            });
+        });
+    </script>
+</body>
+</html>
