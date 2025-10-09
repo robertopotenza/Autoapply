@@ -749,6 +749,7 @@ async function saveAndExit() {
                 headers,
                 body: JSON.stringify({
                     fullName: data.fullName || '',
+                    email: data.email || '',
                     resumePath: data.resumePath || '',
                     coverLetterOption: data.coverLetterOption || '',
                     coverLetterPath: data.coverLetterPath || '',
