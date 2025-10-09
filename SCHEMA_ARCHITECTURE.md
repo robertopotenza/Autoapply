@@ -52,6 +52,116 @@ The Auto-Apply platform uses a **normalized database schema** with separate tabl
 - **Read Operations** → Go through the VIEW which aggregates table data
 - **VIEW** → Does NOT store data, just provides a query interface
 
+## Entity Relationship Diagram
+
+The following ER diagram shows the database structure, including all tables, their columns, and relationships:
+
+```mermaid
+erDiagram
+    users {
+        SERIAL user_id "PK"
+        VARCHAR(255) email "UNIQUE"
+        TEXT password_hash
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    magic_link_tokens {
+        SERIAL id "PK"
+        VARCHAR(255) email
+        VARCHAR(255) token "UNIQUE"
+        TIMESTAMP expires_at
+        BOOLEAN used
+        TIMESTAMP created_at
+    }
+
+    password_reset_tokens {
+        SERIAL id "PK"
+        VARCHAR(255) email
+        VARCHAR(64) token "UNIQUE"
+        TIMESTAMP expires_at
+        TIMESTAMP used_at
+        TIMESTAMP created_at
+    }
+
+    job_preferences {
+        SERIAL id "PK"
+        INT user_id "FK"
+        JSONB remote_jobs
+        VARCHAR(255) onsite_location
+        JSONB job_types
+        JSONB job_titles
+        JSONB seniority_levels
+        JSONB time_zones
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    profile {
+        SERIAL id "PK"
+        INT user_id "FK"
+        VARCHAR(255) full_name
+        VARCHAR(255) email
+        TEXT resume_path
+        VARCHAR(50) cover_letter_option
+        TEXT cover_letter_path
+        VARCHAR(20) phone
+        VARCHAR(100) country
+        VARCHAR(100) city
+        VARCHAR(100) state_region
+        VARCHAR(20) postal_code
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    eligibility {
+        SERIAL id "PK"
+        INT user_id "FK"
+        VARCHAR(255) current_job_title
+        VARCHAR(50) availability
+        JSONB eligible_countries
+        BOOLEAN visa_sponsorship
+        JSONB nationality
+        NUMERIC(12 current_salary
+        NUMERIC(12 expected_salary
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    screening_answers {
+        SERIAL id "PK"
+        INT user_id "FK"
+        TEXT experience_summary
+        VARCHAR(50) hybrid_preference
+        VARCHAR(50) travel
+        VARCHAR(50) relocation
+        JSONB languages
+        DATE date_of_birth
+        NUMERIC(3 gpa
+        BOOLEAN is_adult
+        VARCHAR(50) gender_identity
+        VARCHAR(50) disability_status
+        VARCHAR(50) military_service
+        VARCHAR(100) ethnicity
+        TEXT driving_license
+        TIMESTAMP created_at
+        TIMESTAMP updated_at
+    }
+
+    users ||--o{ job_preferences : "has"
+    users ||--o{ profile : "has"
+    users ||--o{ eligibility : "has"
+    users ||--o{ screening_answers : "has"
+```
+
+
+**Key:**
+- **PK**: Primary Key
+- **FK**: Foreign Key
+- **||--o{**: One-to-many relationship
+- **||--||**: One-to-one relationship
+
+
 ## Current Architecture
 
 ### Separate Tables (Normalized Design)

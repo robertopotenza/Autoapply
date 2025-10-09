@@ -1,0 +1,104 @@
+@startuml
+
+!define Table(name,desc) class name as "desc" << (T,#FFAAAA) >>
+!define primary_key(x) <u>x</u>
+!define foreign_key(x) <i>x</i>
+hide methods
+hide stereotypes
+
+entity users {
+* user_id: SERIAL <<PK>>
++ email: VARCHAR(255)
+  password_hash: TEXT
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity magic_link_tokens {
+* id: SERIAL <<PK>>
++ email: VARCHAR(255)
++ token: VARCHAR(255)
++ expires_at: TIMESTAMP
+  used: BOOLEAN
+  created_at: TIMESTAMP
+}
+
+entity password_reset_tokens {
+* id: SERIAL <<PK>>
++ email: VARCHAR(255)
++ token: VARCHAR(64)
++ expires_at: TIMESTAMP
+  used_at: TIMESTAMP
+  created_at: TIMESTAMP
+}
+
+entity job_preferences {
+* id: SERIAL <<PK>>
+  user_id: INT <<FK>>
+  remote_jobs: JSONB
+  onsite_location: VARCHAR(255)
+  job_types: JSONB
+  job_titles: JSONB
+  seniority_levels: JSONB
+  time_zones: JSONB
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity profile {
+* id: SERIAL <<PK>>
+  user_id: INT <<FK>>
+  full_name: VARCHAR(255)
+  email: VARCHAR(255)
+  resume_path: TEXT
+  cover_letter_option: VARCHAR(50)
+  cover_letter_path: TEXT
+  phone: VARCHAR(20)
+  country: VARCHAR(100)
+  city: VARCHAR(100)
+  state_region: VARCHAR(100)
+  postal_code: VARCHAR(20)
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity eligibility {
+* id: SERIAL <<PK>>
+  user_id: INT <<FK>>
+  current_job_title: VARCHAR(255)
+  availability: VARCHAR(50)
+  eligible_countries: JSONB
+  visa_sponsorship: BOOLEAN
+  nationality: JSONB
+  current_salary: NUMERIC(12
+  expected_salary: NUMERIC(12
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+entity screening_answers {
+* id: SERIAL <<PK>>
+  user_id: INT <<FK>>
+  experience_summary: TEXT
+  hybrid_preference: VARCHAR(50)
+  travel: VARCHAR(50)
+  relocation: VARCHAR(50)
+  languages: JSONB
+  date_of_birth: DATE
+  gpa: NUMERIC(3
+  is_adult: BOOLEAN
+  gender_identity: VARCHAR(50)
+  disability_status: VARCHAR(50)
+  military_service: VARCHAR(50)
+  ethnicity: VARCHAR(100)
+  driving_license: TEXT
+  created_at: TIMESTAMP
+  updated_at: TIMESTAMP
+}
+
+users ||--o{ job_preferences
+users ||--o{ profile
+users ||--o{ eligibility
+users ||--o{ screening_answers
+
+@enduml

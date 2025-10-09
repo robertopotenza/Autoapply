@@ -198,12 +198,83 @@ If a script fails:
 2. **Permission Error**: Verify database user has appropriate permissions
 3. **Syntax Error**: Check PostgreSQL version compatibility
 
-## Related Documentation
+**Related Documentation**
 
 - `MIGRATION_003_GUIDE.md` - Detailed migration 003 instructions
 - `database/migrations/004_README.md` - Migration 004 documentation
 - `MIGRATION_004_VERIFICATION.md` - Code compatibility verification for migration 004
 - `COMPLETE_FIX_SUMMARY.md` - Complete fix documentation
 - `DATA_FLOW_DIAGRAM.md` - Visual data flow diagram
+- `DOCUMENTATION_AUDIT_REPORT.md` - Schema and documentation audit results
+- `SCHEMA_ARCHITECTURE.md` - Architecture documentation with ER diagram
 - `database/schema.sql` - Complete database schema
 - `database/migrations/` - All migration files
+
+---
+
+## Documentation & Audit Tools
+
+### audit-documentation.js
+**Purpose**: Comprehensive documentation and schema consistency audit
+
+**Usage**:
+```bash
+npm run docs:audit
+# or
+node scripts/audit-documentation.js
+```
+
+**What it does**:
+- Parses database/schema.sql and migration files to extract all tables and views
+- Scans all model files in src/database/models/
+- Scans all route files in src/routes/
+- Extracts table, model, and route references from documentation
+- Cross-references documentation with actual code
+- Verifies JSDoc references point to actual files
+- Verifies all schema tables have corresponding models
+- Checks documentation cross-references for broken links
+- Generates detailed color-coded console report
+
+**When to use**:
+- After making schema changes
+- When updating documentation
+- Before major releases
+- To verify code-documentation consistency
+
+**Exit Codes**:
+- 0 = All checks passed or only warnings
+- 1 = Critical errors found
+
+**See also**: `DOCUMENTATION_AUDIT_REPORT.md` for latest audit results
+
+---
+
+### generate-er-diagram.js
+**Purpose**: Generate visual ER diagram from database schema
+
+**Usage**:
+```bash
+npm run docs:diagram
+# or
+node scripts/generate-er-diagram.js
+```
+
+**What it does**:
+- Parses database/schema.sql to extract table definitions
+- Extracts column names, data types, and constraints
+- Identifies primary keys, foreign keys, and unique constraints
+- Determines table relationships
+- Generates Mermaid ER diagram syntax
+- Generates PlantUML ER diagram syntax (alternative format)
+- Automatically embeds Mermaid diagram in SCHEMA_ARCHITECTURE.md
+- Saves PlantUML version to docs/ER_DIAGRAM.plantuml
+
+**When to use**:
+- After schema changes
+- When updating architecture documentation
+- To visualize database structure
+- For onboarding new developers
+
+**Output**:
+- Updates SCHEMA_ARCHITECTURE.md with new ER diagram
+- Creates/updates docs/ER_DIAGRAM.plantuml

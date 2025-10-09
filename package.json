@@ -19,7 +19,9 @@
     "db:seed": "node database/seed.js",
     "db:check": "node scripts/check-db-connection.js",
     "db:migrate-all": "node scripts/run-all-migrations.js",
-    "db:diagnose": "node scripts/diagnose-and-fix-db.js"
+    "db:diagnose": "node scripts/diagnose-and-fix-db.js",
+    "docs:audit": "node scripts/audit-documentation.js",
+    "docs:diagram": "node scripts/generate-er-diagram.js"
   },
   "keywords": [
     "job-application",

@@ -14,6 +14,11 @@ This directory contains comprehensive documentation about the Auto-Apply platfor
 
 ### 🔧 Tools & Scripts
 - **[scripts/verify-screening-schema.js](scripts/verify-screening-schema.js)** - Verification script
+- **[scripts/audit-documentation.js](scripts/audit-documentation.js)** - Documentation consistency audit
+- **[scripts/generate-er-diagram.js](scripts/generate-er-diagram.js)** - ER diagram generator
+
+### 📊 Reports
+- **[DOCUMENTATION_AUDIT_REPORT.md](DOCUMENTATION_AUDIT_REPORT.md)** - Schema and documentation audit results
 
 ### 🧪 Tests
 - **[tests/wizard-screening.test.js](tests/wizard-screening.test.js)** - Unit tests
@@ -63,7 +68,9 @@ This directory contains comprehensive documentation about the Auto-Apply platfor
 │       └── 📄 wizard.js                ← API endpoints
 │
 ├── 📁 scripts/
-│   └── 📄 verify-screening-schema.js  ← Verification tool
+│   ├── 📄 verify-screening-schema.js  ← Verification tool
+│   ├── 📄 audit-documentation.js      ← Documentation audit
+│   └── 📄 generate-er-diagram.js      ← ER diagram generator
 │
 └── 📁 tests/
     ├── 📄 wizard-screening.test.js     ← Unit tests
