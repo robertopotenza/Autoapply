@@ -1,10 +1,29 @@
-    // Ensure gender <select> updates both gender and genderIdentity
+    // Ensure gender <select> updates both gender and genderIdentity, with debug logs
     const genderSelect = document.getElementById('gender');
     if (genderSelect) {
         genderSelect.addEventListener('change', (e) => {
             if (window.formState) {
                 window.formState.data['gender'] = e.target.value;
                 window.formState.data['genderIdentity'] = e.target.value;
+                console.log('🧑‍🦰 [GENDER CHANGE] gender:', window.formState.data['gender'], 'genderIdentity:', window.formState.data['genderIdentity']);
+            }
+        });
+    }
+    // Debug log before restoring genderIdentity
+    if (saved) {
+        const savedState = JSON.parse(saved);
+        console.log('🧑‍🦰 [RESTORE] Saved gender:', savedState.data['gender'], 'Saved genderIdentity:', savedState.data['genderIdentity']);
+        // ...existing code...
+    // Debug log before sending to backend
+    console.log('🧑‍🦰 [PRE-SAVE] gender:', formState.data['gender'], 'genderIdentity:', formState.data['genderIdentity']);
+// Ensure gender <select> updates both gender and genderIdentity
+    const genderSelect = document.getElementById('gender');
+    if (genderSelect) {
+        genderSelect.addEventListener('change', (e) => {
+            if (window.formState) {
+                window.formState.data['gender'] = e.target.value;
+                window.formState.data['genderIdentity'] = e.target.value;
+                console.log('[GENDER CHANGE] gender:', e.target.value, 'genderIdentity:', window.formState.data['genderIdentity']);
             }
         });
     }
@@ -731,6 +750,7 @@ async function saveAndExit() {
         // Send all data in one request
     console.log('📤 [SAVE_AND_EXIT] Sending unified profile data to /api/user/profile:', profileData);
     console.log('🧑‍🦰 [SAVE_AND_EXIT] genderIdentity value:', profileData.genderIdentity);
+    console.log('[SAVE_AND_EXIT] formState.data.gender:', window.formState.data['gender'], 'formState.data.genderIdentity:', window.formState.data['genderIdentity']);
         const response = await fetch('/api/user/profile', {
             method: 'POST',
             headers,
@@ -909,8 +929,6 @@ function loadSavedState() {
     const saved = localStorage.getItem('autoApplyFormState');
     if (saved) {
         const savedState = JSON.parse(saved);
-
-        // Restore form data
         Object.keys(savedState.data).forEach(key => {
             const input = document.getElementById(key);
             if (input) {
@@ -918,9 +936,9 @@ function loadSavedState() {
                     input.checked = savedState.data[key];
                 } else {
                     input.value = savedState.data[key];
-                    // Special case: gender select also updates genderIdentity
                     if (key === 'gender') {
                         window.formState.data['genderIdentity'] = savedState.data[key];
+                        console.log('[GENDER RESTORE] gender:', savedState.data[key], 'genderIdentity:', window.formState.data['genderIdentity']);
                     }
                 }
             }
