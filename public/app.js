@@ -715,7 +715,8 @@ async function saveAndExit() {
         const profileData = parseFormData();
 
         // Send all data in one request
-        console.log('� [SAVE_AND_EXIT] Sending unified profile data to /api/user/profile:', profileData);
+    console.log('📤 [SAVE_AND_EXIT] Sending unified profile data to /api/user/profile:', profileData);
+    console.log('🧑‍🦰 [SAVE_AND_EXIT] genderIdentity value:', profileData.genderIdentity);
         const response = await fetch('/api/user/profile', {
             method: 'POST',
             headers,
