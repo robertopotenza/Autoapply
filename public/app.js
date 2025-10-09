@@ -804,9 +804,11 @@ async function saveAndExit() {
             ethnicity: data.ethnicity || '(empty)',
             licenses: data.licenses || '(empty)'
         });
-        if (hasScreeningData(data)) {
+        if (data.experienceSummary || data.hybridPreference || data.travel || data.relocation || 
+            (data.languages && data.languages.length > 0) || data.dateOfBirth || data.gpa || 
+            data.isAdult || data.genderIdentity || data.disabilityStatus || data.militaryService || 
+            data.ethnicity || data.drivingLicense) {
             console.log('📝 [SCREENING FETCH - SAVE_AND_EXIT] Detected screening data - preparing to save');
-            console.log('📊 [SCREENING FETCH - SAVE_AND_EXIT] hasScreeningData returned true');
             console.log('🔍 [SCREENING FETCH - SAVE_AND_EXIT] Screening data details:', {
                 experienceSummary: data.experienceSummary || '(empty)',
                 hybridPreference: data.hybridPreference || '(empty)',
@@ -865,7 +867,6 @@ async function saveAndExit() {
             }
         } else {
             console.log('⚠️ [SCREENING FETCH - SAVE_AND_EXIT] No screening data detected - skipping screening save');
-            console.log('🔍 [SCREENING FETCH - SAVE_AND_EXIT] hasScreeningData returned false for data:', data);
         }
 
         showSuccessDialog('Progress saved successfully! You can continue where you left off next time.', () => {
