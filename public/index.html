@@ -119,6 +119,60 @@
     </style>
 </head>
 <body>
+    <script>
+        /**
+         * Handle admin dashboard access with accessible modal
+         */
+        function accessAdminDashboard() {
+            // Show the admin token modal
+            document.getElementById('admin-modal').style.display = 'block';
+            document.getElementById('admin-token-input').focus();
+        }
+
+        // Handle modal form submission
+        function submitAdminToken(event) {
+            event.preventDefault();
+            const tokenInput = document.getElementById('admin-token-input');
+            const token = tokenInput.value;
+            if (!token || token.trim() === '') {
+                document.getElementById('admin-modal-error').textContent = 'Error: Admin token cannot be empty. Please enter a valid token.';
+                tokenInput.focus();
+                return;
+            }
+            // Redirect to admin dashboard with token as query parameter
+            window.location.href = `/admin/dashboard?token=${encodeURIComponent(token.trim())}`;
+        }
+
+        // Handle modal close
+        function closeAdminModal() {
+            document.getElementById('admin-modal').style.display = 'none';
+            document.getElementById('admin-token-input').value = '';
+            document.getElementById('admin-modal-error').textContent = '';
+        }
+
+        // Accessibility: close modal on Escape key
+        document.addEventListener('keydown', function(e) {
+            const modal = document.getElementById('admin-modal');
+            if (modal.style.display === 'block' && e.key === 'Escape') {
+                closeAdminModal();
+            }
+        });
+    </script>
+    <!-- Accessible Admin Token Modal -->
+    <div id="admin-modal" role="dialog" aria-modal="true" aria-labelledby="admin-modal-title" style="display:none; position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.6); z-index:1000; align-items:center; justify-content:center;">
+        <div style="background:#222; color:#fff; max-width:350px; margin:auto; padding:2rem; border-radius:8px; box-shadow:0 2px 16px rgba(0,0,0,0.3); position:relative;">
+            <h2 id="admin-modal-title" style="margin-top:0;">Admin Dashboard Access</h2>
+            <form onsubmit="submitAdminToken(event)">
+                <label for="admin-token-input" style="display:block; margin-bottom:0.5rem;">Enter Admin Token:</label>
+                <input id="admin-token-input" name="admin-token" type="password" autocomplete="off" style="width:100%; padding:0.5rem; margin-bottom:1rem; border-radius:4px; border:1px solid #888;" aria-required="true" />
+                <div id="admin-modal-error" style="color:#ff6b6b; min-height:1.5em; margin-bottom:1rem;" aria-live="polite"></div>
+                <div style="display:flex; gap:0.5rem;">
+                    <button type="submit" class="cta-btn cta-primary" style="flex:1;">Submit</button>
+                    <button type="button" onclick="closeAdminModal()" class="cta-btn cta-secondary" style="flex:1;">Cancel</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <div class="landing-container">
         <div class="hero">
             <h1>🚀 Auto-Apply</h1>
@@ -127,6 +181,13 @@
             <div class="cta-buttons">
                 <a href="/signup.html" class="cta-btn cta-primary">Get Started Free</a>
                 <a href="/login.html" class="cta-btn cta-secondary">Sign In</a>
+            </div>
+            
+            <!-- Admin Dashboard Access -->
+            <div style="margin-top: 3rem;">
+                <button onclick="accessAdminDashboard()" class="cta-btn" style="background: rgba(255, 255, 255, 0.2); color: white; border: 1px solid rgba(255, 255, 255, 0.4); font-size: 0.875rem; padding: 0.75rem 1.5rem;">
+                    🔐 Admin Dashboard
+                </button>
             </div>
         </div>
 

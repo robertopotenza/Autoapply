@@ -404,9 +404,23 @@
     </div>
 
     <script>
-        const ADMIN_TOKEN = localStorage.getItem('ADMIN_TOKEN') || prompt('Enter Admin Token:');
-        if (ADMIN_TOKEN) {
+        // Check for token in URL query parameter first, then localStorage, then prompt
+        const urlParams = new URLSearchParams(window.location.search);
+        const tokenFromUrl = urlParams.get('token');
+        
+        let ADMIN_TOKEN;
+        if (tokenFromUrl) {
+            // Token provided via URL query parameter
+            ADMIN_TOKEN = tokenFromUrl;
             localStorage.setItem('ADMIN_TOKEN', ADMIN_TOKEN);
+            // Clean up URL by removing token parameter
+            window.history.replaceState({}, document.title, window.location.pathname);
+        } else {
+            // Fall back to localStorage or prompt
+            ADMIN_TOKEN = localStorage.getItem('ADMIN_TOKEN') || prompt('Enter Admin Token:');
+            if (ADMIN_TOKEN) {
+                localStorage.setItem('ADMIN_TOKEN', ADMIN_TOKEN);
+            }
         }
 
         let autoRefreshInterval = null;
