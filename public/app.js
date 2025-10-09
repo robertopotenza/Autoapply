@@ -1338,7 +1338,7 @@ function parseFormData() {
         currentSalary: data['current-salary'] || null,
         expectedSalary: data['expected-salary'] || null,
 
-        // Screening
+        // Screening - FIXED FIELD NAMES FOR BACKEND COMPATIBILITY
         experienceSummary: data['experience-summary'] || '',
         hybridPreference: data['hybrid-preference'] || '',
         travel: data['travel-comfortable'] || '',
@@ -1347,15 +1347,15 @@ function parseFormData() {
         dateOfBirth: data['date-of-birth'] || null,
         gpa: data['gpa'] || null,
         isAdult: data['age-18'] || '',
-        gender: data['gender'] || '',
-        disability: data['disability'] || '',
-        military: data['military'] || '',
+        genderIdentity: data['gender'] || '',           // FIXED: was 'gender'
+        disabilityStatus: data['disability'] || '',     // FIXED: was 'disability'
+        militaryService: data['military'] || '',        // FIXED: was 'military'
         ethnicity: data['ethnicity'] || '',
-        licenses: data['no-license'] === true ? 'No driver\'s license' : (data['licenses'] || ''),
+        drivingLicense: data['no-license'] === true ? 'No driver\'s license' : (data['licenses'] || ''), // FIXED: was 'licenses'
         noLicense: data['no-license'] || false
     };
 
-    console.log('📊 [parseFormData] Screening data extracted:', {
+    console.log('📊 [parseFormData] Screening data extracted (FIXED FIELD NAMES):', {
         experienceSummary: parsed.experienceSummary || '(empty)',
         hybridPreference: parsed.hybridPreference || '(empty)',
         travel: parsed.travel || '(empty)',
@@ -1364,11 +1364,11 @@ function parseFormData() {
         dateOfBirth: parsed.dateOfBirth || '(empty)',
         gpa: parsed.gpa || '(empty)',
         isAdult: parsed.isAdult || '(empty)',
-        gender: parsed.gender || '(empty)',
-        disability: parsed.disability || '(empty)',
-        military: parsed.military || '(empty)',
+        genderIdentity: parsed.genderIdentity || '(empty)',     // FIXED: was gender
+        disabilityStatus: parsed.disabilityStatus || '(empty)', // FIXED: was disability
+        militaryService: parsed.militaryService || '(empty)',   // FIXED: was military
         ethnicity: parsed.ethnicity || '(empty)',
-        licenses: parsed.licenses || '(empty)'
+        drivingLicense: parsed.drivingLicense || '(empty)'      // FIXED: was licenses
     });
 
     console.log('📊 parseFormData() - Parsed data (Step 2 & 3):', {
