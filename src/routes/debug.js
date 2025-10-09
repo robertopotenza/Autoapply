@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const crypto = require('crypto');
 const db = require('../database/db');
 const { Logger } = require('../utils/logger');
 
@@ -91,7 +92,7 @@ function debugAccessControl(req, res, next) {
 router.get('/profile/:userId', debugAccessControl, async (req, res) => {
     try {
         const userId = parseInt(req.params.userId, 10);
-        const correlationId = req.traceId || req.correlationId || require('crypto').randomUUID();
+        const correlationId = req.traceId || req.correlationId || crypto.randomUUID();
         
         if (isNaN(userId)) {
             return res.status(400).json({
