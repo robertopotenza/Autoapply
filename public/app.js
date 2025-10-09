@@ -918,6 +918,10 @@ function loadSavedState() {
                     input.checked = savedState.data[key];
                 } else {
                     input.value = savedState.data[key];
+                    // Special case: gender select also updates genderIdentity
+                    if (key === 'gender') {
+                        window.formState.data['genderIdentity'] = savedState.data[key];
+                    }
                 }
             }
         });
