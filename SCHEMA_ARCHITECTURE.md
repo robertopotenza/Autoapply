@@ -4,6 +4,54 @@
 
 The Auto-Apply platform uses a **normalized database schema** with separate tables for different data domains, combined with a VIEW that provides a unified interface for reading complete user profiles.
 
+## Data Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         WIZARD FRONTEND                          │
+│                      (User fills 3 steps +                       │
+│                      screening questions)                        │
+└────────┬────────────────┬────────────────┬─────────────┬────────┘
+         │                │                │             │
+         │ POST /step1    │ POST /step2    │ POST /step3 │ POST /screening
+         ▼                ▼                ▼             ▼
+┌────────────────┐ ┌────────────┐ ┌─────────────┐ ┌──────────────────┐
+│ JobPreferences │ │  Profile   │ │ Eligibility │ │ ScreeningAnswers │
+│     Model      │ │   Model    │ │    Model    │ │      Model       │
+└────────┬───────┘ └─────┬──────┘ └──────┬──────┘ └────────┬─────────┘
+         │               │               │                  │
+         │ .upsert()     │ .upsert()     │ .upsert()       │ .upsert()
+         ▼               ▼               ▼                  ▼
+┌────────────────┐ ┌────────────┐ ┌─────────────┐ ┌──────────────────┐
+│job_preferences │ │  profile   │ │ eligibility │ │screening_answers │
+│     TABLE      │ │   TABLE    │ │    TABLE    │ │      TABLE       │
+└────────┬───────┘ └─────┬──────┘ └──────┬──────┘ └────────┬─────────┘
+         │               │               │                  │
+         └───────────────┴───────────────┴──────────────────┘
+                                 │
+                        LEFT JOIN operations
+                                 │
+                                 ▼
+                  ┌──────────────────────────┐
+                  │  user_complete_profile   │
+                  │          VIEW            │
+                  │   (READ-ONLY INTERFACE)  │
+                  └─────────────┬────────────┘
+                                │
+                       GET /api/wizard/data
+                                │
+                                ▼
+                  ┌──────────────────────────┐
+                  │    User.getCompleteProfile()    │
+                  │    Returns unified data   │
+                  └──────────────────────────┘
+```
+
+**Key Points:**
+- **Write Operations** → Go directly to individual TABLES
+- **Read Operations** → Go through the VIEW which aggregates table data
+- **VIEW** → Does NOT store data, just provides a query interface
+
 ## Current Architecture
 
 ### Separate Tables (Normalized Design)
@@ -55,6 +103,24 @@ LEFT JOIN profile p ON u.user_id = p.user_id
 LEFT JOIN eligibility e ON u.user_id = e.user_id
 LEFT JOIN screening_answers sa ON u.user_id = sa.user_id;
 ```
+
+## Wizard Step to Table Mapping
+
+Each step in the wizard corresponds to a specific database table:
+
+| Wizard Step | API Endpoint | Model | Database Table | Data Stored |
+|------------|--------------|-------|----------------|-------------|
+| **Step 1** | `POST /api/wizard/step1` | `JobPreferences` | `job_preferences` | Remote/onsite preferences, job types, titles, seniority, time zones |
+| **Step 2** | `POST /api/wizard/step2` | `Profile` | `profile` | Name, email, phone, resume path, cover letter, location |
+| **Step 3** | `POST /api/wizard/step3` | `Eligibility` | `eligibility` | Job title, availability, visa sponsorship, nationality, salary |
+| **Screening** | `POST /api/wizard/screening` | `ScreeningAnswers` | `screening_answers` | Languages, disability status, gender, military service, demographics |
+| **Get All** | `GET /api/wizard/data` | `User` | `user_complete_profile` VIEW | Complete unified profile (read-only) |
+
+**Important Notes:**
+- Each POST endpoint writes to its specific table using the model's `upsert()` method
+- The GET endpoint reads from the VIEW, which automatically aggregates all tables
+- You **cannot** write directly to `user_complete_profile` (it's read-only)
+- All write operations use INSERT ... ON CONFLICT DO UPDATE (upsert pattern)
 
 ## How Data is Saved
 

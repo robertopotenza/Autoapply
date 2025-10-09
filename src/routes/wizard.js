@@ -9,13 +9,56 @@ const ScreeningAnswers = require('../database/models/ScreeningAnswers');
 const { Logger } = require('../utils/logger');
 const logger = new Logger('Wizard');
 
+/**
+ * Wizard Routes
+ * 
+ * ARCHITECTURE OVERVIEW:
+ * This module handles the multi-step wizard data flow. Each wizard step
+ * writes to its own dedicated database table using the upsert pattern.
+ * Complete profiles are read from the user_complete_profile VIEW which
+ * aggregates all tables via LEFT JOINs.
+ * 
+ * DATA FLOW:
+ *   WRITE: POST /step{1,2,3} or /screening → Model.upsert() → Individual TABLE
+ *   READ:  GET /data → User.getCompleteProfile() → user_complete_profile VIEW
+ * 
+ * TABLES WRITTEN BY THIS MODULE:
+ *   - job_preferences   (Step 1)
+ *   - profile          (Step 2)
+ *   - eligibility      (Step 3)
+ *   - screening_answers (Screening)
+ * 
+ * VIEW READ BY THIS MODULE:
+ *   - user_complete_profile (aggregates all wizard tables)
+ * 
+ * IMPORTANT: user_complete_profile is a VIEW, not a table. You cannot write to it.
+ * 
+ * @see SCHEMA_ARCHITECTURE.md for detailed architecture documentation
+ * @see FAQ_SCREENING_DATA.md for common questions about data storage
+ */
+
 // All wizard routes require authentication
 router.use(authenticateToken);
 
-// GET /api/wizard/data - Get all saved wizard data for user
-// NOTE: This reads from the user_complete_profile VIEW, which aggregates data
-// from job_preferences, profile, eligibility, and screening_answers tables.
-// The VIEW does not store data - it's just a convenient read interface.
+/**
+ * GET /api/wizard/data
+ * 
+ * Retrieves complete wizard data for the authenticated user.
+ * 
+ * DATA SOURCE: user_complete_profile VIEW (not a table)
+ * MODEL: User.getCompleteProfile(userId)
+ * 
+ * The VIEW aggregates data from:
+ *   - job_preferences table
+ *   - profile table
+ *   - eligibility table
+ *   - screening_answers table
+ * 
+ * The VIEW does not store data - it's just a convenient read interface
+ * that performs LEFT JOINs on the underlying tables.
+ * 
+ * @returns {Object} Complete user profile with all wizard step data
+ */
 router.get('/data', async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -48,7 +91,26 @@ router.get('/data', async (req, res) => {
     }
 });
 
-// POST /api/wizard/step1 - Save Step 1 (Job Preferences)
+/**
+ * POST /api/wizard/step1
+ * 
+ * Saves wizard Step 1 (Job Preferences) data.
+ * 
+ * DATA DESTINATION: job_preferences TABLE
+ * MODEL: JobPreferences.upsert(userId, data)
+ * PATTERN: INSERT ... ON CONFLICT DO UPDATE (upsert)
+ * 
+ * This endpoint writes directly to the job_preferences table.
+ * The data will be accessible via the user_complete_profile VIEW.
+ * 
+ * @param {Object} req.body.remoteJobs - Remote work preferences
+ * @param {string} req.body.onsiteLocation - Onsite location
+ * @param {Array} req.body.jobTypes - Job types
+ * @param {Array} req.body.jobTitles - Job titles
+ * @param {Array} req.body.seniorityLevels - Seniority levels
+ * @param {Array} req.body.timeZones - Time zones
+ * @returns {Object} Saved job preferences record
+ */
 router.post('/step1', async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -81,7 +143,30 @@ router.post('/step1', async (req, res) => {
     }
 });
 
-// POST /api/wizard/step2 - Save Step 2 (Profile)
+/**
+ * POST /api/wizard/step2
+ * 
+ * Saves wizard Step 2 (Profile) data.
+ * 
+ * DATA DESTINATION: profile TABLE
+ * MODEL: Profile.upsert(userId, data)
+ * PATTERN: INSERT ... ON CONFLICT DO UPDATE (upsert)
+ * 
+ * This endpoint writes directly to the profile table.
+ * The data will be accessible via the user_complete_profile VIEW.
+ * 
+ * @param {string} req.body.fullName - Full name
+ * @param {string} req.body.email - Email address
+ * @param {string} req.body.resumePath - Resume file path
+ * @param {string} req.body.coverLetterOption - Cover letter preference
+ * @param {string} req.body.coverLetterPath - Cover letter file path
+ * @param {string} req.body.phone - Phone number
+ * @param {string} req.body.country - Country
+ * @param {string} req.body.city - City
+ * @param {string} req.body.stateRegion - State/Region
+ * @param {string} req.body.postalCode - Postal code
+ * @returns {Object} Saved profile record
+ */
 router.post('/step2', async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -130,7 +215,27 @@ router.post('/step2', async (req, res) => {
     }
 });
 
-// POST /api/wizard/step3 - Save Step 3 (Eligibility)
+/**
+ * POST /api/wizard/step3
+ * 
+ * Saves wizard Step 3 (Eligibility) data.
+ * 
+ * DATA DESTINATION: eligibility TABLE
+ * MODEL: Eligibility.upsert(userId, data)
+ * PATTERN: INSERT ... ON CONFLICT DO UPDATE (upsert)
+ * 
+ * This endpoint writes directly to the eligibility table.
+ * The data will be accessible via the user_complete_profile VIEW.
+ * 
+ * @param {string} req.body.currentJobTitle - Current job title
+ * @param {string} req.body.availability - Availability to start
+ * @param {Array} req.body.eligibleCountries - Countries eligible to work in
+ * @param {boolean} req.body.visaSponsorship - Visa sponsorship needs
+ * @param {Array} req.body.nationality - Nationality/nationalities
+ * @param {number} req.body.currentSalary - Current salary
+ * @param {number} req.body.expectedSalary - Expected salary
+ * @returns {Object} Saved eligibility record
+ */
 router.post('/step3', async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -175,9 +280,36 @@ router.post('/step3', async (req, res) => {
     }
 });
 
-// POST /api/wizard/screening - Save Screening Answers
-// NOTE: This saves data to the screening_answers TABLE, not to user_complete_profile.
-// The user_complete_profile is a VIEW that reads from screening_answers and other tables.
+/**
+ * POST /api/wizard/screening
+ * 
+ * Saves screening questions data.
+ * 
+ * DATA DESTINATION: screening_answers TABLE (NOT user_complete_profile)
+ * MODEL: ScreeningAnswers.upsert(userId, data)
+ * PATTERN: INSERT ... ON CONFLICT DO UPDATE (upsert)
+ * 
+ * IMPORTANT: This writes to the screening_answers table.
+ * When you query user_complete_profile and see screening data (languages,
+ * disability_status, etc.), that data is being read FROM screening_answers table.
+ * The user_complete_profile VIEW does not store data - it just provides a
+ * unified read interface via JOIN operations.
+ * 
+ * @param {string} req.body.experienceSummary - Experience summary
+ * @param {string} req.body.hybridPreference - Hybrid work preference
+ * @param {string} req.body.travel - Travel willingness
+ * @param {string} req.body.relocation - Relocation willingness
+ * @param {Array} req.body.languages - Languages spoken
+ * @param {string} req.body.dateOfBirth - Date of birth
+ * @param {number} req.body.gpa - GPA
+ * @param {boolean} req.body.isAdult - Is 18+ years old
+ * @param {string} req.body.genderIdentity - Gender identity
+ * @param {string} req.body.disabilityStatus - Disability status
+ * @param {string} req.body.militaryService - Military service status
+ * @param {string} req.body.ethnicity - Ethnicity
+ * @param {string} req.body.drivingLicense - Driving license status
+ * @returns {Object} Saved screening answers record
+ */
 router.post('/screening', async (req, res) => {
     try {
         const userId = req.user.userId;

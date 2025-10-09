@@ -1,6 +1,36 @@
 const { query } = require('../db');
 
+/**
+ * Eligibility Model
+ * 
+ * Manages wizard Step 3 data in the eligibility TABLE.
+ * 
+ * IMPORTANT: This model writes to the eligibility table, NOT to user_complete_profile.
+ * The user_complete_profile is a VIEW that reads from eligibility (along with other tables).
+ * 
+ * When you query user_complete_profile and see eligibility data (current_job_title, 
+ * availability, visa_sponsorship, etc.), that data is actually stored in THIS table 
+ * (eligibility), and the VIEW simply makes it appear as part of a unified profile structure.
+ * 
+ * @see SCHEMA_ARCHITECTURE.md for architecture details
+ * @see src/routes/wizard.js for API endpoint: POST /api/wizard/step3
+ */
 class Eligibility {
+    /**
+     * Insert or update eligibility information for a user (wizard Step 3).
+     * Uses PostgreSQL's INSERT ... ON CONFLICT DO UPDATE pattern (upsert).
+     * 
+     * @param {number} userId - The user ID
+     * @param {Object} data - Eligibility data
+     * @param {string} data.currentJobTitle - Current job title
+     * @param {string} data.availability - When user can start
+     * @param {Array<string>} data.eligibleCountries - Countries eligible to work in
+     * @param {string} data.visaSponsorship - Visa sponsorship requirements
+     * @param {Array<string>} data.nationality - User's nationality/nationalities
+     * @param {number} data.currentSalary - Current salary
+     * @param {number} data.expectedSalary - Expected/desired salary
+     * @returns {Object} The saved eligibility record
+     */
     static async upsert(userId, data) {
         const result = await query(
             `INSERT INTO eligibility (

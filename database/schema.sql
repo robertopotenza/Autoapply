@@ -1,28 +1,112 @@
 -- Auto-Apply Platform Database Schema
 -- PostgreSQL Database on Railway
 --
--- SCHEMA ARCHITECTURE OVERVIEW:
--- ==============================
--- This schema uses a NORMALIZED design with separate tables for different data domains:
+-- ============================================================================
+-- SCHEMA ARCHITECTURE OVERVIEW
+-- ============================================================================
 --
--- WIZARD DATA TABLES (write operations):
+-- This database schema implements a NORMALIZED multi-table design pattern
+-- with a VIEW-based aggregation layer for unified data access.
+--
+-- DESIGN PRINCIPLES:
+--   1. NORMALIZATION - Separate tables for distinct data domains
+--   2. UPSERT PATTERN - All writes use INSERT ... ON CONFLICT DO UPDATE
+--   3. VIEW AGGREGATION - Read-only VIEW provides unified profile access
+--   4. NO DUPLICATION - Each piece of data stored in exactly one place
+--
+-- ============================================================================
+-- TABLE STRUCTURE (Write Operations)
+-- ============================================================================
+--
+-- WIZARD DATA TABLES:
+--   Each wizard step writes to its own dedicated table via Model.upsert()
+--
 --   1. job_preferences   - Step 1: Remote/onsite, job types, titles, seniority
+--                          API: POST /api/wizard/step1
+--                          Model: JobPreferences.upsert(userId, data)
+--
 --   2. profile          - Step 2: Name, contact, resume, location
+--                          API: POST /api/wizard/step2
+--                          Model: Profile.upsert(userId, data)
+--
 --   3. eligibility      - Step 3: Job title, availability, visa, salary
+--                          API: POST /api/wizard/step3
+--                          Model: Eligibility.upsert(userId, data)
+--
 --   4. screening_answers - Screening: Languages, demographics, preferences
+--                          API: POST /api/wizard/screening
+--                          Model: ScreeningAnswers.upsert(userId, data)
 --
--- UNIFIED READ INTERFACE:
---   - user_complete_profile (VIEW) - Aggregates all wizard data via JOINs
---   - This is a VIEW, not a table - it doesn't store data
---   - Provides convenient read-only access to complete user profiles
+-- SUPPORTING TABLES:
+--   - users                  - Base user authentication and identity
+--   - magic_link_tokens      - Passwordless authentication tokens
+--   - password_reset_tokens  - Password recovery tokens
+--   - jobs                   - Job postings from scraped platforms
+--   - applications           - User job application records
+--   - autoapply_settings     - Auto-apply preferences and rules
 --
--- DATA FLOW:
---   WRITE: App → Model.upsert() → Individual TABLE
---   READ:  App → User.getCompleteProfile() → user_complete_profile VIEW → Individual TABLES
+-- ============================================================================
+-- VIEW STRUCTURE (Read Operations)
+-- ============================================================================
 --
--- See SCHEMA_ARCHITECTURE.md and FAQ_SCREENING_DATA.md for detailed documentation.
+--   user_complete_profile (VIEW) - Unified read interface
+--                          API: GET /api/wizard/data
+--                          Model: User.getCompleteProfile(userId)
+--                          Purpose: Aggregates all wizard tables via LEFT JOINs
+--                          Storage: NONE - It's a query, not a table
 --
--- ==============================
+-- ============================================================================
+-- DATA FLOW SUMMARY
+-- ============================================================================
+--
+--   WRITE FLOW:
+--     Frontend → POST /api/wizard/stepX → Model.upsert() → Individual TABLE
+--     Example: Screening data → ScreeningAnswers.upsert() → screening_answers table
+--
+--   READ FLOW:
+--     Frontend → GET /api/wizard/data → User.getCompleteProfile() 
+--              → user_complete_profile VIEW → LEFT JOIN all tables → Unified JSON
+--
+--   KEY INSIGHT:
+--     When you see screening data (languages, disability_status, etc.) in
+--     user_complete_profile, it's NOT stored there. The VIEW is reading it
+--     from screening_answers table. The VIEW is just a convenient query interface.
+--
+-- ============================================================================
+-- COMMON MISCONCEPTIONS (Please Read!)
+-- ============================================================================
+--
+--   ❌ WRONG: "Data is saved to user_complete_profile table"
+--   ✅ RIGHT: "Data is saved to separate tables, VIEW provides read access"
+--
+--   ❌ WRONG: "screening_answers is empty but user_complete_profile has data"
+--   ✅ RIGHT: "If VIEW shows data, it MUST be in the underlying table"
+--
+--   ❌ WRONG: "We should write to user_complete_profile"
+--   ✅ RIGHT: "Views are read-only, always write to the specific tables"
+--
+-- ============================================================================
+-- VERIFICATION
+-- ============================================================================
+--
+--   To verify schema structure:
+--     $ node scripts/verify-screening-schema.js
+--
+--   To check if user_complete_profile is a VIEW:
+--     SELECT table_type FROM information_schema.tables 
+--     WHERE table_name = 'user_complete_profile';
+--     -- Expected: 'VIEW'
+--
+-- ============================================================================
+-- DOCUMENTATION
+-- ============================================================================
+--
+--   For complete architecture documentation, see:
+--     - SCHEMA_ARCHITECTURE.md     - Detailed architecture explanation
+--     - FAQ_SCREENING_DATA.md      - Common questions and troubleshooting
+--     - DATABASE_SCHEMA_DOCS.md    - Documentation index
+--
+-- ============================================================================
 
 -- Users Table
 CREATE TABLE IF NOT EXISTS users (
