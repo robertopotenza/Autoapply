@@ -358,6 +358,86 @@ You'll see detailed SQL logs like:
 }
 ```
 
+### Testing Wizard Form Data Binding
+
+**Problem:** Wizard forms may send empty payloads to the backend if data binding is not working correctly.
+
+**How to Test:**
+
+1. **Open browser console** with DevTools (F12)
+
+2. **Enable detailed logging** by setting debug mode in console:
+   ```javascript
+   localStorage.setItem('DEBUG_MODE', 'true');
+   ```
+
+3. **Navigate to the wizard** at `http://localhost:3000/wizard.html`
+
+4. **Fill in Step 3 (Profile):**
+   - Full Name: "Test User"
+   - Email: "test@example.com"
+   - Phone: "5551234567"
+   - Country: "US"
+   - City: "New York"
+
+5. **Click "Next"** to go to Step 4
+
+6. **Fill in Step 4 (Eligibility):**
+   - Current Job Title: "Software Engineer"
+   - Availability: Click "Immediate" pill
+   - Eligible Countries: Select "United States"
+   - Visa Sponsorship: Click "No" pill
+
+7. **Click "Complete Setup"**
+
+8. **Check browser console** for these logs:
+   ```
+   🔍 saveAllStepsData() - Collecting data from all steps...
+     Step 3: Found X inputs
+       ✓ [full-name] = "Test User"
+       ✓ [email] = "test@example.com"
+       ✓ [phone] = "5551234567"
+       ✓ [location-country] = "US"
+     Step 4: Found Y inputs
+       ✓ [current-job-title] = "Software Engineer"
+       ✓ [availability] = "immediate"
+   
+   📊 Parsed form data:
+     step2: { fullName: "Test User", email: "test@example.com", ... }
+     step3: { currentJobTitle: "Software Engineer", availability: "immediate", ... }
+   
+   📤 Sending Step 2 (Profile) to /api/wizard/step2: { ... }
+   📤 Sending Step 3 (Eligibility) to /api/wizard/step3: { ... }
+   ```
+
+9. **Check backend logs** for:
+   ```
+   Step 2 data received for user X:
+     fullName: "Test User"
+     phone: "+15551234567"
+     country: "US"
+   
+   Step 3 data received for user X:
+     availability: "immediate"
+     currentJobTitle: "Software Engineer"
+   ```
+
+**Expected Result:**
+- Browser console shows non-empty values being collected
+- Backend logs show full payloads (not empty strings)
+- Success message appears: "✅ Profile saved successfully!"
+
+**If Data is Empty:**
+- Check that all inputs have proper `id` attributes
+- Verify `saveAllStepsData()` is being called before `parseFormData()`
+- Ensure pill buttons are updating hidden inputs correctly
+- Confirm multi-select components are setting hidden input values
+
+**Common Issues:**
+- **Empty phone field**: Check that country-code and phone inputs both have values
+- **Empty eligibility fields**: Ensure pill buttons have `active` class when clicked
+- **Empty multi-select fields**: Verify hidden inputs are being updated by multi-select components
+
 ## Testing
 
 ### Running Tests
