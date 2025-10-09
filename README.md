@@ -318,11 +318,36 @@ GET /api/metrics/live?token=YOUR_ADMIN_TOKEN
 - Recent error monitoring
 - System resource metrics
 
-**Runtime Configuration:**
+**Runtime Configuration with Live Sync:**
 - Toggle performance logging without restart
 - Enable/disable debug mode on-the-fly
 - Control alert notifications
+- **NEW**: Real-time backend sync via `globalThis.runtimeConfig`
+- **NEW**: Auto-polling every 10 seconds for synchronized state
+- **NEW**: Slack alerts on configuration failures
+- **NEW**: Improved UI feedback (✅ Saved / ⚠️ Failed)
 - Live log viewer with auto-refresh
+
+**API Endpoints:**
+
+**GET /api/admin/config/current** - Returns current in-memory runtime configuration
+```json
+{
+  "PERF_LOG_ENABLED": true,
+  "DEBUG_MODE": false,
+  "ALERTS_ENABLED": true,
+  "lastUpdated": "2025-10-09T04:25:00Z"
+}
+```
+
+**POST /api/admin/config/update** - Updates runtime config with immediate sync
+```bash
+curl -X POST \
+  -H "X-Admin-Token: your-token" \
+  -H "Content-Type: application/json" \
+  -d '{"PERF_LOG_ENABLED": true}' \
+  http://localhost:3000/api/admin/config/update
+```
 
 **Access:** Requires `ADMIN_TOKEN` environment variable
 
