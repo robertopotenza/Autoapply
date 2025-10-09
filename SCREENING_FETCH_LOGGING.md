@@ -5,27 +5,19 @@ Comprehensive logging has been added to the JavaScript code to track when and ho
 
 ## Logging Locations
 
-### 1. **hasScreeningData() Function** (Line ~1339)
-This function determines whether screening data exists before attempting to save it.
-
-**Logs:**
-- `🔍 [hasScreeningData] Evaluating screening data presence...` - Entry point
-- `📋 [hasScreeningData] Checking fields:` - Shows boolean status of each screening field
-- `✅ [hasScreeningData] Result: TRUE/FALSE` - Final decision
-
-### 2. **parseFormData() Function** (Line ~1315)
+### 1. **parseFormData() Function** (Line ~1250)
 Extracts and parses screening data from the form state.
 
 **Logs:**
 - `📊 [parseFormData] Screening data extracted:` - Shows all extracted screening values
 
-### 3. **saveAndExit() Function** (Line ~791-854)
+### 2. **saveAndExit() Function** (Line ~790-870)
 Saves partial progress when user clicks "Save and Exit" button.
 
 **Logs:**
 - `🔍 [SAVE_AND_EXIT] Checking for screening data...` - Start of check
+- `🔍 [SAVE_AND_EXIT] Parsed screening data to check:` - Shows all screening fields being checked
 - `📝 [SCREENING FETCH - SAVE_AND_EXIT] Detected screening data - preparing to save` - Data found
-- `📊 [SCREENING FETCH - SAVE_AND_EXIT] hasScreeningData returned true` - Confirmation
 - `🔍 [SCREENING FETCH - SAVE_AND_EXIT] Screening data details:` - Full data object
 - `📤 [SCREENING FETCH - SAVE_AND_EXIT] Sending POST request to /api/wizard/screening` - About to send
 - `📦 [SCREENING FETCH - SAVE_AND_EXIT] Payload:` - Full JSON payload being sent
@@ -36,22 +28,16 @@ Saves partial progress when user clicks "Save and Exit" button.
 - `❌ [SCREENING FETCH - SAVE_AND_EXIT] Fetch failed with exception:` - Network/exception errors
 - `⚠️ [SCREENING FETCH - SAVE_AND_EXIT] No screening data detected - skipping screening save` - When no data found
 
-### 4. **submitForm() Function** (Line ~1176-1239)
+### 3. **submitForm() Function** (Line ~1053-1248)
 Saves complete profile when user submits the final step.
 
-**Logs:** (Same structure as saveAndExit)
-- `🔍 [SUBMIT_FORM] Checking for screening data...`
-- `📝 [SCREENING FETCH - SUBMIT_FORM] Detected screening data - preparing to save`
-- `📊 [SCREENING FETCH - SUBMIT_FORM] hasScreeningData returned true`
-- `🔍 [SCREENING FETCH - SUBMIT_FORM] Screening data details:`
-- `📤 [SCREENING FETCH - SUBMIT_FORM] Sending POST request to /api/wizard/screening`
-- `📦 [SCREENING FETCH - SUBMIT_FORM] Payload:`
-- `⏱️ [SCREENING FETCH - SUBMIT_FORM] Timestamp:`
-- `✅ [SCREENING FETCH - SUBMIT_FORM] Response received - Status:`
-- `✅ [SCREENING FETCH - SUBMIT_FORM] Success response:` (if OK)
-- `❌ [SCREENING FETCH - SUBMIT_FORM] Error response:` (if failed)
-- `❌ [SCREENING FETCH - SUBMIT_FORM] Fetch failed with exception:` (network errors)
-- `⚠️ [SCREENING FETCH - SUBMIT_FORM] No screening data detected - skipping screening save`
+**Logs:**
+- `📝 [SCREENING] Saving screening data (using simple pattern like job preferences)` - Starting screening save
+- `📤 [SCREENING] Sending to /api/wizard/screening:` - About to send with payload details
+- `✅ [SCREENING] Success:` - Success details (if OK)
+- `❌ [SCREENING] Error:` - Error details (if failed)
+
+**Note:** Unlike `saveAndExit()`, `submitForm()` always saves screening data without checking if it exists first (using the "simple always-submit pattern").
 
 ## How to Use the Logs
 
@@ -73,41 +59,52 @@ Or filter by specific function:
 ```
 [SAVE_AND_EXIT]
 [SUBMIT_FORM]
-[hasScreeningData]
+[SCREENING]
 [parseFormData]
 ```
 
 ## What to Look For
 
-### Successful Flow
+### Successful Flow (submitForm)
 ```
 🔍 [parseFormData] Screening data extracted: {...}
-🔍 [SUBMIT_FORM] Checking for screening data...
-🔍 [hasScreeningData] Evaluating screening data presence...
-📋 [hasScreeningData] Checking fields: {...}
-✅ [hasScreeningData] Result: TRUE - screening data found
-📝 [SCREENING FETCH - SUBMIT_FORM] Detected screening data - preparing to save
-🔍 [SCREENING FETCH - SUBMIT_FORM] Screening data details: {...}
-📤 [SCREENING FETCH - SUBMIT_FORM] Sending POST request to /api/wizard/screening
-📦 [SCREENING FETCH - SUBMIT_FORM] Payload: {...}
-⏱️ [SCREENING FETCH - SUBMIT_FORM] Timestamp: 2025-10-09T...
-✅ [SCREENING FETCH - SUBMIT_FORM] Response received - Status: 200 OK
-✅ [SCREENING FETCH - SUBMIT_FORM] Success response: {...}
+📝 [SCREENING] Saving screening data (using simple pattern like job preferences)
+📤 [SCREENING] Sending to /api/wizard/screening: {...payload...}
+✅ [SCREENING] Success: {...}
 ```
 
-### When No Data Found
+### Successful Flow (saveAndExit with data)
 ```
-🔍 [hasScreeningData] Evaluating screening data presence...
-📋 [hasScreeningData] Checking fields: {all false...}
-✅ [hasScreeningData] Result: FALSE - no screening data
-⚠️ [SCREENING FETCH - SUBMIT_FORM] No screening data detected - skipping screening save
+🔍 [SAVE_AND_EXIT] Checking for screening data...
+🔍 [SAVE_AND_EXIT] Parsed screening data to check: {...}
+📝 [SCREENING FETCH - SAVE_AND_EXIT] Detected screening data - preparing to save
+🔍 [SCREENING FETCH - SAVE_AND_EXIT] Screening data details: {...}
+📤 [SCREENING FETCH - SAVE_AND_EXIT] Sending POST request to /api/wizard/screening
+📦 [SCREENING FETCH - SAVE_AND_EXIT] Payload: {...}
+⏱️ [SCREENING FETCH - SAVE_AND_EXIT] Timestamp: 2025-10-09T...
+✅ [SCREENING FETCH - SAVE_AND_EXIT] Response received - Status: 200 OK
+✅ [SCREENING FETCH - SAVE_AND_EXIT] Success response: {...}
 ```
+
+### When No Data Found (saveAndExit only)
+```
+🔍 [SAVE_AND_EXIT] Checking for screening data...
+🔍 [SAVE_AND_EXIT] Parsed screening data to check: {all empty...}
+⚠️ [SCREENING FETCH - SAVE_AND_EXIT] No screening data detected - skipping screening save
+```
+
+**Note:** `submitForm()` always submits screening data, so it never skips.
 
 ### When Fetch Fails
 ```
-📤 [SCREENING FETCH - SUBMIT_FORM] Sending POST request...
-❌ [SCREENING FETCH - SUBMIT_FORM] Response received - Status: 500 Internal Server Error
-❌ [SCREENING FETCH - SUBMIT_FORM] Error response: {...error details...}
+📤 [SCREENING FETCH - SAVE_AND_EXIT] Sending POST request...
+❌ [SCREENING FETCH - SAVE_AND_EXIT] Response received - Status: 500 Internal Server Error
+❌ [SCREENING FETCH - SAVE_AND_EXIT] Error response: {...error details...}
+```
+Or for submitForm:
+```
+📤 [SCREENING] Sending to /api/wizard/screening: {...}
+❌ [SCREENING] Error: {...error details...}
 ```
 
 ## Troubleshooting Guide
