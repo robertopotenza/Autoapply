@@ -939,9 +939,8 @@ function saveAllStepsData() {
             } else {
                 // ALWAYS save the value, even if empty, to ensure formState.data reflects current state
                 formState.data[input.id] = input.value;
-                if (input.id && (input.id.includes('full-name') || input.id.includes('phone') || 
-                                 input.id.includes('country') || input.id.includes('availability') || 
-                                 input.id.includes('current-job'))) {
+                const logFieldIds = ['full-name', 'phone', 'country', 'availability', 'current-job'];
+                if (input.id && logFieldIds.includes(input.id)) {
                     console.log(`    ✓ [${input.id}] = "${input.value}"`);
                 }
             }
