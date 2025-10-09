@@ -1,5 +1,6 @@
 const crypto = require('crypto');
 const { Logger } = require('../utils/logger');
+const metricsBuffer = require('../utils/metricsBuffer');
 
 const logger = new Logger('Performance');
 
@@ -127,6 +128,9 @@ function performanceLogger() {
 
             // Log as single-line JSON
             logger.info('Request performance', perfLog);
+
+            // Add to metrics buffer for real-time monitoring
+            metricsBuffer.add(perfLog);
 
             // Call original end
             originalEnd.apply(res, arguments);

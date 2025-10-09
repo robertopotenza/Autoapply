@@ -286,6 +286,200 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Resend Email Setup](docs/RESEND_SETUP.md) - Email service configuration
 - [API Reference](docs/API.md) - Complete API documentation
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
+- [Developer Onboarding](docs/DEVELOPER_ONBOARDING.md) - Get started guide for developers
+- [Observability](docs/OBSERVABILITY.md) - Monitoring and debugging features
+
+## 🚀 Phase 4: Advanced Observability & Admin Tools
+
+### Performance Monitoring
+
+**Real-Time Metrics Dashboard** (`/admin/metrics`)
+- Live performance metrics via Server-Sent Events
+- Route-level statistics (P95, P99 latency)
+- Database timing analysis
+- Success rate tracking
+- Configurable time windows (15min - 24h)
+
+**API Endpoints:**
+```bash
+# Get performance summary
+GET /api/metrics/summary?window=1
+
+# Stream live metrics (SSE)
+GET /api/metrics/live?token=YOUR_ADMIN_TOKEN
+```
+
+### Admin Dashboard (`/admin/dashboard`)
+
+**System Health Monitoring:**
+- Uptime and memory usage tracking
+- Database connection status
+- Recent error monitoring
+- System resource metrics
+
+**Runtime Configuration:**
+- Toggle performance logging without restart
+- Enable/disable debug mode on-the-fly
+- Control alert notifications
+- Live log viewer with auto-refresh
+
+**Access:** Requires `ADMIN_TOKEN` environment variable
+
+### Smart Performance Alerts
+
+**Anomaly Detection:**
+- Automated daily scans via GitHub Actions
+- Detects slow requests (>500ms configurable)
+- Database bottlenecks (>100ms)
+- Performance spikes (>3x average)
+
+**Alerting:**
+- Slack webhook integration
+- GitHub issue creation for critical anomalies
+- JSON artifact uploads for analysis
+- Configurable thresholds
+
+**Configuration:**
+```bash
+ALERTS_ENABLED=true
+ALERTS_SLACK_WEBHOOK=https://hooks.slack.com/services/...
+ALERTS_THRESHOLD_MS=500
+```
+
+### Schema Drift Detection
+
+**Automatic Drift Detection:**
+- Compares expected vs actual schema
+- Generates SQL patch files
+- Identifies missing tables/columns
+- Type mismatch detection
+
+**Safe Migration:**
+- Never auto-applies migrations
+- Generates SQL patches in `reports/`
+- Optional GitHub PR creation
+- Manual review required
+
+**Run Detection:**
+```bash
+node scripts/detect-schema-drift.js
+```
+
+### AI-Powered Trace Analysis
+
+**Intelligent Performance Optimization:**
+- Analyzes request traces using OpenAI GPT
+- Calculates mean, median, P95, P99 latency
+- Identifies bottlenecks automatically
+- Generates actionable recommendations
+
+**Recommendations Include:**
+- Database index suggestions
+- Caching strategies
+- Query optimization tips
+- API design improvements
+
+**Weekly Reports:**
+- Automated via GitHub Actions
+- Saved to `reports/ai-trace-report-YYYY-MM-DD.md`
+- Requires `OPENAI_API_KEY`
+
+**Manual Run:**
+```bash
+TRACE_ANALYSIS_ENABLED=true node scripts/analyze-traces-with-ai.js
+```
+
+### Developer CLI Tool
+
+**Unified Command Interface:**
+```bash
+# Install globally
+npm link
+
+# Schema verification and tests
+autoapply verify
+autoapply verify --skip-tests
+
+# Performance analysis
+autoapply perf --window=24h
+
+# Debug user profile
+autoapply debug 123 --host=yourapp.railway.app
+
+# Generate documentation
+autoapply docs
+
+# Trigger anomaly detection
+autoapply alerts
+```
+
+### Environment Variables
+
+**Phase 4 Configuration:**
+```bash
+# Admin Access
+ADMIN_TOKEN=your-secret-admin-token
+
+# Performance Monitoring
+PERF_LOG_ENABLED=false
+PERF_LOG_SAMPLE_RATE=1.0
+
+# Alerting
+ALERTS_ENABLED=false
+ALERTS_SLACK_WEBHOOK=
+ALERTS_THRESHOLD_MS=500
+
+# Schema Management
+AUTO_MIGRATION_ENABLED=false
+
+# AI Analysis
+TRACE_ANALYSIS_ENABLED=false
+TRACE_ANALYSIS_PERIOD_HOURS=24
+OPENAI_API_KEY=sk-...
+```
+
+### GitHub Actions Workflows
+
+**Performance Alerts** (`.github/workflows/performance-alerts.yml`)
+- Runs daily at 4 AM UTC
+- Analyzes performance logs
+- Creates GitHub issues for critical anomalies
+- Uploads JSON artifacts
+
+**AI Trace Analysis** (`.github/workflows/trace-analysis.yml`)
+- Runs weekly on Sunday at 2 AM UTC
+- Generates AI-powered optimization reports
+- Uploads markdown artifacts
+
+### Getting Started with Phase 4
+
+1. **Enable performance logging:**
+   ```bash
+   echo "PERF_LOG_ENABLED=true" >> .env
+   ```
+
+2. **Set admin token:**
+   ```bash
+   echo "ADMIN_TOKEN=$(openssl rand -hex 32)" >> .env
+   ```
+
+3. **Access dashboards:**
+   - Admin Dashboard: `http://localhost:3000/admin/dashboard`
+   - Metrics Dashboard: `http://localhost:3000/admin/metrics`
+
+4. **Install CLI:**
+   ```bash
+   npm link
+   autoapply verify
+   ```
+
+5. **Configure alerts (optional):**
+   ```bash
+   ALERTS_ENABLED=true
+   ALERTS_SLACK_WEBHOOK=your-webhook-url
+   ```
+
+For detailed documentation, see [Developer Onboarding Guide](docs/DEVELOPER_ONBOARDING.md).
 
 ---
 

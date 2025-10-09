@@ -1,0 +1,63 @@
+name: AI Trace Analysis
+
+# Run weekly on Sunday at 2 AM UTC
+on:
+  schedule:
+    - cron: '0 2 * * 0'
+  workflow_dispatch: # Allow manual trigger
+
+jobs:
+  analyze-traces:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run AI trace analysis
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          TRACE_ANALYSIS_ENABLED: ${{ secrets.TRACE_ANALYSIS_ENABLED || 'true' }}
+          TRACE_ANALYSIS_PERIOD_HOURS: ${{ secrets.TRACE_ANALYSIS_PERIOD_HOURS || '168' }}
+          PERF_LOG_ENABLED: true
+        run: |
+          node scripts/analyze-traces-with-ai.js --period=168
+
+      - name: Upload analysis report
+        uses: actions/upload-artifact@v4
+        with:
+          name: ai-trace-report-${{ github.run_id }}
+          path: reports/ai-trace-report-*.md
+          retention-days: 90
+
+      - name: Create summary
+        run: |
+          echo "### AI Trace Analysis Complete 🤖" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          
+          if [ -f reports/ai-trace-report-*.md ]; then
+            REPORT_FILE=$(ls reports/ai-trace-report-*.md | head -1)
+            echo "**Report Generated:** \`$(basename $REPORT_FILE)\`" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "📊 [View Full Report as Artifact](https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }})" >> $GITHUB_STEP_SUMMARY
+          else
+            echo "⚠️ No report generated - check logs" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Commit report to repository (optional)
+        if: false # Disabled by default - enable if you want reports in git
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add reports/
+          git commit -m "Add AI trace analysis report [skip ci]" || echo "No changes to commit"
+          git push

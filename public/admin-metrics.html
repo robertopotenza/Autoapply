@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AutoApply - Performance Metrics</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #333;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            padding: 20px 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        h1 {
+            color: #667eea;
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+
+        .metric-card h3 {
+            color: #667eea;
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .metric-value {
+            font-size: 32px;
+            font-weight: bold;
+            color: #333;
+            margin: 10px 0;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .chart-container {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .chart-container h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .status {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .status.live {
+            background: #10b981;
+            color: white;
+        }
+
+        .status.error {
+            background: #ef4444;
+            color: white;
+        }
+
+        .status.connecting {
+            background: #f59e0b;
+            color: white;
+        }
+
+        .controls {
+            background: white;
+            padding: 15px 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .controls label {
+            color: #666;
+            font-size: 14px;
+            font-weight: 600;
+        }
+
+        .controls input {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+
+        .controls button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .controls button:hover {
+            background: #5568d3;
+        }
+
+        .routes-table {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow-x: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #eee;
+        }
+
+        th {
+            background: #f8f9fa;
+            color: #667eea;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        td {
+            font-size: 14px;
+            color: #333;
+        }
+
+        tr:hover {
+            background: #f8f9fa;
+        }
+
+        .icon {
+            width: 20px;
+            height: 20px;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📊 Performance Metrics Dashboard</h1>
+            <p class="subtitle">Real-time monitoring and analytics • <span id="connection-status" class="status connecting">Connecting...</span></p>
+        </header>
+
+        <div class="controls">
+            <label for="window-select">Time Window:</label>
+            <select id="window-select">
+                <option value="0.25">15 minutes</option>
+                <option value="0.5">30 minutes</option>
+                <option value="1" selected>1 hour</option>
+                <option value="6">6 hours</option>
+                <option value="24">24 hours</option>
+            </select>
+            <button onclick="loadMetrics()">Refresh</button>
+            <button onclick="toggleLiveMode()">
+                <span id="live-mode-text">Start Live Mode</span>
+            </button>
+        </div>
+
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <h3>
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                    Total Requests
+                </h3>
+                <div class="metric-value" id="total-requests">-</div>
+                <div class="metric-label">in selected window</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Avg Response Time
+                </h3>
+                <div class="metric-value" id="avg-response">-</div>
+                <div class="metric-label">milliseconds</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4"></path>
+                    </svg>
+                    Avg DB Time
+                </h3>
+                <div class="metric-value" id="avg-db">-</div>
+                <div class="metric-label">milliseconds</div>
+            </div>
+
+            <div class="metric-card">
+                <h3>
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Success Rate
+                </h3>
+                <div class="metric-value" id="success-rate">-</div>
+                <div class="metric-label">percentage</div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <h3>Response Time by Route (P95)</h3>
+            <canvas id="routeChart"></canvas>
+        </div>
+
+        <div class="routes-table">
+            <h3 style="color: #667eea; margin-bottom: 15px;">Route Performance Details</h3>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Route</th>
+                        <th>Requests</th>
+                        <th>Avg Duration</th>
+                        <th>Avg DB Time</th>
+                        <th>P95 Duration</th>
+                        <th>Success Rate</th>
+                        <th>Errors</th>
+                    </tr>
+                </thead>
+                <tbody id="routes-table-body">
+                    <tr>
+                        <td colspan="7" class="loading">Loading metrics...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const ADMIN_TOKEN = localStorage.getItem('ADMIN_TOKEN') || prompt('Enter Admin Token:');
+        if (ADMIN_TOKEN) {
+            localStorage.setItem('ADMIN_TOKEN', ADMIN_TOKEN);
+        }
+
+        let liveMode = false;
+        let eventSource = null;
+        let routeChart = null;
+        let liveMetrics = [];
+
+        // Initialize chart
+        const ctx = document.getElementById('routeChart').getContext('2d');
+        routeChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'P95 Duration (ms)',
+                    data: [],
+                    backgroundColor: 'rgba(102, 126, 234, 0.7)',
+                    borderColor: 'rgba(102, 126, 234, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Duration (ms)'
+                        }
+                    }
+                }
+            }
+        });
+
+        function updateStatus(status, text) {
+            const statusEl = document.getElementById('connection-status');
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = text;
+        }
+
+        async function loadMetrics() {
+            try {
+                const window = document.getElementById('window-select').value;
+                const response = await fetch(`/api/metrics/summary?window=${window}`, {
+                    headers: {
+                        'X-Admin-Token': ADMIN_TOKEN
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                displayMetrics(data);
+                updateStatus('live', 'Connected');
+            } catch (error) {
+                console.error('Error loading metrics:', error);
+                updateStatus('error', 'Error loading metrics');
+            }
+        }
+
+        function displayMetrics(data) {
+            // Update summary cards
+            const totalRequests = data.totalRequests || 0;
+            document.getElementById('total-requests').textContent = totalRequests.toLocaleString();
+
+            // Calculate averages across all routes
+            let totalDuration = 0;
+            let totalDb = 0;
+            let totalSuccess = 0;
+            let routeCount = data.routes.length;
+
+            data.routes.forEach(route => {
+                totalDuration += route.avgDuration || 0;
+                totalDb += route.avgDbTime || 0;
+                totalSuccess += route.successRate || 0;
+            });
+
+            const avgDuration = routeCount > 0 ? (totalDuration / routeCount).toFixed(2) : 0;
+            const avgDb = routeCount > 0 ? (totalDb / routeCount).toFixed(2) : 0;
+            const avgSuccess = routeCount > 0 ? (totalSuccess / routeCount).toFixed(2) : 0;
+
+            document.getElementById('avg-response').textContent = avgDuration;
+            document.getElementById('avg-db').textContent = avgDb;
+            document.getElementById('success-rate').textContent = `${avgSuccess}%`;
+
+            // Update chart
+            const sortedRoutes = [...data.routes].sort((a, b) => (b.p95Duration || 0) - (a.p95Duration || 0)).slice(0, 10);
+            routeChart.data.labels = sortedRoutes.map(r => r.route);
+            routeChart.data.datasets[0].data = sortedRoutes.map(r => r.p95Duration || 0);
+            routeChart.update();
+
+            // Update table
+            const tbody = document.getElementById('routes-table-body');
+            if (data.routes.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="loading">No metrics available</td></tr>';
+            } else {
+                tbody.innerHTML = data.routes
+                    .sort((a, b) => b.count - a.count)
+                    .map(route => `
+                        <tr>
+                            <td><strong>${route.route}</strong></td>
+                            <td>${route.count}</td>
+                            <td>${route.avgDuration.toFixed(2)} ms</td>
+                            <td>${route.avgDbTime.toFixed(2)} ms</td>
+                            <td>${(route.p95Duration || 0).toFixed(2)} ms</td>
+                            <td>${route.successRate.toFixed(2)}%</td>
+                            <td style="color: ${route.errorCount > 0 ? '#ef4444' : '#10b981'}">${route.errorCount}</td>
+                        </tr>
+                    `).join('');
+            }
+        }
+
+        function toggleLiveMode() {
+            liveMode = !liveMode;
+            const button = document.getElementById('live-mode-text');
+
+            if (liveMode) {
+                button.textContent = 'Stop Live Mode';
+                startLiveMode();
+            } else {
+                button.textContent = 'Start Live Mode';
+                stopLiveMode();
+            }
+        }
+
+        function startLiveMode() {
+            if (eventSource) {
+                eventSource.close();
+            }
+
+            eventSource = new EventSource(`/api/metrics/live?token=${ADMIN_TOKEN}`);
+            
+            eventSource.onmessage = (event) => {
+                const metric = JSON.parse(event.data);
+                if (metric.type === 'connected') {
+                    updateStatus('live', '🟢 Live Mode Active');
+                } else {
+                    // Add to live metrics buffer
+                    liveMetrics.push(metric);
+                    
+                    // Keep only last 1000 metrics
+                    if (liveMetrics.length > 1000) {
+                        liveMetrics.shift();
+                    }
+                }
+            };
+
+            eventSource.onerror = (error) => {
+                console.error('SSE error:', error);
+                updateStatus('error', 'Connection lost');
+                stopLiveMode();
+            };
+
+            // Refresh display every 5 seconds in live mode
+            liveInterval = setInterval(loadMetrics, 5000);
+        }
+
+        function stopLiveMode() {
+            if (eventSource) {
+                eventSource.close();
+                eventSource = null;
+            }
+            if (liveInterval) {
+                clearInterval(liveInterval);
+            }
+            updateStatus('live', 'Connected');
+            liveMetrics = [];
+        }
+
+        // Load initial metrics
+        loadMetrics();
+
+        // Auto-refresh every 30 seconds (if not in live mode)
+        setInterval(() => {
+            if (!liveMode) {
+                loadMetrics();
+            }
+        }, 30000);
+    </script>
+</body>
+</html>

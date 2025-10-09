@@ -530,6 +530,262 @@ npm test -- tests/your-test.test.js
 - **Architecture**: See `SCHEMA_ARCHITECTURE.md` for database design
 - **FAQ**: See `FAQ_SCREENING_DATA.md` for common questions
 - **API Reference**: See `README.md` for API documentation
+- **Observability**: See `docs/OBSERVABILITY.md` for monitoring features
+
+## Phase 4 - Advanced Observability & Admin Tools
+
+### AutoApply CLI Tool
+
+The `autoapply` CLI provides unified access to common developer tasks:
+
+```bash
+# Install CLI globally (optional)
+npm link
+
+# Or run directly from project
+./bin/autoapply.js <command>
+
+# Or use npx
+npx autoapply <command>
+```
+
+**Available Commands:**
+
+```bash
+# Run schema verification and tests
+autoapply verify
+autoapply verify --skip-tests
+
+# Summarize performance logs
+autoapply perf
+autoapply perf --window=24h
+autoapply perf --window=7d
+
+# Fetch debug profile for a user
+autoapply debug <userId>
+autoapply debug 123 --host=myapp.railway.app
+
+# Regenerate documentation
+autoapply docs
+
+# Trigger anomaly detection manually
+autoapply alerts
+```
+
+### Admin Dashboard (`/admin/dashboard`)
+
+The admin dashboard provides real-time system monitoring and configuration:
+
+**Access:** `http://localhost:3000/admin/dashboard`
+
+**Features:**
+- **System Health**: Uptime, memory usage, CPU, database status
+- **Runtime Configuration**: Toggle debug modes without restart
+- **Live Logs**: View and auto-refresh system logs
+- **Error Monitoring**: Recent errors and alerts
+
+**Configuration Toggles:**
+- `PERF_LOG_ENABLED` - Enable/disable performance logging
+- `DEBUG_MODE` - Enable/disable verbose debug logs
+- `ALERTS_ENABLED` - Enable/disable performance alerts
+
+**Security:**
+- Requires `ADMIN_TOKEN` in environment
+- Token must be provided via localStorage or prompt
+- All API calls authenticated
+
+### Performance Metrics Dashboard (`/admin/metrics`)
+
+Real-time performance monitoring with live graphs:
+
+**Access:** `http://localhost:3000/admin/metrics`
+
+**Features:**
+- **Summary Metrics**: Average response time, DB time, success rate
+- **Route Performance**: P95 latency by route
+- **Live Streaming**: Server-Sent Events (SSE) for real-time updates
+- **Historical Data**: Configurable time windows (15min to 24h)
+
+**API Endpoints:**
+```bash
+# Get performance summary (requires ADMIN_TOKEN)
+curl -H "X-Admin-Token: your-token" \
+  http://localhost:3000/api/metrics/summary?window=1
+
+# Stream live metrics
+curl -H "X-Admin-Token: your-token" \
+  http://localhost:3000/api/metrics/live
+```
+
+### Performance Alerting
+
+Automatic anomaly detection runs daily via GitHub Actions:
+
+**Configuration:**
+```bash
+# .env or GitHub Secrets
+ALERTS_ENABLED=true
+ALERTS_SLACK_WEBHOOK=https://hooks.slack.com/services/...
+ALERTS_THRESHOLD_MS=500
+```
+
+**Anomaly Detection Rules:**
+- Request duration > 500ms (configurable)
+- Database time > 100ms
+- Spikes > 3x rolling average
+
+**Manual Trigger:**
+```bash
+node scripts/analyze-performance-logs.js
+```
+
+**Reports:** Saved to `reports/performance-anomalies-YYYY-MM-DD.json`
+
+### Schema Drift Detection
+
+Automatically detect and fix schema inconsistencies:
+
+**Run Detection:**
+```bash
+node scripts/detect-schema-drift.js
+```
+
+**Output:**
+- Console report of drift issues
+- SQL patch file: `reports/schema-drift-YYYY-MM-DD.sql`
+
+**Auto-Migration (Disabled by Default):**
+```bash
+AUTO_MIGRATION_ENABLED=false  # Set to true for PR generation
+```
+
+### AI-Assisted Trace Analysis
+
+Weekly AI-powered performance optimization recommendations:
+
+**Configuration:**
+```bash
+OPENAI_API_KEY=sk-...
+TRACE_ANALYSIS_ENABLED=true
+TRACE_ANALYSIS_PERIOD_HOURS=168  # Default: 7 days
+```
+
+**Manual Run:**
+```bash
+node scripts/analyze-traces-with-ai.js
+node scripts/analyze-traces-with-ai.js --period=48
+```
+
+**Output:**
+- Markdown report: `reports/ai-trace-report-YYYY-MM-DD.md`
+- Performance statistics (mean, median, P95, P99)
+- AI-generated optimization recommendations
+
+**Workflow:** Runs automatically every Sunday at 2 AM UTC
+
+### Environment Variables Reference
+
+#### Phase 4 Variables
+
+```bash
+# Admin Access
+ADMIN_TOKEN=your-secret-token           # Required for admin endpoints
+
+# Performance Alerts
+ALERTS_ENABLED=false                    # Enable automatic alerting
+ALERTS_SLACK_WEBHOOK=                   # Slack webhook URL
+ALERTS_THRESHOLD_MS=500                 # Anomaly threshold
+
+# Schema Management
+AUTO_MIGRATION_ENABLED=false            # Enable auto-PR for drift fixes
+
+# AI Trace Analysis
+TRACE_ANALYSIS_ENABLED=false            # Enable AI analysis
+TRACE_ANALYSIS_PERIOD_HOURS=24          # Analysis time window
+
+# OpenAI
+OPENAI_API_KEY=                         # Required for AI features
+```
+
+### Debugging Workflows
+
+#### Investigate Slow Endpoints
+
+1. **Enable performance logging:**
+   ```bash
+   PERF_LOG_ENABLED=true
+   ```
+
+2. **Generate some traffic**
+
+3. **Run anomaly detection:**
+   ```bash
+   autoapply alerts
+   ```
+
+4. **Review report:**
+   ```bash
+   cat reports/performance-anomalies-*.json
+   ```
+
+5. **Get AI recommendations:**
+   ```bash
+   TRACE_ANALYSIS_ENABLED=true node scripts/analyze-traces-with-ai.js
+   ```
+
+#### Monitor Production Issues
+
+1. **Access admin dashboard:**
+   ```
+   https://yourapp.railway.app/admin/dashboard
+   ```
+
+2. **Check system health**
+
+3. **Review error logs** (auto-refresh enabled)
+
+4. **Toggle debug mode** if needed (temporary)
+
+5. **Check metrics dashboard** for performance trends
+
+#### Detect Schema Issues
+
+1. **Run verification:**
+   ```bash
+   autoapply verify
+   ```
+
+2. **Check drift detection:**
+   ```bash
+   node scripts/detect-schema-drift.js
+   ```
+
+3. **Review SQL patch** in `reports/`
+
+4. **Apply manually** after review
+
+### GitHub Actions Workflows
+
+#### Performance Alerts (Daily)
+- **Schedule**: Daily at 4 AM UTC
+- **Path**: `.github/workflows/performance-alerts.yml`
+- **Output**: Artifact + GitHub issue (if critical)
+
+#### AI Trace Analysis (Weekly)
+- **Schedule**: Weekly on Sunday at 2 AM UTC
+- **Path**: `.github/workflows/trace-analysis.yml`
+- **Output**: Markdown report artifact
+
+### Best Practices
+
+1. **Enable performance logging in development** to catch issues early
+2. **Use CLI for routine tasks** instead of manual commands
+3. **Check admin dashboard before deploying** to production
+4. **Review AI recommendations weekly** for optimization opportunities
+5. **Set up Slack alerts** for production anomalies
+6. **Keep ADMIN_TOKEN secure** and rotate regularly
+7. **Monitor schema drift** before major migrations
+8. **Use metrics dashboard** to validate performance improvements
 
 ## Getting Help
 
