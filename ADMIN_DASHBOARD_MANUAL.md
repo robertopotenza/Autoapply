@@ -49,6 +49,7 @@ The Admin Dashboard (`/admin/dashboard`) is a secure, real-time system monitorin
 6. [Security Best Practices](#security-best-practices)
 7. [Troubleshooting](#troubleshooting)
 8. [API Reference](#api-reference)
+9. [Practical Examples](#practical-examples)
 
 ---
 
@@ -659,6 +660,134 @@ curl -H "X-Admin-Token: your-token" \
   "timestamp": "2025-10-09T12:00:00Z"
 }
 ```
+
+---
+
+## Practical Examples
+
+### Example 1: First-Time Setup
+
+**Scenario:** You're setting up the admin dashboard for the first time on your local machine.
+
+**Steps:**
+
+1. Generate a token:
+   ```bash
+   openssl rand -hex 32
+   # Output: a1b2c3d4e5f6...
+   ```
+
+2. Add to `.env` file:
+   ```bash
+   echo "ADMIN_TOKEN=a1b2c3d4e5f6..." >> .env
+   ```
+
+3. Restart your server:
+   ```bash
+   npm run dev
+   ```
+
+4. Open browser to `http://localhost:3000/admin/dashboard`
+
+5. When prompted, enter: `a1b2c3d4e5f6...`
+
+6. Dashboard loads showing system health!
+
+### Example 2: Debugging a Slow Application
+
+**Scenario:** Your application is responding slowly, and you need to investigate.
+
+**Steps:**
+
+1. Access admin dashboard at `/admin/dashboard`
+
+2. Check **System Health** card:
+   - Memory usage: 85% (high!)
+   - Uptime: 12d 5h (no recent restarts)
+
+3. Enable performance logging:
+   - Toggle **PERF_LOG_ENABLED** ON
+   - Click **Save Configuration**
+
+4. Check **Logs** section:
+   - Select "Combined" logs
+   - Set lines to 200
+   - Enable Auto-Refresh
+
+5. Observe logs for slow requests:
+   - Look for `durationMs > 1000`
+   - Check `dbTotalMs` values
+
+6. Found the issue: Database queries taking 500ms+
+
+7. Take action:
+   - Review database indices
+   - Optimize slow queries
+   - Consider caching
+
+### Example 3: Monitoring Production System
+
+**Scenario:** You want to monitor your production system's health.
+
+**Steps:**
+
+1. Set up token in Railway:
+   ```bash
+   # In Railway dashboard:
+   ADMIN_TOKEN=production-secure-token-here
+   ```
+
+2. Access dashboard:
+   ```
+   https://yourapp.railway.app/admin/dashboard
+   ```
+
+3. Check health metrics:
+   - ✅ Database: Connected
+   - ✅ Schema: Valid
+   - ✅ Uptime: 30d 12h 5m
+   - Memory: 45% (healthy)
+
+4. Review recent errors:
+   - No critical errors
+   - 2 warnings about slow queries
+
+5. Enable alerts for proactive monitoring:
+   - Toggle **ALERTS_ENABLED** ON
+   - Configure Slack webhook in environment
+   - Receive notifications for issues
+
+### Example 4: Troubleshooting Authentication Issues
+
+**Scenario:** Users are reporting login problems.
+
+**Steps:**
+
+1. Access admin dashboard
+
+2. Enable debug logging:
+   - Toggle **DEBUG_MODE** ON
+   - Click **Save Configuration**
+
+3. View error logs:
+   - Select "Error" log type
+   - Set lines to 100
+   - Click Refresh
+
+4. Search for authentication errors:
+   - Look for "JWT" or "auth" keywords
+   - Check timestamps match user reports
+
+5. Found: "JWT verification failed" errors
+
+6. Take action:
+   - Check JWT_SECRET is configured
+   - Verify token expiration times
+   - Review authentication middleware
+
+7. After fix:
+   - Toggle **DEBUG_MODE** OFF
+   - Monitor for resolution
 
 ---
 
