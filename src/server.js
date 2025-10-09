@@ -42,6 +42,7 @@ const debugRoutes = require('./routes/debug');
 const debugResetRoutes = require('./routes/debug-reset');
 const diagnosticsRoutes = require('./routes/diagnostics');
 const metricsRoutes = require('./routes/metrics');
+const adminDashboardRoutes = require('./routes/admin-dashboard');
 
 // Import utilities and middleware
 const { Logger } = require('./utils/logger');
@@ -190,6 +191,7 @@ app.use('/api/debug', debugRoutes);
 app.use('/api/debug-reset', debugResetRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
 app.use('/api/metrics', metricsRoutes);
+app.use('/api/admin', adminDashboardRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
@@ -275,6 +277,18 @@ app.get('/admin/metrics(.html)?', (req, res) => {
     } catch (error) {
         logger.error('Error serving admin-metrics.html:', error);
         res.status(500).send('Error loading metrics dashboard');
+    }
+});
+
+// Admin dashboard endpoint
+app.get('/admin/dashboard(.html)?', (req, res) => {
+    try {
+        const dashboardPath = path.join(__dirname, '../public/admin-dashboard.html');
+        logger.info(`Serving admin-dashboard.html from: ${dashboardPath}`);
+        res.sendFile(dashboardPath);
+    } catch (error) {
+        logger.error('Error serving admin-dashboard.html:', error);
+        res.status(500).send('Error loading admin dashboard');
     }
 });
 
