@@ -41,6 +41,7 @@ const { router: autoApplyRouter, initializeOrchestrator } = require('./routes/au
 const debugRoutes = require('./routes/debug');
 const debugResetRoutes = require('./routes/debug-reset');
 const diagnosticsRoutes = require('./routes/diagnostics');
+const metricsRoutes = require('./routes/metrics');
 
 // Import utilities and middleware
 const { Logger } = require('./utils/logger');
@@ -188,6 +189,7 @@ app.use('/api/autoapply', autoApplyRouter);
 app.use('/api/debug', debugRoutes);
 app.use('/api/debug-reset', debugResetRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
+app.use('/api/metrics', metricsRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
@@ -261,6 +263,18 @@ app.get('/signup.html', (req, res) => {
     } catch (error) {
         logger.error('Error serving signup.html:', error);
         res.status(500).send('Error loading signup');
+    }
+});
+
+// Admin metrics endpoint
+app.get('/admin/metrics(.html)?', (req, res) => {
+    try {
+        const metricsPath = path.join(__dirname, '../public/admin-metrics.html');
+        logger.info(`Serving admin-metrics.html from: ${metricsPath}`);
+        res.sendFile(metricsPath);
+    } catch (error) {
+        logger.error('Error serving admin-metrics.html:', error);
+        res.status(500).send('Error loading metrics dashboard');
     }
 });
 
