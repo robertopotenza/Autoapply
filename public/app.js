@@ -788,27 +788,33 @@ async function saveAndExit() {
         }
 
         // Save screening answers if any
+        console.log('🔍 [saveAndExit] Checking if screening data should be saved...');
         if (hasScreeningData(data)) {
-            console.log('📝 Saving screening data:', data);
+            console.log('✅ [saveAndExit] hasScreeningData returned TRUE - sending screening data to API');
+            const screeningPayload = {
+                experienceSummary: data.experienceSummary || '',
+                hybridPreference: data.hybridPreference || '',
+                travel: data.travel || '',
+                relocation: data.relocation || '',
+                languages: data.languages || [],
+                dateOfBirth: data.dateOfBirth || null,
+                gpa: data.gpa || null,
+                isAdult: data.isAdult === 'yes',
+                genderIdentity: data.gender || '',
+                disabilityStatus: data.disability || '',
+                militaryService: data.military || '',
+                ethnicity: data.ethnicity || '',
+                drivingLicense: data.licenses || ''
+            };
+            console.log('📤 [saveAndExit] Screening payload to be sent:', screeningPayload);
             await fetch('/api/wizard/screening', {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({
-                    experienceSummary: data.experienceSummary || '',
-                    hybridPreference: data.hybridPreference || '',
-                    travel: data.travel || '',
-                    relocation: data.relocation || '',
-                    languages: data.languages || [],
-                    dateOfBirth: data.dateOfBirth || null,
-                    gpa: data.gpa || null,
-                    isAdult: data.isAdult === 'yes',
-                    genderIdentity: data.gender || '',
-                    disabilityStatus: data.disability || '',
-                    militaryService: data.military || '',
-                    ethnicity: data.ethnicity || '',
-                    drivingLicense: data.licenses || ''
-                })
+                body: JSON.stringify(screeningPayload)
             });
+        } else {
+            console.log('❌ [saveAndExit] hasScreeningData returned FALSE - skipping screening API call');
+            console.log('💡 No screening data was filled in, so /api/wizard/screening will not be called');
         }
 
         showSuccessDialog('Progress saved successfully! You can continue where you left off next time.', () => {
@@ -1131,27 +1137,33 @@ async function submitForm() {
         });
 
         // Save screening answers if any
+        console.log('🔍 [submitForm] Checking if screening data should be saved...');
         if (hasScreeningData(data)) {
-            console.log('📝 Saving screening data:', data);
+            console.log('✅ [submitForm] hasScreeningData returned TRUE - sending screening data to API');
+            const screeningPayload = {
+                experienceSummary: data.experienceSummary || '',
+                hybridPreference: data.hybridPreference || '',
+                travel: data.travel || '',
+                relocation: data.relocation || '',
+                languages: data.languages || [],
+                dateOfBirth: data.dateOfBirth || null,
+                gpa: data.gpa || null,
+                isAdult: data.isAdult === 'yes',
+                genderIdentity: data.gender || '',
+                disabilityStatus: data.disability || '',
+                militaryService: data.military || '',
+                ethnicity: data.ethnicity || '',
+                drivingLicense: data.licenses || ''
+            };
+            console.log('📤 [submitForm] Screening payload to be sent:', screeningPayload);
             await fetch('/api/wizard/screening', {
                 method: 'POST',
                 headers,
-                body: JSON.stringify({
-                    experienceSummary: data.experienceSummary || '',
-                    hybridPreference: data.hybridPreference || '',
-                    travel: data.travel || '',
-                    relocation: data.relocation || '',
-                    languages: data.languages || [],
-                    dateOfBirth: data.dateOfBirth || null,
-                    gpa: data.gpa || null,
-                    isAdult: data.isAdult === 'yes',
-                    genderIdentity: data.gender || '',
-                    disabilityStatus: data.disability || '',
-                    militaryService: data.military || '',
-                    ethnicity: data.ethnicity || '',
-                    drivingLicense: data.licenses || ''
-                })
+                body: JSON.stringify(screeningPayload)
             });
+        } else {
+            console.log('❌ [submitForm] hasScreeningData returned FALSE - skipping screening API call');
+            console.log('💡 No screening data was filled in, so /api/wizard/screening will not be called');
         }
 
         showSuccessDialog('✅ Profile saved successfully! All your job preferences and profile information have been saved.', () => {
@@ -1179,6 +1191,23 @@ function parseFormData() {
         'availability': data['availability'],
         'eligible-countries': data['eligible-countries'],
         'visa-sponsorship': data['visa-sponsorship']
+    });
+    
+    console.log('🔍 parseFormData() - Raw screening fields in formState.data:', {
+        'experience-summary': data['experience-summary'],
+        'hybrid-preference': data['hybrid-preference'],
+        'travel-comfortable': data['travel-comfortable'],
+        'relocation-open': data['relocation-open'],
+        'languages-input': data['languages-input'],
+        'date-of-birth': data['date-of-birth'],
+        'gpa': data['gpa'],
+        'age-18': data['age-18'],
+        'gender': data['gender'],
+        'disability': data['disability'],
+        'military': data['military'],
+        'ethnicity': data['ethnicity'],
+        'licenses': data['licenses'],
+        'no-license': data['no-license']
     });
 
     const parsed = {
@@ -1255,12 +1284,46 @@ function parseCommaSeparated(value) {
 function hasScreeningData(data) {
     // Check for camelCase field names (as returned by parseFormData())
     // This function receives PARSED data, not raw formState.data
-    return data.experienceSummary || data.hybridPreference ||
-           data.travel || data.relocation ||
-           data.languages?.length > 0 || data.dateOfBirth ||
-           data.gpa || data.isAdult || data.gender ||
-           data.disability || data.military ||
-           data.ethnicity || data.licenses;
+    const checks = {
+        experienceSummary: !!data.experienceSummary,
+        hybridPreference: !!data.hybridPreference,
+        travel: !!data.travel,
+        relocation: !!data.relocation,
+        languages: data.languages?.length > 0,
+        dateOfBirth: !!data.dateOfBirth,
+        gpa: !!data.gpa,
+        isAdult: !!data.isAdult,
+        gender: !!data.gender,
+        disability: !!data.disability,
+        military: !!data.military,
+        ethnicity: !!data.ethnicity,
+        licenses: !!data.licenses
+    };
+    
+    const hasData = Object.values(checks).some(v => v === true);
+    
+    // Log detailed information when debugging
+    console.log('🔍 hasScreeningData() check:', {
+        hasData,
+        checks,
+        rawValues: {
+            experienceSummary: data.experienceSummary,
+            hybridPreference: data.hybridPreference,
+            travel: data.travel,
+            relocation: data.relocation,
+            languages: data.languages,
+            dateOfBirth: data.dateOfBirth,
+            gpa: data.gpa,
+            isAdult: data.isAdult,
+            gender: data.gender,
+            disability: data.disability,
+            military: data.military,
+            ethnicity: data.ethnicity,
+            licenses: data.licenses
+        }
+    });
+    
+    return hasData;
 }
 
 async function uploadFiles(token) {
