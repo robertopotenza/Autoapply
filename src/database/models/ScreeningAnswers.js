@@ -1,7 +1,17 @@
 const { query } = require('../db');
+const { Logger } = require('../../utils/logger');
+const logger = new Logger('ScreeningAnswers');
 
 class ScreeningAnswers {
     static async upsert(userId, data) {
+        // Log what we're about to insert for debugging
+        const languagesJson = JSON.stringify(data.languages || []);
+        logger.debug(`Upserting screening answers for user ${userId}:`, {
+            languages: data.languages,
+            languagesJson,
+            disabilityStatus: data.disabilityStatus
+        });
+        
         const result = await query(
             `INSERT INTO screening_answers (
                 user_id, experience_summary, hybrid_preference, travel,
@@ -31,7 +41,7 @@ class ScreeningAnswers {
                 data.hybridPreference || null,
                 data.travel || null,
                 data.relocation || null,
-                JSON.stringify(data.languages || []),
+                languagesJson,
                 data.dateOfBirth || null,
                 data.gpa || null,
                 data.isAdult || null,
@@ -42,6 +52,11 @@ class ScreeningAnswers {
                 data.drivingLicense || null
             ]
         );
+
+        logger.debug(`Screening answers saved for user ${userId}. Result:`, {
+            languages: result.rows[0].languages,
+            disability_status: result.rows[0].disability_status
+        });
 
         return result.rows[0];
     }

@@ -176,6 +176,14 @@ router.post('/step3', async (req, res) => {
 router.post('/screening', async (req, res) => {
     try {
         const userId = req.user.userId;
+        
+        // Log incoming request body for debugging
+        logger.info(`[POST /screening] Received payload for user ${userId}:`, {
+            languages: req.body.languages,
+            disabilityStatus: req.body.disabilityStatus,
+            fullPayload: req.body
+        });
+        
         const data = {
             experienceSummary: req.body.experienceSummary || '',
             hybridPreference: req.body.hybridPreference || '',
@@ -192,8 +200,18 @@ router.post('/screening', async (req, res) => {
             drivingLicense: req.body.drivingLicense || ''
         };
 
+        logger.info(`[POST /screening] Prepared data for upsert:`, {
+            languages: data.languages,
+            disabilityStatus: data.disabilityStatus
+        });
+
         const result = await ScreeningAnswers.upsert(userId, data);
 
+        logger.info(`[POST /screening] Result after upsert:`, {
+            languages: result.languages,
+            disability_status: result.disability_status
+        });
+        
         logger.info(`Screening answers saved for user ${userId}`);
 
         res.json({
