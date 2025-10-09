@@ -354,6 +354,26 @@
             </div>
         </div>
 
+        <!-- Step 2 Submission Alerts -->
+        <div class="card" style="margin-bottom: 20px;">
+            <h3>
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path>
+                </svg>
+                Step 2 Submission Alerts
+                <button class="btn btn-secondary" style="margin-left: auto; font-size: 12px;" onclick="loadStep2Alerts()">Refresh</button>
+            </h3>
+            <div style="margin-bottom: 15px;">
+                <label style="display: flex; align-items: center; gap: 8px; cursor: pointer;">
+                    <input type="checkbox" id="step2-alerts-toggle" onchange="toggleStep2Alerts()">
+                    <span>Enable Step 2 Slack Alerts</span>
+                </label>
+            </div>
+            <div id="step2-alerts-container" style="max-height: 400px; overflow-y: auto;">
+                <div class="loading">Loading alerts...</div>
+            </div>
+        </div>
+
         <!-- Logs Viewer -->
         <div class="card">
             <h3>
@@ -668,16 +688,129 @@
             }
         }
 
+        // Load Step 2 alerts
+        async function loadStep2Alerts() {
+            try {
+                const data = await apiCall('/api/admin/alerts/step2?limit=10');
+                
+                const container = document.getElementById('step2-alerts-container');
+                
+                if (data.alerts.length === 0) {
+                    container.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">No Step 2 alerts found</div>';
+                    return;
+                }
+                
+                let html = '<div style="display: flex; flex-direction: column; gap: 10px;">';
+                
+                data.alerts.forEach(alert => {
+                    const icon = alert.severity === 'critical' ? '🚨' : '⚠️';
+                    const color = alert.severity === 'critical' ? '#ef4444' : '#f59e0b';
+                    const bgColor = alert.severity === 'critical' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)';
+                    
+                    const timestamp = new Date(alert.timestamp).toLocaleString();
+                    const missingFields = alert.emptyFields.length > 0 ? 
+                        alert.emptyFields.join(', ') : 
+                        'All fields empty';
+                    
+                    html += `
+                        <div style="padding: 15px; border-left: 3px solid ${color}; background: ${bgColor}; border-radius: 5px;">
+                            <div style="display: flex; justify-content: space-between; align-items: start; margin-bottom: 8px;">
+                                <div style="font-weight: 600; color: ${color};">
+                                    ${icon} ${alert.severity === 'critical' ? 'Critical' : 'Warning'} - User ${alert.userId}
+                                </div>
+                                <div style="font-size: 11px; color: #666;">${timestamp}</div>
+                            </div>
+                            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 13px;">
+                                <div>
+                                    <span style="color: #666;">Missing Fields:</span>
+                                    <span style="font-weight: 500;"> ${missingFields}</span>
+                                </div>
+                                <div>
+                                    <span style="color: #666;">Environment:</span>
+                                    <span style="font-weight: 500;"> ${alert.environment}</span>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                html += '</div>';
+                container.innerHTML = html;
+            } catch (error) {
+                console.error('Error loading Step 2 alerts:', error);
+                document.getElementById('step2-alerts-container').innerHTML = 
+                    '<div style="padding: 20px; text-align: center; color: #ef4444;">Failed to load alerts</div>';
+            }
+        }
+
+        // Toggle Step 2 alerts
+        async function toggleStep2Alerts() {
+            const toggle = document.getElementById('step2-alerts-toggle');
+            const enabled = toggle.checked;
+            
+            try {
+                // Read current config
+                const configData = await apiCall('/api/admin/config');
+                const currentConfig = configData.saved || {};
+                
+                // Update alerts.step2Slack
+                if (!currentConfig.alerts) {
+                    currentConfig.alerts = {};
+                }
+                currentConfig.alerts.step2Slack = enabled;
+                
+                // Save to runtime.json
+                const response = await apiCall('/api/admin/config', {
+                    method: 'PUT',
+                    body: JSON.stringify(currentConfig)
+                });
+                
+                if (response.success) {
+                    showMessage(`✅ Step 2 alerts ${enabled ? 'enabled' : 'disabled'}`, 'success');
+                } else {
+                    throw new Error('Failed to update config');
+                }
+            } catch (error) {
+                console.error('Error toggling Step 2 alerts:', error);
+                showMessage('Failed to update Step 2 alerts setting', 'error');
+                // Reset toggle
+                toggle.checked = !enabled;
+            }
+        }
+
+        // Load Step 2 alerts toggle state
+        async function loadStep2AlertsToggle() {
+            try {
+                const data = await apiCall('/api/admin/config');
+                const config = data.saved || {};
+                
+                const toggle = document.getElementById('step2-alerts-toggle');
+                if (toggle && config.alerts && typeof config.alerts.step2Slack !== 'undefined') {
+                    toggle.checked = config.alerts.step2Slack;
+                } else {
+                    // Default to enabled
+                    toggle.checked = true;
+                }
+            } catch (error) {
+                console.error('Error loading Step 2 alerts toggle:', error);
+            }
+        }
+
         // Initial load
         loadSystemStatus();
         loadRuntimeConfig();
         loadLogs();
+        loadStep2Alerts();
+        loadStep2AlertsToggle();
 
         // Start config polling
         startConfigPolling();
 
         // Refresh system status every 30 seconds
         setInterval(loadSystemStatus, 30000);
+        
+        // Refresh Step 2 alerts every 60 seconds
+        setInterval(loadStep2Alerts, 60000);
     </script>
 </body>
 </html>

@@ -1,0 +1,47 @@
+name: Step 2 Slack Alerts
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+  schedule:
+    - cron: '0 2 * * *'  # daily at 2 AM UTC
+
+jobs:
+  alert:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+        
+      - name: Run Step 2 tests
+        id: tests
+        continue-on-error: true
+        run: |
+          npm test -- wizard-step2 --verbose > test-results.txt 2>&1
+          cat test-results.txt
+        
+      - name: Monitor Step 2 alerts
+        if: always()
+        run: node scripts/monitor-step2-alerts.js --ci
+        env:
+          SLACK_STEP2_ALERT_WEBHOOK: ${{ secrets.SLACK_STEP2_ALERT_WEBHOOK }}
+          NODE_ENV: ci
+          
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: step2-test-results
+          path: test-results.txt
+          retention-days: 7

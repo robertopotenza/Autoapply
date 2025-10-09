@@ -499,6 +499,55 @@ router.get('/logs', adminAccessControl, (req, res) => {
 });
 
 /**
+ * GET /api/admin/alerts/step2
+ * Get recent Step 2 submission alerts
+ */
+router.get('/alerts/step2', adminAccessControl, async (req, res) => {
+    try {
+        const alertsPath = path.join(__dirname, '../../alerts/step2-alerts.log');
+        const limit = parseInt(req.query.limit || '10', 10);
+        
+        if (!fs.existsSync(alertsPath)) {
+            return res.json({
+                alerts: [],
+                count: 0,
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        const content = fs.readFileSync(alertsPath, 'utf8');
+        const alertLines = content.split('\n').filter(line => line.trim());
+        
+        // Parse alerts and take the last N entries
+        const alerts = [];
+        const recentAlerts = alertLines.slice(-limit);
+        
+        for (const line of recentAlerts) {
+            try {
+                alerts.push(JSON.parse(line));
+            } catch (e) {
+                logger.warn('Failed to parse alert line', { error: e.message });
+            }
+        }
+        
+        // Sort by timestamp (newest first)
+        alerts.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+        
+        res.json({
+            alerts,
+            count: alerts.length,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        logger.error('Error reading Step 2 alerts', { error: error.message });
+        res.status(500).json({
+            error: 'Failed to read alerts',
+            message: error.message
+        });
+    }
+});
+
+/**
  * Helper function to find the correct log file path
  * In production, logs are date-stamped (e.g., error-2025-10-09.log)
  * In development, logs are simple (e.g., error.log)
