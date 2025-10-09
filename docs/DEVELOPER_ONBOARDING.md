@@ -528,7 +528,6 @@ npm test -- tests/your-test.test.js
 ## Additional Resources
 
 - **Architecture**: See `SCHEMA_ARCHITECTURE.md` for database design
-- **Observability**: See `docs/OBSERVABILITY.md` for logging and tracing
 - **FAQ**: See `FAQ_SCREENING_DATA.md` for common questions
 - **API Reference**: See `README.md` for API documentation
 
