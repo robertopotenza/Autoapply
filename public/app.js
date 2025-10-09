@@ -360,6 +360,10 @@ function initializeForm() {
                         pill.classList.add('active');
                     }
                     updatePillGroupValue(group, hiddenInput, isMultiple);
+                    // Ensure formState.data is updated for hidden input fields
+                    if (window.formState && hiddenInput.id) {
+                        window.formState.data[hiddenInput.id] = hiddenInput.value;
+                    }
                 });
             });
         }
