@@ -694,22 +694,10 @@ function nextStep() {
 }
 
 async function saveAndExit() {
-    // Save current step data first (don't validate since this is "Save and Exit")
+    // Save all form data in one unified API call
     saveStepData();
-    
-    // CRITICAL: Save ALL steps' data, not just current step
     saveAllStepsData();
 
-    console.log('✅ Captured all form data:', {
-        fullName: formState.data['full-name'],
-        phone: formState.data['phone'],
-        currentJobTitle: formState.data['current-job-title'],
-        availability: formState.data['availability'],
-        experienceSummary: formState.data['experience-summary'],
-        hybridPreference: formState.data['hybrid-preference']
-    });
-
-    // Check if user is authenticated
     const token = localStorage.getItem('authToken');
     if (!token) {
         alert('Please login first');
@@ -718,167 +706,33 @@ async function saveAndExit() {
     }
 
     try {
-        // Save each step to the API
         const headers = {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
         };
 
-        // Upload files first if any
         await uploadFiles(token);
+        const profileData = parseFormData();
 
-        // Parse form data into structured objects AFTER uploading files
-        const data = parseFormData();
-
-        // 🔍 AUTO-VALIDATION: Log Step 2 data quality for "Save and Exit"
-        console.log('💾 Save and Exit - Step 2 data:', {
-            fullName: data.fullName,
-            email: data.email,
-            country: data.country,
-            phone: data.phone
+        // Send all data in one request
+        console.log('� [SAVE_AND_EXIT] Sending unified profile data to /api/user/profile:', profileData);
+        const response = await fetch('/api/user/profile', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(profileData)
         });
 
-        // Save step 1 (Job Preferences) - only if data exists
-        if (data.jobTypes || data.jobTitles) {
-            await fetch('/api/wizard/step1', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    remoteJobs: data.remoteJobs || [],
-                    onsiteLocation: data.onsiteLocation || '',
-                    jobTypes: data.jobTypes || [],
-                    jobTitles: data.jobTitles || [],
-                    seniorityLevels: data.seniorityLevels || [],
-                    timeZones: data.timeZones || []
-                })
+        if (response.ok) {
+            const result = await response.json();
+            console.log('✅ [SAVE_AND_EXIT] Success response:', result);
+            showSuccessDialog('Progress saved successfully! You can continue where you left off next time.', () => {
+                window.location.href = '/dashboard.html';
             });
-        }
-
-        // Save step 2 (Profile) - only if data exists
-        if (data.fullName || data.phone || data.country) {
-            await fetch('/api/wizard/step2', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    fullName: data.fullName || '',
-                    email: data.email || '',
-                    resumePath: data.resumePath || '',
-                    coverLetterOption: data.coverLetterOption || '',
-                    coverLetterPath: data.coverLetterPath || '',
-                    phone: data.phone || '',
-                    country: data.country || '',
-                    city: data.city || '',
-                    stateRegion: data.stateRegion || '',
-                    postalCode: data.postalCode || ''
-                })
-            });
-        }
-
-        // Save step 3 (Eligibility) - only if data exists
-        if (data.availability || data.eligibleCountries || data.visaSponsorship) {
-            await fetch('/api/wizard/step3', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    currentJobTitle: data.currentJobTitle || '',
-                    availability: data.availability || '',
-                    eligibleCountries: data.eligibleCountries || [],
-                    visaSponsorship: data.visaSponsorship === 'yes',
-                    nationality: data.nationality || [],
-                    currentSalary: data.currentSalary || null,
-                    expectedSalary: data.expectedSalary || null
-                })
-            });
-        }
-
-        // Save screening answers if any
-        console.log('🔍 [SAVE_AND_EXIT] Checking for screening data...');
-        console.log('🔍 [SAVE_AND_EXIT] Parsed screening data to check:', {
-            experienceSummary: data.experienceSummary || '(empty)',
-            hybridPreference: data.hybridPreference || '(empty)',
-            travel: data.travel || '(empty)',
-            relocation: data.relocation || '(empty)',
-            languages: data.languages || [],
-            dateOfBirth: data.dateOfBirth || '(empty)',
-            gpa: data.gpa || '(empty)',
-            isAdult: data.isAdult || '(empty)',
-            gender: data.gender || '(empty)',
-            disability: data.disability || '(empty)',
-            military: data.military || '(empty)',
-            ethnicity: data.ethnicity || '(empty)',
-            licenses: data.licenses || '(empty)'
-        });
-        if (data.experienceSummary || data.hybridPreference || data.travel || data.relocation || 
-            (data.languages && data.languages.length > 0) || data.dateOfBirth || data.gpa || 
-            data.isAdult || data.genderIdentity || data.disabilityStatus || data.militaryService || 
-            data.ethnicity || data.drivingLicense) {
-            console.log('📝 [SCREENING FETCH - SAVE_AND_EXIT] Detected screening data - preparing to save');
-            console.log('🔍 [SCREENING FETCH - SAVE_AND_EXIT] Screening data details:', {
-                experienceSummary: data.experienceSummary || '(empty)',
-                hybridPreference: data.hybridPreference || '(empty)',
-                travel: data.travel || '(empty)',
-                relocation: data.relocation || '(empty)',
-                languages: data.languages || [],
-                dateOfBirth: data.dateOfBirth || null,
-                gpa: data.gpa || null,
-                isAdult: data.isAdult,
-                gender: data.gender || '(empty)',
-                disability: data.disability || '(empty)',
-                military: data.military || '(empty)',
-                ethnicity: data.ethnicity || '(empty)',
-                licenses: data.licenses || '(empty)'
-            });
-
-            const screeningPayload = {
-                experienceSummary: data.experienceSummary || '',
-                hybridPreference: data.hybridPreference || '',
-                travel: data.travel || '',
-                relocation: data.relocation || '',
-                languages: data.languages || [],
-                dateOfBirth: data.dateOfBirth || null,
-                gpa: data.gpa || null,
-                isAdult: data.isAdult === 'yes',
-                genderIdentity: data.genderIdentity || '',      // FIXED: was data.gender
-                disabilityStatus: data.disabilityStatus || '', // FIXED: was data.disability
-                militaryService: data.militaryService || '',   // FIXED: was data.military
-                ethnicity: data.ethnicity || '',
-                drivingLicense: data.drivingLicense || ''       // FIXED: was data.licenses
-            };
-
-            console.log('📤 [SCREENING FETCH - SAVE_AND_EXIT] Sending POST request to /api/wizard/screening');
-            console.log('📦 [SCREENING FETCH - SAVE_AND_EXIT] Payload:', JSON.stringify(screeningPayload, null, 2));
-            console.log('⏱️ [SCREENING FETCH - SAVE_AND_EXIT] Timestamp:', new Date().toISOString());
-
-            try {
-                const screeningResponse = await fetch('/api/wizard/screening', {
-                    method: 'POST',
-                    headers,
-                    body: JSON.stringify(screeningPayload)
-                });
-
-                console.log('✅ [SCREENING FETCH - SAVE_AND_EXIT] Response received - Status:', screeningResponse.status, screeningResponse.statusText);
-
-                if (screeningResponse.ok) {
-                    const screeningResult = await screeningResponse.json();
-                    console.log('✅ [SCREENING FETCH - SAVE_AND_EXIT] Success response:', screeningResult);
-                } else {
-                    const errorText = await screeningResponse.text();
-                    console.error('❌ [SCREENING FETCH - SAVE_AND_EXIT] Error response:', errorText);
-                }
-            } catch (error) {
-                console.error('❌ [SCREENING FETCH - SAVE_AND_EXIT] Fetch failed with exception:', error);
-                console.error('❌ [SCREENING FETCH - SAVE_AND_EXIT] Error details:', error.message, error.stack);
-            }
         } else {
-            console.log('⚠️ [SCREENING FETCH - SAVE_AND_EXIT] No screening data detected - skipping screening save');
+            const errorText = await response.text();
+            console.error('❌ [SAVE_AND_EXIT] Error response:', errorText);
+            showErrorDialog('Error saving progress. Please try again.');
         }
-
-        showSuccessDialog('Progress saved successfully! You can continue where you left off next time.', () => {
-            // Keep the saved state for when they return
-            // localStorage.removeItem('autoApplyFormState'); // Don't remove so they can continue later
-            window.location.href = '/dashboard.html';
-        });
-
     } catch (error) {
         console.error('Save and exit error:', error);
         showErrorDialog('Error saving progress. Please try again.');

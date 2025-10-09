@@ -43,6 +43,7 @@ const debugResetRoutes = require('./routes/debug-reset');
 const diagnosticsRoutes = require('./routes/diagnostics');
 const metricsRoutes = require('./routes/metrics');
 const adminDashboardRoutes = require('./routes/admin-dashboard');
+const userProfileRoutes = require('./routes/userProfile');
 
 // Import utilities and middleware
 const { Logger } = require('./utils/logger');
@@ -192,6 +193,7 @@ app.use('/api/debug-reset', debugResetRoutes);
 app.use('/api/diagnostics', diagnosticsRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/admin', adminDashboardRoutes);
+app.use('/api/user', userProfileRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
