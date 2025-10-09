@@ -1221,23 +1221,20 @@ async function submitForm() {
 
         console.log('📤 [SCREENING] Sending to /api/wizard/screening:', screeningPayload);
 
-        try {
-            const screeningResponse = await fetch('/api/wizard/screening', {
-                method: 'POST',
-                headers,
-                body: JSON.stringify(screeningPayload)
-            });
+        const screeningResponse = await fetch('/api/wizard/screening', {
+            method: 'POST',
+            headers,
+            body: JSON.stringify(screeningPayload)
+        });
 
-            if (screeningResponse.ok) {
-                const screeningResult = await screeningResponse.json();
-                console.log('✅ [SCREENING] Success:', screeningResult);
-            } else {
-                const errorText = await screeningResponse.text();
-                console.error('❌ [SCREENING] Error:', errorText);
-            }
-        } catch (error) {
-            console.error('❌ [SCREENING] Exception:', error);
+        if (!screeningResponse.ok) {
+            const errorText = await screeningResponse.text();
+            console.error('❌ [SCREENING] Error:', errorText);
+            throw new Error(`Screening submission failed: ${errorText}`);
         }
+
+        const screeningResult = await screeningResponse.json();
+        console.log('✅ [SCREENING] Success:', screeningResult);
 
         showSuccessDialog('✅ Profile saved successfully! All your job preferences and profile information have been saved.', () => {
             localStorage.removeItem('autoApplyFormState');
