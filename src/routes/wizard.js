@@ -197,6 +197,28 @@ router.post('/step2', async (req, res) => {
             postalCode: data.postalCode
         });
 
+        // 🔍 AUTO-DETECTION: Check for incomplete/empty critical fields
+        const criticalFields = ['fullName', 'email', 'country'];
+        const emptyFields = criticalFields.filter(field => !data[field] || data[field].trim() === '');
+        
+        if (emptyFields.length > 0) {
+            logger.warn(`⚠️ INCOMPLETE STEP 2 SUBMISSION - User ${userId} submitted with empty critical fields:`, {
+                emptyFields,
+                allData: data,
+                suggestion: 'Check frontend data capture: saveAllStepsData() → parseFormData() → API call'
+            });
+        }
+
+        // 🔍 AUTO-DETECTION: Check if ALL fields are empty (likely a bug)
+        const allFieldsEmpty = Object.values(data).every(value => !value || value.trim() === '');
+        
+        if (allFieldsEmpty) {
+            logger.error(`❌ CRITICAL: All Step 2 fields are empty for user ${userId}!`, {
+                receivedBody: req.body,
+                suggestion: 'Frontend is sending empty payload. Check: 1) saveAllStepsData() execution, 2) parseFormData() logic, 3) API request body'
+            });
+        }
+
         const result = await Profile.upsert(userId, data);
 
         logger.info(`Step 2 saved for user ${userId}. Result:`, {
