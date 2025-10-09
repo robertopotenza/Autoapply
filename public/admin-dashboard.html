@@ -548,18 +548,74 @@
         // Update config
         async function updateConfig(key, value) {
             try {
-                await apiCall('/api/admin/config', {
-                    method: 'PUT',
+                const token = localStorage.getItem('adminToken');
+                const res = await fetch('/api/admin/config/update', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Admin-Token': token
+                    },
                     body: JSON.stringify({ [key]: value })
                 });
                 
-                showMessage(`${key} updated successfully`, 'success');
+                const data = await res.json();
+                
+                if (!res.ok || !data.success) {
+                    showMessage(`⚠️ Failed to update ${key}`, 'error');
+                    // Reload to reset toggle
+                    loadRuntimeConfig();
+                    return;
+                }
+                
+                showMessage(`✅ ${key} saved`, 'success');
+                
+                // Update in-memory config display
+                setTimeout(loadRuntimeConfig, 500);
             } catch (error) {
                 console.error('Error updating config:', error);
-                showMessage(`Failed to update ${key}`, 'error');
+                showMessage(`⚠️ Failed to update ${key}`, 'error');
                 // Reload to reset toggle
                 loadRuntimeConfig();
             }
+        }
+
+        // Poll config state every 10 seconds
+        let configPollingInterval = null;
+        
+        function startConfigPolling() {
+            if (configPollingInterval) {
+                clearInterval(configPollingInterval);
+            }
+            
+            configPollingInterval = setInterval(async () => {
+                try {
+                    const token = localStorage.getItem('adminToken');
+                    const res = await fetch('/api/admin/config/current', {
+                        headers: { 'X-Admin-Token': token }
+                    });
+                    
+                    if (res.ok) {
+                        const config = await res.json();
+                        
+                        // Update toggles if they've changed
+                        const perfToggle = document.getElementById('perf-log-toggle');
+                        const debugToggle = document.getElementById('debug-mode-toggle');
+                        const alertsToggle = document.getElementById('alerts-toggle');
+                        
+                        if (perfToggle && perfToggle.checked !== config.PERF_LOG_ENABLED) {
+                            perfToggle.checked = config.PERF_LOG_ENABLED;
+                        }
+                        if (debugToggle && debugToggle.checked !== config.DEBUG_MODE) {
+                            debugToggle.checked = config.DEBUG_MODE;
+                        }
+                        if (alertsToggle && alertsToggle.checked !== config.ALERTS_ENABLED) {
+                            alertsToggle.checked = config.ALERTS_ENABLED;
+                        }
+                    }
+                } catch (error) {
+                    console.error('Config polling error:', error);
+                }
+            }, 10000);
         }
 
         // Load logs
@@ -616,6 +672,9 @@
         loadSystemStatus();
         loadRuntimeConfig();
         loadLogs();
+
+        // Start config polling
+        startConfigPolling();
 
         // Refresh system status every 30 seconds
         setInterval(loadSystemStatus, 30000);

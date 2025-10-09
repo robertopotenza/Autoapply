@@ -5,10 +5,21 @@ const path = require('path');
 const os = require('os');
 const { query } = require('../database/db');
 const { Logger } = require('../utils/logger');
+const { sendSlackAlert } = require('../utils/slackAlert');
 
 const logger = new Logger('AdminDashboard');
 
 const RUNTIME_CONFIG_PATH = path.join(__dirname, '../../config/runtime.json');
+
+// Initialize global runtime config
+if (!globalThis.runtimeConfig) {
+    globalThis.runtimeConfig = {
+        PERF_LOG_ENABLED: false,
+        DEBUG_MODE: false,
+        ALERTS_ENABLED: false,
+        lastUpdated: null
+    };
+}
 
 /**
  * Access control middleware for admin dashboard
@@ -94,6 +105,12 @@ function applyRuntimeConfig(config) {
     if (config.ALERTS_ENABLED !== undefined) {
         process.env.ALERTS_ENABLED = config.ALERTS_ENABLED.toString();
     }
+    
+    // Update globalThis.runtimeConfig for in-memory access
+    globalThis.runtimeConfig = {
+        ...globalThis.runtimeConfig,
+        ...config
+    };
     
     logger.info('Runtime configuration applied', config);
 }
@@ -236,7 +253,7 @@ router.get('/config', adminAccessControl, (req, res) => {
  *   ALERTS_ENABLED: boolean
  * }
  */
-router.put('/config', adminAccessControl, (req, res) => {
+router.put('/config', adminAccessControl, async (req, res) => {
     try {
         const { PERF_LOG_ENABLED, DEBUG_MODE, ALERTS_ENABLED } = req.body;
         
@@ -255,6 +272,19 @@ router.put('/config', adminAccessControl, (req, res) => {
         
         // Save configuration
         if (!saveRuntimeConfig(config)) {
+            const errorMsg = 'Failed to save configuration to file';
+            logger.error(errorMsg);
+            
+            // Send Slack alert on failure
+            try {
+                await sendSlackAlert('Config update failed: Unable to write to config/runtime.json', {
+                    error: 'EACCES - Failed to write config file',
+                    environment: process.env.NODE_ENV
+                });
+            } catch (alertError) {
+                logger.error('Failed to send Slack alert', { error: alertError.message });
+            }
+            
             return res.status(500).json({
                 error: 'Failed to save configuration'
             });
@@ -275,8 +305,143 @@ router.put('/config', adminAccessControl, (req, res) => {
         });
     } catch (error) {
         logger.error('Error updating config', { error: error.message });
+        
+        // Send Slack alert on error
+        try {
+            await sendSlackAlert('Config update failed with exception', {
+                error: error,
+                environment: process.env.NODE_ENV
+            });
+        } catch (alertError) {
+            logger.error('Failed to send Slack alert', { error: alertError.message });
+        }
+        
         res.status(500).json({
             error: 'Failed to update configuration',
+            message: error.message
+        });
+    }
+});
+
+/**
+ * POST /api/admin/config/update
+ * 
+ * Updates runtime configuration with immediate sync to memory
+ * 
+ * Request body:
+ * {
+ *   PERF_LOG_ENABLED: boolean,
+ *   DEBUG_MODE: boolean,
+ *   ALERTS_ENABLED: boolean
+ * }
+ * 
+ * Returns:
+ * {
+ *   success: true,
+ *   config: { updated config with all values }
+ * }
+ */
+router.post('/config/update', adminAccessControl, async (req, res) => {
+    try {
+        const updates = req.body;
+        
+        // Load current config
+        const config = loadRuntimeConfig();
+        
+        // Update only provided values
+        if (updates.PERF_LOG_ENABLED !== undefined) {
+            config.PERF_LOG_ENABLED = Boolean(updates.PERF_LOG_ENABLED);
+        }
+        if (updates.DEBUG_MODE !== undefined) {
+            config.DEBUG_MODE = Boolean(updates.DEBUG_MODE);
+        }
+        if (updates.ALERTS_ENABLED !== undefined) {
+            config.ALERTS_ENABLED = Boolean(updates.ALERTS_ENABLED);
+        }
+        
+        // Save to file
+        if (!saveRuntimeConfig(config)) {
+            const errorMsg = 'Failed to write config/runtime.json';
+            logger.error(errorMsg, { config });
+            
+            // Send Slack alert on file write failure
+            try {
+                await sendSlackAlert('🚨 AutoApply Admin Config Sync Failed', {
+                    error: 'EACCES – Failed to write config/runtime.json',
+                    environment: process.env.NODE_ENV
+                });
+            } catch (alertError) {
+                logger.error('Failed to send Slack alert', { error: alertError.message });
+            }
+            
+            return res.status(500).json({
+                success: false,
+                error: errorMsg
+            });
+        }
+        
+        // Update globalThis.runtimeConfig for immediate in-memory sync
+        globalThis.runtimeConfig = {
+            ...globalThis.runtimeConfig,
+            ...config
+        };
+        
+        // Apply to runtime environment
+        applyRuntimeConfig(config);
+        
+        logger.info('Configuration updated via /config/update', {
+            updatedBy: req.ip,
+            updates,
+            newConfig: config
+        });
+        
+        res.json({
+            success: true,
+            config
+        });
+    } catch (error) {
+        logger.error('Admin config update failed', { error: error.message, stack: error.stack });
+        
+        // Send Slack alert on exception
+        try {
+            await sendSlackAlert(`🚨 Config update failed: ${error.message}`, {
+                error: error,
+                environment: process.env.NODE_ENV
+            });
+        } catch (alertError) {
+            logger.error('Failed to send Slack alert', { error: alertError.message });
+        }
+        
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
+/**
+ * GET /api/admin/config/current
+ * 
+ * Returns the latest runtime configuration from memory
+ * 
+ * Returns:
+ * {
+ *   PERF_LOG_ENABLED: boolean,
+ *   DEBUG_MODE: boolean,
+ *   ALERTS_ENABLED: boolean,
+ *   lastUpdated: string (ISO timestamp)
+ * }
+ */
+router.get('/config/current', adminAccessControl, (req, res) => {
+    try {
+        // Return current in-memory config
+        const currentConfig = globalThis.runtimeConfig || loadRuntimeConfig();
+        
+        res.json(currentConfig);
+    } catch (error) {
+        logger.error('Error getting current config', { error: error.message });
+        res.status(500).json({
+            error: 'Failed to get current configuration',
             message: error.message
         });
     }
@@ -386,6 +551,7 @@ function formatUptime(seconds) {
 // Initialize runtime config on startup
 const initialConfig = loadRuntimeConfig();
 applyRuntimeConfig(initialConfig);
+globalThis.runtimeConfig = initialConfig;
 logger.info('Admin dashboard initialized with runtime config', initialConfig);
 
 module.exports = router;
