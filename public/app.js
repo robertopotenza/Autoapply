@@ -832,11 +832,11 @@ async function saveAndExit() {
                 dateOfBirth: data.dateOfBirth || null,
                 gpa: data.gpa || null,
                 isAdult: data.isAdult === 'yes',
-                genderIdentity: data.gender || '',
-                disabilityStatus: data.disability || '',
-                militaryService: data.military || '',
+                genderIdentity: data.genderIdentity || '',      // FIXED: was data.gender
+                disabilityStatus: data.disabilityStatus || '', // FIXED: was data.disability
+                militaryService: data.militaryService || '',   // FIXED: was data.military
                 ethnicity: data.ethnicity || '',
-                drivingLicense: data.licenses || ''
+                drivingLicense: data.drivingLicense || ''       // FIXED: was data.licenses
             };
 
             console.log('📤 [SCREENING FETCH - SAVE_AND_EXIT] Sending POST request to /api/wizard/screening');
@@ -1245,11 +1245,11 @@ async function submitForm() {
                 dateOfBirth: data.dateOfBirth || null,
                 gpa: data.gpa || null,
                 isAdult: data.isAdult === 'yes',
-                genderIdentity: data.gender || '',
-                disabilityStatus: data.disability || '',
-                militaryService: data.military || '',
+                genderIdentity: data.genderIdentity || '',      // FIXED: was data.gender
+                disabilityStatus: data.disabilityStatus || '', // FIXED: was data.disability
+                militaryService: data.militaryService || '',   // FIXED: was data.military
                 ethnicity: data.ethnicity || '',
-                drivingLicense: data.licenses || ''
+                drivingLicense: data.drivingLicense || ''       // FIXED: was data.licenses
             };
 
             console.log('📤 [SCREENING FETCH - SUBMIT_FORM] Sending POST request to /api/wizard/screening');
