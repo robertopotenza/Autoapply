@@ -12,7 +12,8 @@ Welcome to the AutoApply project! This guide will help you get up and running qu
 6. [Debugging Wizard Steps](#debugging-wizard-steps)
 7. [Testing](#testing)
 8. [AI Metadata Tags](#ai-metadata-tags)
-9. [Troubleshooting](#troubleshooting)
+9. [Admin Runtime Toggles](#admin-runtime-toggles)
+10. [Troubleshooting](#troubleshooting)
 
 ## Prerequisites
 
@@ -538,6 +539,119 @@ describe('Wizard Screening Endpoint', () => {
   });
 });
 ```
+
+## Admin Runtime Toggles
+
+The Admin Dashboard supports live runtime configuration updates for observability features.
+
+### Overview
+
+The Admin Dashboard (`/admin/dashboard`) provides real-time control over:
+
+- **Performance Logging**: Enable/disable request performance tracking
+- **Debug Mode**: Enable/disable verbose SQL and debug logging
+- **Performance Alerts**: Enable/disable alerts for performance anomalies
+
+### Key Features
+
+1. **Live Sync**: Toggles update backend state immediately via in-memory configuration
+2. **Auto-Polling**: Dashboard polls current state every 10 seconds to stay synchronized
+3. **Slack Alerts**: Automatic alerts sent if configuration update fails
+4. **Persistent Storage**: Changes saved to `config/runtime.json` for restarts
+
+### API Endpoints
+
+#### POST /api/admin/config/update
+
+Updates runtime configuration with immediate sync to memory.
+
+**Request:**
+```bash
+curl -X POST \
+  -H "X-Admin-Token: your-token" \
+  -H "Content-Type: application/json" \
+  -d '{"PERF_LOG_ENABLED": true, "DEBUG_MODE": true}' \
+  http://localhost:3000/api/admin/config/update
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "config": {
+    "PERF_LOG_ENABLED": true,
+    "DEBUG_MODE": true,
+    "ALERTS_ENABLED": false,
+    "lastUpdated": "2025-10-09T04:25:00Z"
+  }
+}
+```
+
+**On Failure:**
+- Returns HTTP 500 with error details
+- Automatically sends Slack alert if `ALERTS_SLACK_WEBHOOK` is configured
+- Alert includes error message, environment, and timestamp
+
+#### GET /api/admin/config/current
+
+Returns the latest runtime configuration from memory.
+
+**Request:**
+```bash
+curl -H "X-Admin-Token: your-token" \
+  http://localhost:3000/api/admin/config/current
+```
+
+**Response:**
+```json
+{
+  "PERF_LOG_ENABLED": true,
+  "DEBUG_MODE": false,
+  "ALERTS_ENABLED": true,
+  "lastUpdated": "2025-10-09T04:25:00Z"
+}
+```
+
+### Frontend Implementation
+
+The dashboard automatically:
+- Updates config via POST `/api/admin/config/update` on toggle click
+- Shows `✅ Saved` on success or `⚠️ Failed to update` on error
+- Polls GET `/api/admin/config/current` every 10 seconds
+- Syncs toggle states if external changes detected
+
+### Slack Alert Configuration
+
+To enable Slack alerts on config failures:
+
+```bash
+# Add to .env file
+ALERTS_SLACK_WEBHOOK=https://hooks.slack.com/services/YOUR/WEBHOOK/URL
+```
+
+Alert format:
+```
+🚨 AutoApply Admin Alert
+Message: Config update failed: Unable to write to config/runtime.json
+Environment: production
+Error: EACCES – Failed to write config file
+Time: 2025-10-09T04:25:12Z
+```
+
+### Testing
+
+Run admin config sync tests:
+
+```bash
+npm test -- tests/admin-config-sync.test.js
+```
+
+Tests cover:
+- Config updates and persistence
+- In-memory sync (globalThis.runtimeConfig)
+- API endpoint authentication
+- Slack alert integration
+- Backwards compatibility
 
 ## Troubleshooting
 
