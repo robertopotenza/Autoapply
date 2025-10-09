@@ -13,6 +13,9 @@ const logger = new Logger('Wizard');
 router.use(authenticateToken);
 
 // GET /api/wizard/data - Get all saved wizard data for user
+// NOTE: This reads from the user_complete_profile VIEW, which aggregates data
+// from job_preferences, profile, eligibility, and screening_answers tables.
+// The VIEW does not store data - it's just a convenient read interface.
 router.get('/data', async (req, res) => {
     try {
         const userId = req.user.userId;
@@ -173,6 +176,8 @@ router.post('/step3', async (req, res) => {
 });
 
 // POST /api/wizard/screening - Save Screening Answers
+// NOTE: This saves data to the screening_answers TABLE, not to user_complete_profile.
+// The user_complete_profile is a VIEW that reads from screening_answers and other tables.
 router.post('/screening', async (req, res) => {
     try {
         const userId = req.user.userId;

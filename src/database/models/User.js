@@ -75,6 +75,22 @@ class User {
         await query('DELETE FROM users WHERE user_id = $1', [userId]);
     }
 
+    /**
+     * Get complete user profile by reading from the user_complete_profile VIEW.
+     * 
+     * IMPORTANT: user_complete_profile is a PostgreSQL VIEW (not a table).
+     * It aggregates data from:
+     * - job_preferences table
+     * - profile table
+     * - eligibility table
+     * - screening_answers table
+     * 
+     * The VIEW does not store data - it's just a convenient read interface
+     * that JOINs the normalized tables.
+     * 
+     * @param {number} userId - The user ID to fetch profile for
+     * @returns {Object} Complete user profile data
+     */
     static async getCompleteProfile(userId) {
         try {
             logger.info(`Querying user_complete_profile for user_id: ${userId}`);
