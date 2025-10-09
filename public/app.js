@@ -1397,7 +1397,7 @@ function parseCommaSeparated(value) {
 
 function hasScreeningData(data) {
     // Check for camelCase field names (as returned by parseFormData())
-    // This function receives PARSED data, not raw formState.data
+    // This function receives PARSED data with correct field names
     console.log('🔍 [hasScreeningData] Evaluating screening data presence...');
     console.log('📋 [hasScreeningData] Checking fields:', {
         experienceSummary: !!data.experienceSummary,
@@ -1408,19 +1408,19 @@ function hasScreeningData(data) {
         dateOfBirth: !!data.dateOfBirth,
         gpa: !!data.gpa,
         isAdult: !!data.isAdult,
-        gender: !!data.gender,
-        disability: !!data.disability,
-        military: !!data.military,
+        genderIdentity: !!data.genderIdentity,        // FIXED: was data.gender
+        disabilityStatus: !!data.disabilityStatus,   // FIXED: was data.disability
+        militaryService: !!data.militaryService,     // FIXED: was data.military
         ethnicity: !!data.ethnicity,
-        licenses: !!data.licenses
+        drivingLicense: !!data.drivingLicense         // FIXED: was data.licenses
     });
 
     const hasData = data.experienceSummary || data.hybridPreference ||
            data.travel || data.relocation ||
            data.languages?.length > 0 || data.dateOfBirth ||
-           data.gpa || data.isAdult || data.gender ||
-           data.disability || data.military ||
-           data.ethnicity || data.licenses;
+           data.gpa || data.isAdult || data.genderIdentity ||      // FIXED: was data.gender
+           data.disabilityStatus || data.militaryService ||       // FIXED: was data.disability, data.military
+           data.ethnicity || data.drivingLicense;                 // FIXED: was data.licenses
 
     console.log(`✅ [hasScreeningData] Result: ${hasData ? 'TRUE - screening data found' : 'FALSE - no screening data'}`);
     return hasData;
