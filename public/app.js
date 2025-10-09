@@ -916,19 +916,40 @@ function saveStepData() {
 function saveAllStepsData() {
     // Save data from ALL steps, not just current one
     const allSteps = document.querySelectorAll('.form-step');
+    
+    console.log('🔍 saveAllStepsData() - Collecting data from all steps...');
 
-    allSteps.forEach(stepEl => {
+    allSteps.forEach((stepEl, stepIndex) => {
+        const stepNum = stepEl.getAttribute('data-step');
         const inputs = stepEl.querySelectorAll('input, select, textarea');
+        console.log(`  Step ${stepNum}: Found ${inputs.length} inputs`);
+        
         inputs.forEach(input => {
             if (input.type === 'file') return;
 
             if (input.type === 'checkbox') {
                 formState.data[input.id] = input.checked;
+                if (input.id) {
+                    console.log(`    ✓ [${input.id}] = ${input.checked} (checkbox)`);
+                }
             } else if (input.value) {  // Only save if has value
                 formState.data[input.id] = input.value;
+                if (input.id && (input.id.includes('full-name') || input.id.includes('phone') || 
+                                 input.id.includes('country') || input.id.includes('availability') || 
+                                 input.id.includes('current-job'))) {
+                    console.log(`    ✓ [${input.id}] = "${input.value}"`);
+                }
+            } else {
+                if (input.id && (input.id.includes('full-name') || input.id.includes('phone') || 
+                                 input.id.includes('country') || input.id.includes('availability') || 
+                                 input.id.includes('current-job'))) {
+                    console.log(`    ⚠️  [${input.id}] = EMPTY (not saved)`);
+                }
             }
         });
     });
+
+    console.log('📦 Final formState.data keys:', Object.keys(formState.data));
 
     // Save to localStorage
     localStorage.setItem('autoApplyFormState', JSON.stringify(formState));
@@ -960,10 +981,35 @@ async function submitForm() {
     console.log('✅ Captured all form data for submit:', {
         fullName: formState.data['full-name'],
         phone: formState.data['phone'],
+        countryCode: formState.data['country-code'],
+        locationCountry: formState.data['location-country'],
         currentJobTitle: formState.data['current-job-title'],
         availability: formState.data['availability'],
+        eligibleCountries: formState.data['eligible-countries'],
+        visaSponsorship: formState.data['visa-sponsorship'],
         experienceSummary: formState.data['experience-summary'],
         hybridPreference: formState.data['hybrid-preference']
+    });
+    
+    // Parse and log the parsed data
+    const parsedData = parseFormData();
+    console.log('📊 Parsed form data:', {
+        step2: {
+            fullName: parsedData.fullName,
+            email: parsedData.email,
+            phone: parsedData.phone,
+            country: parsedData.country,
+            city: parsedData.city,
+            stateRegion: parsedData.stateRegion,
+            postalCode: parsedData.postalCode
+        },
+        step3: {
+            currentJobTitle: parsedData.currentJobTitle,
+            availability: parsedData.availability,
+            eligibleCountries: parsedData.eligibleCountries,
+            visaSponsorship: parsedData.visaSponsorship,
+            nationality: parsedData.nationality
+        }
     });
 
     // Check if user is authenticated
@@ -1002,36 +1048,40 @@ async function submitForm() {
         });
 
         // Save step 2 (Profile)
+        const step2Payload = {
+            fullName: data.fullName || '',
+            email: data.email || '',
+            resumePath: data.resumePath || '',
+            coverLetterOption: data.coverLetterOption || '',
+            coverLetterPath: data.coverLetterPath || '',
+            phone: data.phone || '',
+            country: data.country || '',
+            city: data.city || '',
+            stateRegion: data.stateRegion || '',
+            postalCode: data.postalCode || ''
+        };
+        console.log('📤 Sending Step 2 (Profile) to /api/wizard/step2:', step2Payload);
         await fetch('/api/wizard/step2', {
             method: 'POST',
             headers,
-            body: JSON.stringify({
-                fullName: data.fullName || '',
-                email: data.email || '',
-                resumePath: data.resumePath || '',
-                coverLetterOption: data.coverLetterOption || '',
-                coverLetterPath: data.coverLetterPath || '',
-                phone: data.phone || '',
-                country: data.country || '',
-                city: data.city || '',
-                stateRegion: data.stateRegion || '',
-                postalCode: data.postalCode || ''
-            })
+            body: JSON.stringify(step2Payload)
         });
 
         // Save step 3 (Eligibility)
+        const step3Payload = {
+            currentJobTitle: data.currentJobTitle || '',
+            availability: data.availability || '',
+            eligibleCountries: data.eligibleCountries || [],
+            visaSponsorship: data.visaSponsorship === 'yes',
+            nationality: data.nationality || [],
+            currentSalary: data.currentSalary || null,
+            expectedSalary: data.expectedSalary || null
+        };
+        console.log('📤 Sending Step 3 (Eligibility) to /api/wizard/step3:', step3Payload);
         await fetch('/api/wizard/step3', {
             method: 'POST',
             headers,
-            body: JSON.stringify({
-                currentJobTitle: data.currentJobTitle || '',
-                availability: data.availability || '',
-                eligibleCountries: data.eligibleCountries || [],
-                visaSponsorship: data.visaSponsorship === 'yes',
-                nationality: data.nationality || [],
-                currentSalary: data.currentSalary || null,
-                expectedSalary: data.expectedSalary || null
-            })
+            body: JSON.stringify(step3Payload)
         });
 
         // Save screening answers if any
@@ -1071,8 +1121,21 @@ async function submitForm() {
 
 function parseFormData() {
     const data = formState.data;
+    
+    console.log('🔍 parseFormData() - Raw formState.data relevant fields:', {
+        'full-name': data['full-name'],
+        'email': data['email'],
+        'phone': data['phone'],
+        'country-code': data['country-code'],
+        'location-country': data['location-country'],
+        'location-city': data['location-city'],
+        'current-job-title': data['current-job-title'],
+        'availability': data['availability'],
+        'eligible-countries': data['eligible-countries'],
+        'visa-sponsorship': data['visa-sponsorship']
+    });
 
-    return {
+    const parsed = {
         // Step 1
         remoteJobs: parseCommaSeparated(data['remote-countries-input']),
         onsiteLocation: data['onsite-region'] || '',
@@ -1118,6 +1181,24 @@ function parseFormData() {
         licenses: data['no-license'] === true ? 'No driver\'s license' : (data['licenses'] || ''),
         noLicense: data['no-license'] || false
     };
+    
+    console.log('📊 parseFormData() - Parsed data (Step 2 & 3):', {
+        step2: {
+            fullName: parsed.fullName,
+            email: parsed.email,
+            phone: parsed.phone,
+            country: parsed.country,
+            city: parsed.city
+        },
+        step3: {
+            currentJobTitle: parsed.currentJobTitle,
+            availability: parsed.availability,
+            eligibleCountries: parsed.eligibleCountries,
+            visaSponsorship: parsed.visaSponsorship
+        }
+    });
+    
+    return parsed;
 }
 
 function parseCommaSeparated(value) {
