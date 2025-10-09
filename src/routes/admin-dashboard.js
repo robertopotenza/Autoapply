@@ -366,7 +366,7 @@ router.post('/config/update', adminAccessControl, async (req, res) => {
             
             // Send Slack alert on file write failure
             try {
-                await sendSlackAlert('🚨 AutoApply Admin Config Sync Failed', {
+                await sendSlackAlert(`🚨 Config update failed: ${errorMsg}`, {
                     error: 'EACCES – Failed to write config/runtime.json',
                     environment: process.env.NODE_ENV
                 });
