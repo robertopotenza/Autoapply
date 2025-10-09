@@ -129,7 +129,7 @@ function performanceLogger() {
             logger.info('Request performance', perfLog);
 
             // Call original end
-            res.end.apply(res, [chunk, encoding]);
+            originalEnd.apply(res, arguments);
         };
 
         next();
