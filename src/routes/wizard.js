@@ -183,20 +183,29 @@ router.post('/step2', async (req, res) => {
             postalCode: req.body.postalCode || ''
         };
 
-        // Log what data we're actually receiving
+        // Log what data we're actually receiving (all fields for debugging)
         logger.info(`Step 2 data received for user ${userId}:`, {
             fullName: data.fullName,
-            phone: data.phone,
+            email: data.email,
             resumePath: data.resumePath,
-            country: data.country
+            coverLetterOption: data.coverLetterOption,
+            coverLetterPath: data.coverLetterPath,
+            phone: data.phone,
+            country: data.country,
+            city: data.city,
+            stateRegion: data.stateRegion,
+            postalCode: data.postalCode
         });
 
         const result = await Profile.upsert(userId, data);
 
         logger.info(`Step 2 saved for user ${userId}. Result:`, {
             fullName: result.full_name,
+            email: result.email,
+            resumePath: result.resume_path,
             phone: result.phone,
-            resumePath: result.resume_path
+            country: result.country,
+            city: result.city
         });
 
         res.json({
