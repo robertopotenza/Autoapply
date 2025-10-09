@@ -1,3 +1,6 @@
+// @ai-meta: unit-test
+// @ai-meta: logger-test
+
 /**
  * Unit tests for Logger utility
  * Tests structured JSON logging, log levels, and context handling

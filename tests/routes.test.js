@@ -1,3 +1,6 @@
+// @ai-meta: route-test
+// @ai-meta: endpoint-test
+
 /**
  * Test for consolidated route handlers
  * Verifies that both /route and /route.html patterns work correctly

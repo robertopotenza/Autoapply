@@ -1,3 +1,7 @@
+// @ai-meta: endpoint-test
+// @ai-meta: integration-test
+// @ai-meta: api-routes-test
+
 /**
  * Integration test for API endpoints
  * Tests the routes without requiring a full database

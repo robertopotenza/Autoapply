@@ -1,3 +1,7 @@
+// @ai-meta: endpoint-test
+// @ai-meta: endpoint-test (POST /api/wizard/screening)
+// @ai-meta: integration-test
+
 /**
  * Integration & Unit Tests for wizard screening endpoint
  * Verifies ScreeningAnswers.upsert and correct storage of languages/disabilityStatus

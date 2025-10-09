@@ -47,6 +47,7 @@ const { Logger } = require('./utils/logger');
 const { verifySchema } = require('./utils/verifySchema');
 const authenticateToken = require('./middleware/auth').authenticateToken;
 const traceIdMiddleware = require('./middleware/traceId');
+const performanceLogger = require('./middleware/performanceLogger');
 
 // Initialize logger
 const logger = new Logger('Server');
@@ -101,6 +102,9 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // Add traceId middleware early - after body parsers, before routes
 app.use(traceIdMiddleware(logger));
+
+// Add performance logger middleware - after traceId, before routes
+app.use(performanceLogger());
 
 // Database connection
 // Note: The actual pool is managed by src/database/pool.js

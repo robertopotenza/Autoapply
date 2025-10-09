@@ -1,3 +1,6 @@
+// @ai-meta: schema-test
+// @ai-meta: unit-test
+
 /**
  * Unit tests for Schema Verification Utility
  * Tests the verifySchema function without requiring a database connection
