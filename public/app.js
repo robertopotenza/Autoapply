@@ -789,6 +789,21 @@ async function saveAndExit() {
 
         // Save screening answers if any
         console.log('🔍 [SAVE_AND_EXIT] Checking for screening data...');
+        console.log('🔍 [SAVE_AND_EXIT] Parsed screening data to check:', {
+            experienceSummary: data.experienceSummary || '(empty)',
+            hybridPreference: data.hybridPreference || '(empty)',
+            travel: data.travel || '(empty)',
+            relocation: data.relocation || '(empty)',
+            languages: data.languages || [],
+            dateOfBirth: data.dateOfBirth || '(empty)',
+            gpa: data.gpa || '(empty)',
+            isAdult: data.isAdult || '(empty)',
+            gender: data.gender || '(empty)',
+            disability: data.disability || '(empty)',
+            military: data.military || '(empty)',
+            ethnicity: data.ethnicity || '(empty)',
+            licenses: data.licenses || '(empty)'
+        });
         if (hasScreeningData(data)) {
             console.log('📝 [SCREENING FETCH - SAVE_AND_EXIT] Detected screening data - preparing to save');
             console.log('📊 [SCREENING FETCH - SAVE_AND_EXIT] hasScreeningData returned true');
@@ -999,7 +1014,10 @@ function saveAllStepsData() {
             } else {
                 // ALWAYS save the value, even if empty, to ensure formState.data reflects current state
                 formState.data[input.id] = input.value;
-                const logFieldIds = ['full-name', 'phone', 'country', 'availability', 'current-job'];
+                const logFieldIds = ['full-name', 'phone', 'country', 'availability', 'current-job',
+                                    'experience-summary', 'hybrid-preference', 'travel-comfortable',
+                                    'relocation-open', 'languages-input', 'date-of-birth', 'gpa',
+                                    'age-18', 'gender', 'disability', 'military', 'ethnicity', 'licenses'];
                 if (input.id && logFieldIds.includes(input.id)) {
                     console.log(`    ✓ [${input.id}] = "${input.value}"`);
                 }
@@ -1184,6 +1202,21 @@ async function submitForm() {
 
         // Save screening answers if any
         console.log('🔍 [SUBMIT_FORM] Checking for screening data...');
+        console.log('🔍 [SUBMIT_FORM] Parsed screening data to check:', {
+            experienceSummary: data.experienceSummary || '(empty)',
+            hybridPreference: data.hybridPreference || '(empty)',
+            travel: data.travel || '(empty)',
+            relocation: data.relocation || '(empty)',
+            languages: data.languages || [],
+            dateOfBirth: data.dateOfBirth || '(empty)',
+            gpa: data.gpa || '(empty)',
+            isAdult: data.isAdult || '(empty)',
+            gender: data.gender || '(empty)',
+            disability: data.disability || '(empty)',
+            military: data.military || '(empty)',
+            ethnicity: data.ethnicity || '(empty)',
+            licenses: data.licenses || '(empty)'
+        });
         if (hasScreeningData(data)) {
             console.log('📝 [SCREENING FETCH - SUBMIT_FORM] Detected screening data - preparing to save');
             console.log('📊 [SCREENING FETCH - SUBMIT_FORM] hasScreeningData returned true');
