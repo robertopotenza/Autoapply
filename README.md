@@ -288,6 +288,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - [Troubleshooting](docs/TROUBLESHOOTING.md) - Common issues and solutions
 - [Developer Onboarding](docs/DEVELOPER_ONBOARDING.md) - Get started guide for developers
 - [Observability](docs/OBSERVABILITY.md) - Monitoring and debugging features
+- [Admin Dashboard Manual](ADMIN_DASHBOARD_MANUAL.md) - Complete guide to accessing and using the Admin Dashboard
 
 ## 🚀 Phase 4: Advanced Observability & Admin Tools
 
@@ -324,6 +325,8 @@ GET /api/metrics/live?token=YOUR_ADMIN_TOKEN
 - Live log viewer with auto-refresh
 
 **Access:** Requires `ADMIN_TOKEN` environment variable
+
+📖 **[Complete Admin Dashboard Manual](ADMIN_DASHBOARD_MANUAL.md)** - Detailed setup and usage guide
 
 ### Smart Performance Alerts
 
