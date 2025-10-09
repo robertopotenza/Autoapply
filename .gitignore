@@ -14,3 +14,4 @@ logs/*.json
 !.env.production
 !.env.staging
 !.env.example
+alerts/*.log

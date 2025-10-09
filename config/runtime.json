@@ -2,5 +2,9 @@
   "PERF_LOG_ENABLED": false,
   "DEBUG_MODE": false,
   "ALERTS_ENABLED": false,
+  "alerts": {
+    "step2Slack": true,
+    "threshold": "critical"
+  },
   "lastUpdated": null
 }
