@@ -714,9 +714,6 @@ async function saveAndExit() {
     }
 
     try {
-        // Parse form data into structured objects
-        const data = parseFormData();
-
         // Save each step to the API
         const headers = {
             'Authorization': `Bearer ${token}`,
@@ -725,6 +722,17 @@ async function saveAndExit() {
 
         // Upload files first if any
         await uploadFiles(token);
+
+        // Parse form data into structured objects AFTER uploading files
+        const data = parseFormData();
+
+        // 🔍 AUTO-VALIDATION: Log Step 2 data quality for "Save and Exit"
+        console.log('💾 Save and Exit - Step 2 data:', {
+            fullName: data.fullName,
+            email: data.email,
+            country: data.country,
+            phone: data.phone
+        });
 
         // Save step 1 (Job Preferences) - only if data exists
         if (data.jobTypes || data.jobTitles) {
@@ -1037,6 +1045,30 @@ async function submitForm() {
         // so that resumePath and coverLetterPath are included
         const data = parseFormData();
 
+        // 🔍 AUTO-VALIDATION: Check Step 2 critical fields before submission
+        const criticalStep2Fields = {
+            fullName: data.fullName,
+            email: data.email,
+            country: data.country
+        };
+        const emptyStep2Fields = Object.entries(criticalStep2Fields)
+            .filter(([key, value]) => !value || value.trim() === '')
+            .map(([key]) => key);
+        
+        if (emptyStep2Fields.length > 0) {
+            console.warn('⚠️ WARNING: Step 2 critical fields are empty:', emptyStep2Fields);
+            console.log('📋 Current Step 2 data:', {
+                fullName: data.fullName,
+                email: data.email,
+                country: data.country,
+                phone: data.phone,
+                city: data.city
+            });
+            console.log('💡 TIP: Check that form inputs have IDs matching the expected field names');
+        } else {
+            console.log('✅ Step 2 validation passed - all critical fields populated');
+        }
+
         // Save step 1 (Job Preferences)
         await fetch('/api/wizard/step1', {
             method: 'POST',
@@ -1064,6 +1096,16 @@ async function submitForm() {
             stateRegion: data.stateRegion || '',
             postalCode: data.postalCode || ''
         };
+        
+        // 🔍 VALIDATION: Count empty fields in payload
+        const emptyFieldCount = Object.entries(step2Payload).filter(([k, v]) => !v || v === '').length;
+        if (emptyFieldCount === Object.keys(step2Payload).length) {
+            console.error('❌ CRITICAL: All Step 2 fields are empty! Payload:', step2Payload);
+            console.log('💡 DEBUG: Check formState.data before parseFormData():', formState.data);
+        } else if (emptyFieldCount > 0) {
+            console.warn(`⚠️ Step 2 has ${emptyFieldCount}/${Object.keys(step2Payload).length} empty fields`);
+        }
+        
         console.log('📤 Sending Step 2 (Profile) to /api/wizard/step2:', step2Payload);
         await fetch('/api/wizard/step2', {
             method: 'POST',
