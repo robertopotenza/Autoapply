@@ -803,7 +803,7 @@ async function saveAndExit() {
             });
         }
 
-        showSuccessDialog('✅ Progress saved successfully! You can continue where you left off next time.', () => {
+        showSuccessDialog('Progress saved successfully! You can continue where you left off next time.', () => {
             // Keep the saved state for when they return
             // localStorage.removeItem('autoApplyFormState'); // Don't remove so they can continue later
             window.location.href = '/dashboard.html';
