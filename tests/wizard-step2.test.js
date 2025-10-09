@@ -1,6 +1,7 @@
 /**
- * Integration Tests for wizard Step 2 (Profile) endpoint
- * Verifies Profile.upsert correctly stores fullName, resumePath, and other profile fields
+ * @file
+ * @description Integration Tests for wizard Step 2 (Profile) endpoint.
+ * Verifies Profile.upsert correctly stores fullName, resumePath, and other profile fields.
  */
 
 const request = require('supertest');
