@@ -2,7 +2,27 @@ const { query } = require('../db');
 const { Logger } = require('../../utils/logger');
 const logger = new Logger('ScreeningAnswers');
 
+/**
+ * ScreeningAnswers Model
+ * 
+ * Manages screening question data in the screening_answers TABLE.
+ * 
+ * IMPORTANT: This model writes to the screening_answers table, NOT to user_complete_profile.
+ * The user_complete_profile is a VIEW that reads from screening_answers (along with other tables).
+ * 
+ * When you query user_complete_profile and see screening data (languages, disability_status, etc.),
+ * that data is actually stored in THIS table (screening_answers), and the VIEW simply makes it
+ * appear as part of a unified profile structure.
+ */
 class ScreeningAnswers {
+    /**
+     * Insert or update screening answers for a user.
+     * Uses PostgreSQL's INSERT ... ON CONFLICT DO UPDATE pattern (upsert).
+     * 
+     * @param {number} userId - The user ID
+     * @param {Object} data - Screening answers data
+     * @returns {Object} The saved screening answers record
+     */
     static async upsert(userId, data) {
         // Log what we're about to insert for debugging
         const languagesJson = JSON.stringify(data.languages || []);
