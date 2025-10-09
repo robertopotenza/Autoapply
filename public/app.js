@@ -932,18 +932,13 @@ function saveAllStepsData() {
                 if (input.id) {
                     console.log(`    ✓ [${input.id}] = ${input.checked} (checkbox)`);
                 }
-            } else if (input.value) {  // Only save if has value
+            } else {
+                // ALWAYS save the value, even if empty, to ensure formState.data reflects current state
                 formState.data[input.id] = input.value;
                 if (input.id && (input.id.includes('full-name') || input.id.includes('phone') || 
                                  input.id.includes('country') || input.id.includes('availability') || 
                                  input.id.includes('current-job'))) {
                     console.log(`    ✓ [${input.id}] = "${input.value}"`);
-                }
-            } else {
-                if (input.id && (input.id.includes('full-name') || input.id.includes('phone') || 
-                                 input.id.includes('country') || input.id.includes('availability') || 
-                                 input.id.includes('current-job'))) {
-                    console.log(`    ⚠️  [${input.id}] = EMPTY (not saved)`);
                 }
             }
         });
