@@ -71,7 +71,7 @@
                         <button type="button" class="pill" data-value="contractor">Contractor</button>
                         <button type="button" class="pill" data-value="internship">Internship</button>
                     </div>
-                    <input type="hidden" id="job-types" required>
+                    <input type="hidden" id="job-types" name="job-types" required>
                 </div>
 
                 <div class="form-group">
@@ -81,7 +81,7 @@
                         <div class="tags-display" id="job-titles-tags"></div>
                         <input type="text" class="tags-input" placeholder="Type and press Enter" id="job-titles-input" maxlength="50">
                     </div>
-                    <input type="hidden" id="job-titles" required>
+                    <input type="hidden" id="job-titles" name="job-titles" required>
                 </div>
             </div>
 
@@ -97,7 +97,7 @@
                         <button type="button" class="pill" data-value="mid-senior">Mid-Senior</button>
                         <button type="button" class="pill" data-value="director">Director+</button>
                     </div>
-                    <input type="hidden" id="seniority-levels" required>
+                    <input type="hidden" id="seniority-levels" name="seniority-levels" required>
                 </div>
 
                 <div class="form-group">
@@ -148,12 +148,12 @@
 
                 <div class="form-group">
                     <label>Full Name <span class="required">*</span></label>
-                    <input type="text" class="form-input" id="full-name" placeholder="Enter your full name" required>
+                    <input type="text" class="form-input" id="full-name" name="full-name" placeholder="Enter your full name" required>
                 </div>
 
                 <div class="form-group">
                     <label>Email Address <span class="required">*</span></label>
-                    <input type="email" class="form-input" id="email" placeholder="Enter your email address" required>
+                    <input type="email" class="form-input" id="email" name="email" placeholder="Enter your email address" required>
                     <div class="validation-msg hidden" id="email-validation"></div>
                 </div>
 
@@ -172,14 +172,14 @@
                             <option value="+55">🇧🇷 +55</option>
                             <option value="+39">🇮🇹 +39</option>
                         </select>
-                        <input type="tel" class="form-input phone-input" id="phone" placeholder="Enter phone number" required>
+                        <input type="tel" class="form-input phone-input" id="phone" name="phone" placeholder="Enter phone number" required>
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>Current Location <span class="required">*</span></label>
                     <div class="location-group">
-                        <select class="form-select" id="location-country" required>
+                        <select class="form-select" id="location-country" name="location-country" required>
                             <option value="">Select Country</option>
                             <option value="US">United States</option>
                             <option value="UK">United Kingdom</option>
@@ -192,7 +192,7 @@
                             <option value="JP">Japan</option>
                             <option value="BR">Brazil</option>
                         </select>
-                        <input type="text" class="form-input" id="location-city" placeholder="Enter your city" required>
+                        <input type="text" class="form-input" id="location-city" name="location-city" placeholder="Enter your city" required>
                         <input type="text" class="form-input" id="location-state" placeholder="Enter state/province">
                         <input type="text" class="form-input" id="location-postal" placeholder="Enter postal code">
                     </div>
@@ -216,7 +216,7 @@
                         <button type="button" class="pill" data-value="1month">1 Month</button>
                         <button type="button" class="pill" data-value="3months">3+ Months</button>
                     </div>
-                    <input type="hidden" id="availability" required>
+                    <input type="hidden" id="availability" name="availability" required>
                 </div>
 
                 <div class="form-group">
@@ -227,7 +227,7 @@
                         <div class="tags-container" id="eligible-countries-tags"></div>
                         <div class="dropdown-list hidden" id="eligible-countries-dropdown"></div>
                     </div>
-                    <input type="hidden" id="eligible-countries" required>
+                    <input type="hidden" id="eligible-countries" name="eligible-countries" required>
                 </div>
 
                 <div class="form-group">
@@ -236,7 +236,7 @@
                         <button type="button" class="pill" data-value="yes">Yes</button>
                         <button type="button" class="pill" data-value="no">No</button>
                     </div>
-                    <input type="hidden" id="visa-sponsorship" required>
+                    <input type="hidden" id="visa-sponsorship" name="visa-sponsorship" required>
                 </div>
 
                 <div class="form-group">
@@ -247,7 +247,7 @@
                         <div class="tags-container" id="nationalities-tags"></div>
                         <div class="dropdown-list hidden" id="nationalities-dropdown"></div>
                     </div>
-                    <input type="hidden" id="nationalities" required>
+                    <input type="hidden" id="nationalities" name="nationalities" required>
                 </div>
 
                 <div class="form-group">
@@ -262,7 +262,7 @@
                     <label>Expected Salary <span class="required">*</span> <span class="optional">(USD/year)</span></label>
                     <div class="salary-input">
                         <span class="currency-symbol">$</span>
-                        <input type="number" class="form-input" id="expected-salary" placeholder="100000" min="0" step="1000" required>
+                        <input type="number" class="form-input" id="expected-salary" name="expected-salary" placeholder="100000" min="0" step="1000" required>
                     </div>
                 </div>
             </div>
@@ -340,7 +340,7 @@
 
                     <div class="form-group">
                         <label>Gender Identity</label>
-                        <select class="form-select" id="gender">
+                        <select class="form-select" id="gender" name="gender">
                             <option value="">Prefer not to say</option>
                             <option value="male">Male</option>
                             <option value="female">Female</option>
@@ -351,7 +351,7 @@
 
                     <div class="form-group">
                         <label>Do you have a disability?</label>
-                        <select class="form-select" id="disability">
+                        <select class="form-select" id="disability" name="disability">
                             <option value="">Prefer not to say</option>
                             <option value="yes">Yes</option>
                             <option value="no">No</option>
@@ -360,7 +360,7 @@
 
                     <div class="form-group">
                         <label>Military Service?</label>
-                        <select class="form-select" id="military">
+                        <select class="form-select" id="military" name="military">
                             <option value="">Prefer not to say</option>
                             <option value="yes">Yes</option>
                             <option value="no">No</option>
@@ -369,7 +369,7 @@
 
                     <div class="form-group">
                         <label>Ethnicity</label>
-                        <select class="form-select" id="ethnicity">
+                        <select class="form-select" id="ethnicity" name="ethnicity">
                             <option value="">Prefer not to say</option>
                             <option value="asian">Asian</option>
                             <option value="black">Black or African American</option>
