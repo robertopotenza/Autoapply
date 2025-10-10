@@ -5,49 +5,40 @@
 const path = require('path');
 const fs = require('fs');
 
-console.log('Testing logging and Sentry integration...\n');
+describe('Logging and Sentry Integration', () => {
+    describe('Logger Module', () => {
+        test('should load Logger module', () => {
+            const { Logger } = require('../../src/utils/logger');
+            expect(Logger).toBeDefined();
+            expect(typeof Logger).toBe('function');
+        });
 
-// Test 1: Logger module can be loaded
-console.log('Test 1: Loading logger module');
-try {
-    const { Logger } = require('../../src/utils/logger');
-    console.log('  ✅ Logger module loaded');
-    
-    // Test 2: Create logger instance
-    const logger = new Logger('TestContext');
-    console.log('  ✅ Logger instance created');
-    
-    // Test 3: Logs directory should be created
-    const logsDir = path.join(__dirname, '../../logs');
-    if (fs.existsSync(logsDir)) {
-        console.log('  ✅ Logs directory exists');
-    } else {
-        console.log('  ❌ Logs directory not found');
-    }
-} catch (error) {
-    console.log('  ❌ Error:', error.message);
-    process.exit(1);
-}
+        test('should create logger instance', () => {
+            const { Logger } = require('../../src/utils/logger');
+            const logger = new Logger('TestContext');
+            expect(logger).toBeDefined();
+            expect(logger.info).toBeDefined();
+            expect(logger.error).toBeDefined();
+        });
 
-// Test 4: Sentry module can be loaded
-console.log('\nTest 2: Loading Sentry module');
-try {
-    const Sentry = require('@sentry/node');
-    console.log('  ✅ Sentry module loaded');
-    console.log('  ✅ Sentry version:', Sentry.SDK_VERSION);
-} catch (error) {
-    console.log('  ❌ Error:', error.message);
-    process.exit(1);
-}
+        test('should have logs directory created', () => {
+            const logsDir = path.join(__dirname, '../../logs');
+            expect(fs.existsSync(logsDir)).toBe(true);
+        });
+    });
 
-// Test 5: winston-daily-rotate-file can be loaded
-console.log('\nTest 3: Loading winston-daily-rotate-file');
-try {
-    require('winston-daily-rotate-file');
-    console.log('  ✅ winston-daily-rotate-file loaded');
-} catch (error) {
-    console.log('  ❌ Error:', error.message);
-    process.exit(1);
-}
+    describe('Sentry Module', () => {
+        test('should load Sentry module', () => {
+            const Sentry = require('@sentry/node');
+            expect(Sentry).toBeDefined();
+            expect(Sentry.SDK_VERSION).toBeDefined();
+        });
+    });
 
-console.log('\n✅ All integration tests passed!');
+    describe('Winston Daily Rotate File', () => {
+        test('should load winston-daily-rotate-file module', () => {
+            const DailyRotateFile = require('winston-daily-rotate-file');
+            expect(DailyRotateFile).toBeDefined();
+        });
+    });
+});

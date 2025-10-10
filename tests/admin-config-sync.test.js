@@ -187,7 +187,7 @@ describe('Admin Config Sync', () => {
             expect(response.status).toBe(500);
             expect(response.body.success).toBe(false);
             expect(mockSendSlackAlert).toHaveBeenCalled();
-            expect(mockSendSlackAlert.mock.calls[0][0]).toContain('Config Sync Failed');
+            expect(mockSendSlackAlert.mock.calls[0][0]).toContain('Config update failed');
         });
     });
     
@@ -332,7 +332,7 @@ describe('Admin Config Sync', () => {
             
             expect(mockSendSlackAlert).toHaveBeenCalledTimes(1);
             const alertCall = mockSendSlackAlert.mock.calls[0];
-            expect(alertCall[0]).toContain('Config Sync Failed');
+            expect(alertCall[0]).toContain('Config update failed');
             expect(alertCall[1].error).toBeTruthy();
             expect(alertCall[1].environment).toBe('test');
         });
