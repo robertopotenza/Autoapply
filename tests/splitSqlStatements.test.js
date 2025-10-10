@@ -1,6 +1,6 @@
 /**
- * Tests for SQL statement splitting functionality
- * Tests that both line comments (--) and block comments are properly removed
+ * Tests for SQL statement splitting functionality.
+ * Verifies removal of both line comments (--) and block comment delimiters.
  */
 
 // Helper function to split SQL statements (same as in src/server.js)

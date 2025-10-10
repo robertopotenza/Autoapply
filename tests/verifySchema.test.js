@@ -25,7 +25,7 @@ describe('Schema Verification Utility', () => {
       expect(requiredColumns.users).toContain('created_at');
     });
 
-    test('jobs table has required columns including user_id', () => {
+    test('jobs table has required columns for listings', () => {
       expect(requiredColumns.jobs).toContain('job_id');
       expect(requiredColumns.jobs).toContain('job_title');
       expect(requiredColumns.jobs).toContain('company_name');

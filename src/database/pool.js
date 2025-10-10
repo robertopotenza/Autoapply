@@ -121,13 +121,15 @@ function logConnectionInfo() {
 }
 
 // Log configuration on next tick to avoid blocking module load
-setImmediate(() => {
-    try {
-        logConnectionInfo();
-    } catch (error) {
-        console.error('Warning: Could not log database configuration:', error.message);
-    }
-});
+if (process.env.NODE_ENV !== 'test') {
+    setImmediate(() => {
+        try {
+            logConnectionInfo();
+        } catch (error) {
+            console.error('Warning: Could not log database configuration:', error.message);
+        }
+    });
+}
 
 /**
  * Pool event handlers for monitoring and debugging
