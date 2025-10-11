@@ -13,9 +13,9 @@ RUN npm ci --only=production
 # Copy application code
 COPY . .
 
-# Create non-root user
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+# Create non-root user (combine to reduce layers)
+RUN addgroup -g 1001 -S nodejs && \
+  adduser -S nodejs -u 1001 -G nodejs
 
 # Change ownership of the app directory
 RUN chown -R nodejs:nodejs /app
