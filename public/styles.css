@@ -449,13 +449,34 @@ label {
     cursor: pointer;
 }
 
-/* Collapsible Section */
+/* Screening Section */
 .screening-section {
     margin-top: 2rem;
     border-top: 2px solid var(--border-color);
     padding-top: 2rem;
 }
 
+.section-header {
+    margin-bottom: 2rem;
+}
+
+.section-header h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: 0.5rem;
+}
+
+.section-description {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.screening-content {
+    margin-top: 1.5rem;
+}
+
+/* Legacy collapsible styles (kept for backward compatibility) */
 .collapsible-header {
     width: 100%;
     display: flex;

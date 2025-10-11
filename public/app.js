@@ -81,14 +81,8 @@ async function loadExistingUserData() {
                 populateFormFields(result.data);
                 debugLog('✅ Form fields populated successfully');
 
-                // FIX #1: Auto-expand screening section when in edit mode
-                const screeningToggle = document.getElementById('screening-toggle');
-const screeningContent = document.getElementById('screening-content');
-                if (screeningToggle && screeningContent) {
-                    screeningToggle.classList.add('active');
-                    screeningContent.classList.remove('hidden');
-                    debugLog('✅ Auto-expanded screening section for editing');
-                }
+                // Note: Screening section is now always visible, no need to expand
+                debugLog('✅ Screening section is always visible');
             } else if (result.success && !result.data) {
                 debugLog('⚠️ GET /api/wizard/data returned status 200 but data is null');
                 debugLog('💡 This means the user_complete_profile view has no row for this user');
@@ -422,15 +416,7 @@ function initializeForm() {
         });
     }
 
-    // Collapsible section
-    const screeningToggle = document.getElementById('screening-toggle');
-    const screeningContent = document.getElementById('screening-content');
-    if (screeningToggle && screeningContent) {
-        screeningToggle.addEventListener('click', () => {
-            screeningToggle.classList.toggle('active');
-            screeningContent.classList.toggle('hidden');
-        });
-    }
+    // Note: Screening section is now always visible (no longer collapsible)
 }
 
 function initMultiSelect(baseId, options, maxItems = null) {
@@ -1622,15 +1608,9 @@ function convertUserDataToFormState(userData) {
 
     console.log(`🔍 [SCREENING DATA LOAD] Has screening data: ${hasScreeningData ? 'YES' : 'NO'}`);
 
-    // Expand screening section if there's data
+    // Note: Screening section is now always visible
     if (hasScreeningData) {
-        const screeningToggle = document.getElementById('screening-toggle');
-        const screeningContent = document.getElementById('screening-content');
-        if (screeningToggle && screeningContent) {
-            screeningToggle.classList.add('active');
-            screeningContent.classList.remove('hidden');
-            console.log('✅ Expanded screening section with data');
-        }
+        console.log('✅ Loading screening data (section always visible)');
     }
     
     if (userData.experience_summary) {

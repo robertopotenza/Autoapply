@@ -267,26 +267,26 @@
                 </div>
             </div>
 
-            <!-- Additional Screening Questions (Collapsible) -->
+            <!-- Additional Screening Questions (Required) -->
             <div class="screening-section">
-                <button type="button" class="collapsible-header" id="screening-toggle">
-                    <span>Additional Screening Questions (Optional)</span>
-                    <span class="toggle-icon">▼</span>
-                </button>
-                <div class="collapsible-content hidden" id="screening-content">
+                <div class="section-header">
+                    <h3>Additional Screening Questions</h3>
+                    <p class="section-description">Please complete all required fields below.</p>
+                </div>
+                <div class="screening-content" id="screening-content">
                     <div class="form-group">
-                        <label>Experience Summary <span class="counter" id="exp-counter">0/500</span></label>
-                        <textarea class="form-textarea" id="experience-summary" placeholder="Briefly describe your professional experience..." maxlength="500"></textarea>
+                        <label>Experience Summary <span class="required">*</span> <span class="counter" id="exp-counter">0/500</span></label>
+                        <textarea class="form-textarea" id="experience-summary" placeholder="Briefly describe your professional experience..." maxlength="500" required></textarea>
                     </div>
 
                     <div class="form-group">
-                        <label>Open to Hybrid Work?</label>
+                        <label>Open to Hybrid Work? <span class="required">*</span></label>
                         <div class="pill-group">
                             <button type="button" class="pill" data-value="remote-only">Remote Only</button>
                             <button type="button" class="pill" data-value="hybrid">Hybrid</button>
                             <button type="button" class="pill" data-value="either">Either</button>
                         </div>
-                        <input type="hidden" id="hybrid-preference">
+                        <input type="hidden" id="hybrid-preference" required>
                     </div>
 
                     <div class="form-group">
@@ -310,12 +310,13 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Languages <span class="counter">0/6</span></label>
-                        <div class="tip">💡 Maximum 6 languages</div>
+                        <label>Languages <span class="required">*</span> <span class="counter">0/6</span></label>
+                        <div class="tip">💡 Maximum 6 languages - Select at least one</div>
                         <div class="multi-select-container">
                             <input type="text" class="multi-select-input" placeholder="Search languages..." id="languages-input">
                             <div class="tags-container" id="languages-tags"></div>
                             <div class="dropdown-list hidden" id="languages-dropdown"></div>
+                            <input type="hidden" id="languages" required>
                         </div>
                     </div>
 
@@ -330,12 +331,12 @@
                     </div>
 
                     <div class="form-group">
-                        <label>Are you 18 years or older?</label>
+                        <label>Are you 18 years or older? <span class="required">*</span></label>
                         <div class="pill-group">
                             <button type="button" class="pill" data-value="yes">Yes</button>
                             <button type="button" class="pill" data-value="no">No</button>
                         </div>
-                        <input type="hidden" id="age-18">
+                        <input type="hidden" id="age-18" required>
                     </div>
 
                     <div class="form-group">
