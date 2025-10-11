@@ -1,38 +1,13 @@
-    // Ensure gender <select> updates both gender and genderIdentity, with debug logs
-    const genderSelect = document.getElementById('gender');
-    if (genderSelect) {
-        genderSelect.addEventListener('change', (e) => {
-            if (window.formState) {
-                window.formState.data['gender'] = e.target.value;
-                window.formState.data['genderIdentity'] = e.target.value;
-                console.log('🧑‍🦰 [GENDER CHANGE] gender:', window.formState.data['gender'], 'genderIdentity:', window.formState.data['genderIdentity']);
-            }
-        });
-    }
-    // Debug log before restoring genderIdentity
-    if (saved) {
-        const savedState = JSON.parse(saved);
-        console.log('🧑‍🦰 [RESTORE] Saved gender:', savedState.data['gender'], 'Saved genderIdentity:', savedState.data['genderIdentity']);
-        // ...existing code...
-    // Debug log before sending to backend
-    console.log('🧑‍🦰 [PRE-SAVE] gender:', formState.data['gender'], 'genderIdentity:', formState.data['genderIdentity']);
-// Ensure gender <select> updates both gender and genderIdentity
-    const genderSelect = document.getElementById('gender');
-    if (genderSelect) {
-        genderSelect.addEventListener('change', (e) => {
-            if (window.formState) {
-                window.formState.data['gender'] = e.target.value;
-                window.formState.data['genderIdentity'] = e.target.value;
-                console.log('[GENDER CHANGE] gender:', e.target.value, 'genderIdentity:', window.formState.data['genderIdentity']);
-            }
-        });
-    }
-// State Management
+'use strict';
+
+// Autoapply wizard frontend state (exposed for debugging)
 const formState = {
     currentStep: 1,
     totalSteps: 4,
     data: {}
 };
+
+window.formState = formState;
 
 // Debug Mode Configuration
 const DEBUG_MODE = localStorage.getItem('DEBUG_MODE') === 'true' || window.AUTOAPPLY_DEBUG === true;
@@ -337,6 +312,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
     initializeForm();
     setupEventListeners();
+    initializeRequiredFieldHandling();
+    setupGenderSelect();
     
     // Check if we're in edit mode (coming from dashboard)
     const editStep = localStorage.getItem('wizardStep');
@@ -707,6 +684,46 @@ function setupEventListeners() {
     });
 }
 
+function setupGenderSelect() {
+    const genderSelect = document.getElementById('gender');
+    if (!genderSelect) {
+        return;
+    }
+
+    const initialValue = genderSelect.value || '';
+    window.formState.data.gender = initialValue;
+    window.formState.data.genderIdentity = initialValue;
+
+    genderSelect.addEventListener('change', (event) => {
+        const value = event.target.value;
+        window.formState.data.gender = value;
+        window.formState.data.genderIdentity = value;
+        debugLog('🧑‍🦰 [GENDER CHANGE] gender:', value, 'genderIdentity:', window.formState.data.genderIdentity);
+    });
+}
+
+function initializeRequiredFieldHandling() {
+    document.querySelectorAll('.form-step [required]').forEach((field) => {
+        field.dataset.required = 'true';
+    });
+
+    syncStepRequiredAttributes();
+}
+
+function syncStepRequiredAttributes() {
+    const activeStep = document.querySelector('.form-step.active');
+    const activeStepId = activeStep?.dataset.step;
+
+    document.querySelectorAll('[data-required="true"]').forEach((field) => {
+        field.removeAttribute('required');
+
+        const fieldStep = field.closest('.form-step')?.dataset.step;
+        if (fieldStep && fieldStep === activeStepId) {
+            field.setAttribute('required', '');
+        }
+    });
+}
+
 function previousStep() {
     if (formState.currentStep > 1) {
         saveStepData();
@@ -775,6 +792,8 @@ async function saveAndExit() {
 }
 
 function validateCurrentStep() {
+    syncStepRequiredAttributes();
+
     const currentStepEl = document.querySelector(`.form-step[data-step="${formState.currentStep}"]`);
     const requiredFields = currentStepEl.querySelectorAll('[required]');
 
@@ -824,6 +843,8 @@ function updateUI() {
 
     const currentStepEl = document.querySelector(`.form-step[data-step="${formState.currentStep}"]`);
     currentStepEl?.classList.add('active');
+
+    syncStepRequiredAttributes();
 
     // Update progress
     document.querySelectorAll('.progress-step').forEach(step => {
