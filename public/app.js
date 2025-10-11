@@ -286,6 +286,19 @@ function populateFormFields(userData) {
                 });
             }
         }
+        // Also capture screening section fields (outside of numbered steps)
+        const screeningSection = document.getElementById('screening-content');
+        if (screeningSection) {
+            const screeningInputs = screeningSection.querySelectorAll('input, select, textarea');
+            screeningInputs.forEach(input => {
+                if (input.type === 'file') return;
+                if (input.type === 'checkbox') {
+                    formState.data[input.id] = input.checked;
+                } else {
+                    formState.data[input.id] = input.value;
+                }
+            });
+        }
         console.log('✅ FormState updated:', formState.data);
         
         console.log('✅ Form population completed');
@@ -889,6 +902,20 @@ function saveStepData() {
         }
     });
 
+    // Also save screening section inputs (outside of numbered steps)
+    const screeningSection = document.getElementById('screening-content');
+    if (screeningSection) {
+        const screeningInputs = screeningSection.querySelectorAll('input, select, textarea');
+        screeningInputs.forEach(input => {
+            if (input.type === 'file') return;
+            if (input.type === 'checkbox') {
+                formState.data[input.id] = input.checked;
+            } else {
+                formState.data[input.id] = input.value;
+            }
+        });
+    }
+
     // Save to localStorage
     localStorage.setItem('autoApplyFormState', JSON.stringify(formState));
 }
@@ -925,6 +952,23 @@ function saveAllStepsData() {
             }
         });
     });
+
+    // Also capture screening section inputs that are outside the step flow
+    const screeningSection = document.getElementById('screening-content');
+    if (screeningSection) {
+        const screeningInputs = screeningSection.querySelectorAll('input, select, textarea');
+        console.log(`  Screening section: Found ${screeningInputs.length} inputs`);
+        screeningInputs.forEach(input => {
+            if (input.type === 'file') return;
+            if (input.type === 'checkbox') {
+                formState.data[input.id] = input.checked;
+                if (input.id) console.log(`    ✓ [${input.id}] = ${input.checked} (checkbox)`);
+            } else {
+                formState.data[input.id] = input.value;
+                if (input.id) console.log(`    ✓ [${input.id}] = "${input.value}"`);
+            }
+        });
+    }
 
     console.log('📦 Final formState.data keys:', Object.keys(formState.data));
 
