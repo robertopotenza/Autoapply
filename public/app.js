@@ -524,9 +524,13 @@ function initMultiSelect(baseId, options, maxItems = null) {
     function updateHiddenInput() {
         if (hiddenInput) {
             hiddenInput.value = Array.from(selectedItems).join(',');
+            // Update formState for immediate data capture
+            if (window.formState && window.formState.data) {
+                window.formState.data[baseId] = hiddenInput.value;
+            }
         }
-        // Also update the input field value for form data capture
-        input.value = Array.from(selectedItems).join(',');
+        // Clear the search input
+        input.value = '';
     }
 
     function updateCounter() {
@@ -622,6 +626,10 @@ function initTagsInput(fieldId, maxTags) {
 
     function updateHiddenInput() {
         hiddenInput.value = tags.join(',');
+        // Update formState for immediate data capture
+        if (window.formState && window.formState.data) {
+            window.formState.data[fieldId] = hiddenInput.value;
+        }
     }
 
     function updateCounter() {
@@ -1211,13 +1219,13 @@ function parseFormData() {
     });
 
     const parsed = {
-        // Step 1
-        remoteJobs: parseCommaSeparated(data['remote-countries-input']),
+        // Step 1 - Fixed field names to match actual form IDs
+        remoteJobs: parseCommaSeparated(data['remote-countries']),  // Fixed: was 'remote-countries-input'
         onsiteLocation: data['onsite-region'] || '',
         jobTypes: parseCommaSeparated(data['job-types']),
         jobTitles: parseCommaSeparated(data['job-titles']),
         seniorityLevels: parseCommaSeparated(data['seniority-levels']),
-        timeZones: parseCommaSeparated(data['timezones-input']),
+        timeZones: parseCommaSeparated(data['timezones']),  // Fixed: was 'timezones-input'
 
         // Step 2
         fullName: data['full-name'] || '',
