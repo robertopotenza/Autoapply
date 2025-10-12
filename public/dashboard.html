@@ -493,8 +493,8 @@
             try {
                 showLoading();
                 
-                // Get profile readiness data
-                const readinessData = await apiCall('/debug/readiness');
+                // Get actual profile data
+                const readinessData = await apiCall('/api/wizard/data');
                 profileData = readinessData.data;
 
                 if (debugMode) {
@@ -503,83 +503,122 @@
                 }
 
                 // Calculate completion based on actual data
-                const completionPercentage = calculateCompletionPercentage(profileData.profile || profileData);
+                const completionPercentage = calculateCompletionPercentage(profileData);
                 const isComplete = completionPercentage === 100;
 
                 // Update UI
                 updateCompletionDisplay(completionPercentage, isComplete);
                 updateProfileSections(profileData);
-                updateAutoApplyButton(isComplete, profileData?.completeness?.missing);
+                updateAutoApplyButton(isComplete, '');
 
                 showContent();
 
             } catch (error) {
                 debugError('Failed to load profile:', error);
                 
-                // Fallback: Use complete profile data
-                const mockProfileData = {
-                    profile: {
-                        personal: {
-                            full_name: "Roberto Potenza",
-                            city: "New York"
-                        },
-                        preferences: {
-                            job_titles: ["Software Engineer", "Full Stack Developer"],
-                            seniority_levels: ["Senior", "Lead"],
-                            onsite_location: "Remote"
-                        },
-                        eligibility: {
-                            current_job_title: "Senior Developer"
-                        }
-                    },
-                    completeness: {
-                        complete: true,
-                        missing: ""
-                    }
+                // Fallback: Use empty profile data to show incomplete state
+                const fallbackProfileData = {
+                    full_name: null,
+                    email: null,
+                    phone: null,
+                    resume_path: null,
+                    job_titles: null,
+                    job_types: null,
+                    remote_jobs: null,
+                    onsite_location: null,
+                    seniority_levels: null,
+                    time_zones: null,
+                    eligible_countries: null,
+                    visa_sponsorship: null,
+                    expected_salary: null,
+                    availability: null
                 };
 
-                profileData = mockProfileData;
-                updateCompletionDisplay(100, true);
-                updateProfileSections(mockProfileData);
-                updateAutoApplyButton(true, '');
+                profileData = fallbackProfileData;
+                updateCompletionDisplay(0, false);
+                updateProfileSections(fallbackProfileData);
+                updateAutoApplyButton(false, '');
                 showContent();
             }
         }
 
         // Define field requirements for each module
+        // Note: These field names match the user_complete_profile VIEW schema
         const moduleFields = {
             workLocation: {
                 title: 'Work Location & Jobs',
                 fields: {
-                    'remote_jobs': { label: 'Preferred remote locations', check: (data) => data.preferences?.remote_jobs?.length > 0 },
-                    'job_titles': { label: 'Job titles', check: (data) => data.preferences?.job_titles?.length > 0 },
-                    'job_types': { label: 'Job types', check: (data) => data.preferences?.job_types?.length > 0 },
-                    'onsite_location': { label: 'Onsite region', check: (data) => data.preferences?.onsite_location?.trim() }
+                    'remote_jobs': { label: 'Preferred remote locations', check: (data) => {
+                        const remoteJobs = data.remote_jobs;
+                        if (!remoteJobs) return false;
+                        if (typeof remoteJobs === 'string') {
+                            try { return JSON.parse(remoteJobs).length > 0; } catch { return false; }
+                        }
+                        return Array.isArray(remoteJobs) && remoteJobs.length > 0;
+                    }},
+                    'job_titles': { label: 'Job titles', check: (data) => {
+                        const jobTitles = data.job_titles;
+                        if (!jobTitles) return false;
+                        if (typeof jobTitles === 'string') {
+                            try { return JSON.parse(jobTitles).length > 0; } catch { return false; }
+                        }
+                        return Array.isArray(jobTitles) && jobTitles.length > 0;
+                    }},
+                    'job_types': { label: 'Job types', check: (data) => {
+                        const jobTypes = data.job_types;
+                        if (!jobTypes) return false;
+                        if (typeof jobTypes === 'string') {
+                            try { return JSON.parse(jobTypes).length > 0; } catch { return false; }
+                        }
+                        return Array.isArray(jobTypes) && jobTypes.length > 0;
+                    }},
+                    'onsite_location': { label: 'Onsite region', check: (data) => data.onsite_location?.trim() }
                 }
             },
             seniority: {
                 title: 'Seniority & Time Zones',
                 fields: {
-                    'seniority_levels': { label: 'Seniority level', check: (data) => data.preferences?.seniority_levels?.length > 0 },
-                    'time_zones': { label: 'Preferred time zones', check: (data) => data.preferences?.time_zones?.length > 0 }
+                    'seniority_levels': { label: 'Seniority level', check: (data) => {
+                        const seniorityLevels = data.seniority_levels;
+                        if (!seniorityLevels) return false;
+                        if (typeof seniorityLevels === 'string') {
+                            try { return JSON.parse(seniorityLevels).length > 0; } catch { return false; }
+                        }
+                        return Array.isArray(seniorityLevels) && seniorityLevels.length > 0;
+                    }},
+                    'time_zones': { label: 'Preferred time zones', check: (data) => {
+                        const timeZones = data.time_zones;
+                        if (!timeZones) return false;
+                        if (typeof timeZones === 'string') {
+                            try { return JSON.parse(timeZones).length > 0; } catch { return false; }
+                        }
+                        return Array.isArray(timeZones) && timeZones.length > 0;
+                    }}
                 }
             },
             resumeContact: {
                 title: 'Resume & Contact',
                 fields: {
-                    'resume_path': { label: 'Resume file', check: (data) => data.personal?.resume_path?.trim() },
-                    'full_name': { label: 'Full name', check: (data) => data.personal?.full_name?.trim() },
-                    'email': { label: 'Email address', check: (data) => data.personal?.email?.trim() },
-                    'phone': { label: 'Phone number', check: (data) => data.personal?.phone?.trim() }
+                    'resume_path': { label: 'Resume file', check: (data) => data.resume_path?.trim() },
+                    'full_name': { label: 'Full name', check: (data) => data.full_name?.trim() },
+                    'email': { label: 'Email address', check: (data) => data.email?.trim() },
+                    'phone': { label: 'Phone number', check: (data) => data.phone?.trim() }
                 }
             },
             eligibility: {
                 title: 'Eligibility Details',
                 fields: {
-                    'eligible_countries': { label: 'Work eligible countries', check: (data) => data.eligibility?.eligible_countries?.length > 0 },
-                    'visa_sponsorship': { label: 'Visa sponsorship preference', check: (data) => data.eligibility?.visa_sponsorship !== null && data.eligibility?.visa_sponsorship !== undefined },
-                    'expected_salary': { label: 'Expected salary', check: (data) => data.eligibility?.expected_salary > 0 },
-                    'availability': { label: 'Availability/notice period', check: (data) => data.eligibility?.availability?.trim() }
+                    'eligible_countries': { label: 'Work eligible countries', check: (data) => {
+                        const eligibleCountries = data.eligible_countries;
+                        if (!eligibleCountries) return false;
+                        if (typeof eligibleCountries === 'string') {
+                            try { return JSON.parse(eligibleCountries).length > 0; } catch { return false; }
+                        }
+                        return Array.isArray(eligibleCountries) && eligibleCountries.length > 0;
+                    }},
+                    'visa_sponsorship': { label: 'Visa sponsorship preference', check: (data) => data.visa_sponsorship !== null && data.visa_sponsorship !== undefined },
+                    'expected_salary': { label: 'Expected salary', check: (data) => data.expected_salary && data.expected_salary > 0 },
+                    'availability': { label: 'Availability/notice period', check: (data) => data.availability?.trim() }
                 }
             }
         };
@@ -637,8 +676,8 @@
         function updateProfileSections(data) {
             debugLog('🔧 Updating profile sections with data:', data);
             
-            // Use the correct profile data structure
-            const profileData = data.profile || data;
+            // Use the profile data directly - it comes from user_complete_profile VIEW
+            const profileData = data;
             
             // Check if profile is 100% complete based on actual data
             const completionPercentage = calculateCompletionPercentage(profileData);
