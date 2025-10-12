@@ -4,7 +4,7 @@ const path = require('path');
 const fs = require('fs');
 const multer = require('multer');
 const Resume = require('../database/models/Resume');
-const { requireAuth } = require('../middleware/auth');
+const { authenticateToken } = require('../middleware/auth');
 
 const UPLOAD_DIR = path.join(__dirname, '../../uploads/resumes');
 const MAX_SIZE = 5 * 1024 * 1024; // 5MB
@@ -36,7 +36,7 @@ const upload = multer({
 });
 
 // POST /api/resumes/upload
-router.post('/upload', requireAuth, upload.single('resume'), async (req, res) => {
+router.post('/upload', authenticateToken, upload.single('resume'), async (req, res) => {
     try {
         if (!req.file) {
             return res.status(400).json({ error: 'No file uploaded.' });
@@ -56,7 +56,7 @@ router.post('/upload', requireAuth, upload.single('resume'), async (req, res) =>
 });
 
 // GET /api/resumes/:id
-router.get('/:id', requireAuth, async (req, res) => {
+router.get('/:id', authenticateToken, async (req, res) => {
     try {
         const resume = await Resume.findById(req.params.id);
         if (!resume) return res.status(404).json({ error: 'Resume not found.' });
