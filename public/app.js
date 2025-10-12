@@ -527,6 +527,15 @@ function initMultiSelect(baseId, options, maxItems = null) {
             // Update formState for immediate data capture
             if (window.formState && window.formState.data) {
                 window.formState.data[baseId] = hiddenInput.value;
+                
+                // DEBUG: Log remote countries specifically
+                if (baseId === 'remote-countries') {
+                    console.log('🌍 REMOTE COUNTRIES UPDATE:', {
+                        selectedItems: Array.from(selectedItems),
+                        hiddenInputValue: hiddenInput.value,
+                        formStateValue: window.formState.data[baseId]
+                    });
+                }
             }
         }
         // Clear the search input
@@ -1095,17 +1104,27 @@ async function submitForm() {
         }
 
         // Save step 1 (Job Preferences)
+        const step1Payload = {
+            remoteJobs: data.remoteJobs || [],
+            onsiteLocation: data.onsiteLocation || '',
+            jobTypes: data.jobTypes || [],
+            jobTitles: data.jobTitles || [],
+            seniorityLevels: data.seniorityLevels || [],
+            timeZones: data.timeZones || []
+        };
+        
+        console.log('🚀 STEP 1 API PAYLOAD - Job Preferences:', step1Payload);
+        console.log('🔍 Remote Jobs Debug:', {
+            raw: data.remoteJobs,
+            type: typeof data.remoteJobs,
+            length: Array.isArray(data.remoteJobs) ? data.remoteJobs.length : 'not array',
+            value: data.remoteJobs
+        });
+
         await fetch('/api/wizard/step1', {
             method: 'POST',
             headers,
-            body: JSON.stringify({
-                remoteJobs: data.remoteJobs || [],
-                onsiteLocation: data.onsiteLocation || '',
-                jobTypes: data.jobTypes || [],
-                jobTitles: data.jobTitles || [],
-                seniorityLevels: data.seniorityLevels || [],
-                timeZones: data.timeZones || []
-            })
+            body: JSON.stringify(step1Payload)
         });
 
         // Save step 2 (Profile)
@@ -1206,6 +1225,14 @@ function parseFormData() {
     const data = formState.data;
     
     console.log('🔍 parseFormData() - Raw formState.data relevant fields:', {
+        // Step 1 fields - DEBUGGING REMOTE COUNTRIES ISSUE
+        'remote-countries': data['remote-countries'],
+        'onsite-region': data['onsite-region'],
+        'job-types': data['job-types'],
+        'job-titles': data['job-titles'],
+        'seniority-levels': data['seniority-levels'],
+        'timezones': data['timezones'],
+        // Step 2+ fields
         'full-name': data['full-name'],
         'email': data['email'],
         'phone': data['phone'],

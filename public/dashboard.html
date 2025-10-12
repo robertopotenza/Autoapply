@@ -630,21 +630,43 @@
             let completed = 0;
             let total = Object.keys(module.fields).length;
 
+            console.log(`🔍 Checking completion for ${moduleKey}:`, data);
+
             for (const [fieldKey, fieldDef] of Object.entries(module.fields)) {
-                if (fieldDef.check(data)) {
+                const isComplete = fieldDef.check(data);
+                
+                // Debug logging for workLocation module specifically
+                if (moduleKey === 'workLocation') {
+                    const fieldValue = fieldKey === 'remote_jobs' ? data.remote_jobs :
+                                     fieldKey === 'job_titles' ? data.job_titles :
+                                     fieldKey === 'job_types' ? data.job_types :
+                                     fieldKey === 'onsite_location' ? data.onsite_location : 'N/A';
+                                     
+                    console.log(`  ${fieldKey}:`, {
+                        value: fieldValue,
+                        type: typeof fieldValue,
+                        isComplete: isComplete,
+                        label: fieldDef.label
+                    });
+                }
+                
+                if (isComplete) {
                     completed++;
                 } else {
                     missing.push(fieldDef.label);
                 }
             }
 
-            return {
+            const result = {
                 isComplete: missing.length === 0,
                 completed,
                 total,
                 percentage: Math.round((completed / total) * 100),
                 missing
             };
+            
+            console.log(`📊 ${moduleKey} completion result:`, result);
+            return result;
         }
 
         // Calculate completion percentage
