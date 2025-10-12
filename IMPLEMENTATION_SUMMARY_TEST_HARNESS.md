@@ -218,7 +218,10 @@ If remote countries data is still being lost in production:
    WHERE table_name = 'job_preferences' 
    AND column_name = 'remote_jobs';
    ```
-   Expected: `jsonb` or `text[]`
+   Expected: The column type should be either `jsonb` or `text[]`, depending on your schema.
+   - If using `jsonb`, the stored value will look like: `["US", "CA", "DE"]`
+   - If using `text[]`, the stored value will look like: `{"US","CA","DE"}`
+   Ensure your backend code handles the format accordingly.
 
 3. **Verify View Query**:
    ```sql
