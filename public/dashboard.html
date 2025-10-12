@@ -185,6 +185,92 @@
             background: #3182ce;
         }
 
+        .module-progress {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 1rem 0;
+            padding: 0.5rem;
+            background: #f7fafc;
+            border-radius: 6px;
+        }
+
+        .progress-bar-mini {
+            flex: 1;
+            height: 6px;
+            background: #e2e8f0;
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .progress-fill-mini {
+            height: 100%;
+            background: linear-gradient(90deg, #4299e1, #48bb78);
+            transition: width 0.3s ease;
+        }
+
+        .progress-text {
+            font-size: 0.8rem;
+            color: #4a5568;
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        .missing-fields {
+            margin: 1rem 0;
+        }
+
+        .missing-toggle {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem;
+            background: #fed7d7;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s ease;
+            border: 1px solid #feb2b2;
+        }
+
+        .missing-toggle:hover {
+            background: #fbb6ce;
+        }
+
+        .missing-icon {
+            font-size: 1rem;
+        }
+
+        .missing-toggle span {
+            font-size: 0.9rem;
+            color: #c53030;
+            font-weight: 500;
+        }
+
+        .toggle-arrow {
+            margin-left: auto;
+            font-size: 0.8rem;
+            transition: transform 0.2s ease;
+        }
+
+        .missing-list {
+            margin-top: 0.5rem;
+            padding: 0.75rem;
+            background: #fff5f5;
+            border-radius: 6px;
+            border: 1px solid #fed7d7;
+        }
+
+        .missing-item {
+            color: #c53030;
+            font-size: 0.9rem;
+            margin-bottom: 0.25rem;
+            line-height: 1.4;
+        }
+
+        .missing-item:last-child {
+            margin-bottom: 0;
+        }
+
         .action-buttons {
             display: flex;
             gap: 1rem;
@@ -417,7 +503,7 @@
                 }
 
                 // Calculate completion based on actual data
-                const completionPercentage = calculateCompletionPercentage(profileData);
+                const completionPercentage = calculateCompletionPercentage(profileData.profile || profileData);
                 const isComplete = completionPercentage === 100;
 
                 // Update UI
@@ -460,20 +546,82 @@
             }
         }
 
+        // Define field requirements for each module
+        const moduleFields = {
+            workLocation: {
+                title: 'Work Location & Jobs',
+                fields: {
+                    'remote_jobs': { label: 'Preferred remote locations', check: (data) => data.preferences?.remote_jobs?.length > 0 },
+                    'job_titles': { label: 'Job titles', check: (data) => data.preferences?.job_titles?.length > 0 },
+                    'job_types': { label: 'Job types', check: (data) => data.preferences?.job_types?.length > 0 },
+                    'onsite_location': { label: 'Onsite region', check: (data) => data.preferences?.onsite_location?.trim() }
+                }
+            },
+            seniority: {
+                title: 'Seniority & Time Zones',
+                fields: {
+                    'seniority_levels': { label: 'Seniority level', check: (data) => data.preferences?.seniority_levels?.length > 0 },
+                    'time_zones': { label: 'Preferred time zones', check: (data) => data.preferences?.time_zones?.length > 0 }
+                }
+            },
+            resumeContact: {
+                title: 'Resume & Contact',
+                fields: {
+                    'resume_path': { label: 'Resume file', check: (data) => data.personal?.resume_path?.trim() },
+                    'full_name': { label: 'Full name', check: (data) => data.personal?.full_name?.trim() },
+                    'email': { label: 'Email address', check: (data) => data.personal?.email?.trim() },
+                    'phone': { label: 'Phone number', check: (data) => data.personal?.phone?.trim() }
+                }
+            },
+            eligibility: {
+                title: 'Eligibility Details',
+                fields: {
+                    'eligible_countries': { label: 'Work eligible countries', check: (data) => data.eligibility?.eligible_countries?.length > 0 },
+                    'visa_sponsorship': { label: 'Visa sponsorship preference', check: (data) => data.eligibility?.visa_sponsorship !== null && data.eligibility?.visa_sponsorship !== undefined },
+                    'expected_salary': { label: 'Expected salary', check: (data) => data.eligibility?.expected_salary > 0 },
+                    'availability': { label: 'Availability/notice period', check: (data) => data.eligibility?.availability?.trim() }
+                }
+            }
+        };
+
+        // Check completion status for each module
+        function checkModuleCompletion(data, moduleKey) {
+            const module = moduleFields[moduleKey];
+            const missing = [];
+            let completed = 0;
+            let total = Object.keys(module.fields).length;
+
+            for (const [fieldKey, fieldDef] of Object.entries(module.fields)) {
+                if (fieldDef.check(data)) {
+                    completed++;
+                } else {
+                    missing.push(fieldDef.label);
+                }
+            }
+
+            return {
+                isComplete: missing.length === 0,
+                completed,
+                total,
+                percentage: Math.round((completed / total) * 100),
+                missing
+            };
+        }
+
         // Calculate completion percentage
-        function calculateCompletionPercentage(profile) {
-            if (!profile) return 0;
+        function calculateCompletionPercentage(data) {
+            if (!data) return 0;
 
-            const totalSections = 4;
-            let completedSections = 0;
+            let totalCompleted = 0;
+            let totalFields = 0;
 
-            // Check each section with more comprehensive validation
-            if (profile.preferences?.job_titles?.length && profile.preferences?.job_types?.length) completedSections++;
-            if (profile.preferences?.seniority_levels?.length) completedSections++;
-            if (profile.personal?.full_name?.trim() && profile.personal?.email?.trim()) completedSections++;
-            if (profile.eligibility?.expected_salary && profile.eligibility?.availability) completedSections++;
+            for (const moduleKey of Object.keys(moduleFields)) {
+                const status = checkModuleCompletion(data, moduleKey);
+                totalCompleted += status.completed;
+                totalFields += status.total;
+            }
 
-            return Math.round((completedSections / totalSections) * 100);
+            return Math.round((totalCompleted / totalFields) * 100);
         }        // Update completion display
         function updateCompletionDisplay(percentage, isComplete) {
             document.getElementById('completion-percentage').textContent = percentage + '%';
@@ -489,8 +637,11 @@
         function updateProfileSections(data) {
             debugLog('🔧 Updating profile sections with data:', data);
             
+            // Use the correct profile data structure
+            const profileData = data.profile || data;
+            
             // Check if profile is 100% complete based on actual data
-            const completionPercentage = calculateCompletionPercentage(data);
+            const completionPercentage = calculateCompletionPercentage(profileData);
             const overallComplete = completionPercentage === 100;
             
             debugLog('📊 Completion status:', { 
@@ -500,29 +651,38 @@
             });
             
             // Check individual section completion based on actual data
+            const workLocationStatus = checkModuleCompletion(profileData, 'workLocation');
+            const seniorityStatus = checkModuleCompletion(profileData, 'seniority');
+            const resumeContactStatus = checkModuleCompletion(profileData, 'resumeContact');
+            const eligibilityStatus = checkModuleCompletion(profileData, 'eligibility');
+
             const sections = [
                 {
                     title: 'Work Location & Jobs',
                     description: 'Set your preferred work locations, job types, and job titles',
-                    isComplete: !!(data.preferences?.job_titles?.length && data.preferences?.job_types?.length),
+                    isComplete: workLocationStatus.isComplete,
+                    status: workLocationStatus,
                     editAction: 'editJobPreferences'
                 },
                 {
                     title: 'Seniority & Time Zones',
                     description: 'Select seniority levels and preferred time zones',
-                    isComplete: !!(data.preferences?.seniority_levels?.length),
+                    isComplete: seniorityStatus.isComplete,
+                    status: seniorityStatus,
                     editAction: 'editSeniority'
                 },
                 {
                     title: 'Resume & Contact',
                     description: 'Upload your resume and provide contact information',
-                    isComplete: !!(data.personal?.full_name?.trim() && data.personal?.email?.trim()),
+                    isComplete: resumeContactStatus.isComplete,
+                    status: resumeContactStatus,
                     editAction: 'editContact'
                 },
                 {
                     title: 'Eligibility Details',
                     description: 'Set work eligibility, visa requirements, and salary expectations',
-                    isComplete: !!(data.eligibility?.expected_salary && data.eligibility?.availability),
+                    isComplete: eligibilityStatus.isComplete,
+                    status: eligibilityStatus,
                     editAction: 'editEligibility'
                 }
             ];
@@ -530,18 +690,58 @@
             debugLog('📋 Section completion status:', sections.map(s => ({ title: s.title, isComplete: s.isComplete })));
 
             const container = document.getElementById('profile-sections');
-            container.innerHTML = sections.map(section => `
-                <div class="profile-card ${section.isComplete ? 'complete' : 'incomplete'}">
-                    <div class="card-header">
-                        <div class="card-title">${section.title}</div>
-                        <div class="status-badge ${section.isComplete ? 'status-complete' : 'status-incomplete'}">
-                            ${section.isComplete ? 'Complete' : 'Incomplete'}
+            container.innerHTML = sections.map(section => {
+                const progressBar = section.status.percentage > 0 ? `
+                    <div class="module-progress">
+                        <div class="progress-bar-mini">
+                            <div class="progress-fill-mini" style="width: ${section.status.percentage}%"></div>
+                        </div>
+                        <span class="progress-text">${section.status.completed}/${section.status.total} fields</span>
+                    </div>
+                ` : '';
+
+                const missingFields = !section.isComplete && section.status.missing.length > 0 ? `
+                    <div class="missing-fields">
+                        <div class="missing-toggle" onclick="toggleMissingFields('${section.editAction}')">
+                            <span class="missing-icon">⚠️</span>
+                            <span>Missing: ${section.status.missing.length} field${section.status.missing.length > 1 ? 's' : ''}</span>
+                            <span class="toggle-arrow">▼</span>
+                        </div>
+                        <div class="missing-list" id="missing-${section.editAction}" style="display: none;">
+                            ${section.status.missing.map(field => `<div class="missing-item">• ${field}</div>`).join('')}
                         </div>
                     </div>
-                    <div class="card-description">${section.description}</div>
-                    <button class="edit-btn" onclick="${section.editAction}()">Edit</button>
-                </div>
-            `).join('');
+                ` : '';
+
+                return `
+                    <div class="profile-card ${section.isComplete ? 'complete' : 'incomplete'}">
+                        <div class="card-header">
+                            <div class="card-title">${section.title}</div>
+                            <div class="status-badge ${section.isComplete ? 'status-complete' : 'status-incomplete'}">
+                                ${section.isComplete ? 'Complete' : 'Incomplete'}
+                            </div>
+                        </div>
+                        <div class="card-description">${section.description}</div>
+                        ${progressBar}
+                        ${missingFields}
+                        <button class="edit-btn" onclick="${section.editAction}()">Edit</button>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Toggle missing fields display
+        function toggleMissingFields(sectionId) {
+            const missingList = document.getElementById(`missing-${sectionId}`);
+            const toggle = missingList.previousElementSibling.querySelector('.toggle-arrow');
+            
+            if (missingList.style.display === 'none') {
+                missingList.style.display = 'block';
+                toggle.textContent = '▲';
+            } else {
+                missingList.style.display = 'none';
+                toggle.textContent = '▼';
+            }
         }
 
         // Update AutoApply button
