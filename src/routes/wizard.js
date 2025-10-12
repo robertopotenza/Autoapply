@@ -132,14 +132,21 @@ router.post('/step1', async (req, res) => {
             timeZones: req.body.timeZones || []
         };
 
-        const result = await JobPreferences.upsert(userId, data);
-
-        // 🌍 DETAILED LOGGING: Log stored result
-        logger.info(`🌍 [Step 1] Stored result for user ${userId}:`, {
-            remoteJobsStored: result.remote_jobs,
-            remoteJobsStoredType: typeof result.remote_jobs,
-            remoteJobsStoredIsArray: Array.isArray(result.remote_jobs)
+        // Debug logging for remoteJobs
+        logger.info(`[STEP1] Received remoteJobs for user ${userId}:`, {
+            value: data.remoteJobs,
+            type: Array.isArray(data.remoteJobs) ? 'array' : typeof data.remoteJobs,
+            length: Array.isArray(data.remoteJobs) ? data.remoteJobs.length : undefined
         });
+
+        const result = await JobPreferences.upsert(userId, data);
+    // 🌍 DETAILED LOGGING: Log stored result
+    logger.info(`🌍 [Step 1] Stored result for user ${userId}:`, {
+        remoteJobsStored: result.remote_jobs,
+        remoteJobsStoredType: typeof result.remote_jobs,
+        remoteJobsStoredIsArray: Array.isArray(result.remote_jobs),
+        length: Array.isArray(result.remote_jobs) ? result.remote_jobs.length : undefined
+    });
 
         logger.info(`Step 1 saved for user ${userId}`);
 

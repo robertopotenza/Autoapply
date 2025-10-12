@@ -533,7 +533,10 @@ function initMultiSelect(baseId, options, maxItems = null) {
                     debugLog('🌍 REMOTE COUNTRIES UPDATE:', {
                         selectedItems: Array.from(selectedItems),
                         hiddenInputValue: hiddenInput.value,
-                        formStateValue: window.formState.data[baseId]
+                        formStateValue: window.formState.data[baseId],
+                        asArray: window.formState.data[baseId].split(',').filter(v => v),
+                        type: typeof window.formState.data[baseId],
+                        length: Array.isArray(window.formState.data[baseId].split(',')) ? window.formState.data[baseId].split(',').length : undefined
                     });
                 }
             }
@@ -1255,6 +1258,14 @@ function parseFormData() {
         parsedArray: parseCommaSeparated(data['remote-countries']),
         parsedLength: parseCommaSeparated(data['remote-countries']).length
     });
+
+    // DEBUG: Log remote-countries before parsing
+    if (data['remote-countries']) {
+        console.log('[DEBUG] parseFormData remote-countries raw:', data['remote-countries'],
+            'asArray:', parseCommaSeparated(data['remote-countries']),
+            'type:', typeof data['remote-countries'],
+            'length:', data['remote-countries'].split(',').length);
+    }
 
     const parsed = {
         // Step 1 - Fixed field names to match actual form IDs
