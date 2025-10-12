@@ -1075,6 +1075,9 @@ async function submitForm() {
         // Upload files first if any
         await uploadFiles(token);
 
+        // CRITICAL FIX: Sync all hidden inputs to formState before parsing
+        syncHiddenInputsToFormState();
+        
         // Parse form data into structured objects AFTER uploading files
         // so that resumePath and coverLetterPath are included
         const data = parseFormData();
@@ -1521,9 +1524,40 @@ function convertUserDataToFormState(userData) {
     // Remote countries - populate multi-select by directly updating the tags
     const remoteJobs = userData.remote_jobs;
     if (remoteJobs) {
-        console.log('🌍 Processing remote jobs:', remoteJobs);
-        const remoteArray = Array.isArray(remoteJobs) ? remoteJobs : (remoteJobs || '').split(',').filter(Boolean);
-        populateMultiSelect('remote-countries', remoteArray);
+        console.log('🌍 Processing remote jobs:', {
+            raw: remoteJobs,
+            type: typeof remoteJobs
+        });
+        
+        let remoteArray = [];
+        if (Array.isArray(remoteJobs)) {
+            remoteArray = remoteJobs;
+        } else if (typeof remoteJobs === 'string') {
+            try {
+                // Try to parse as JSON first (from database)
+                remoteArray = JSON.parse(remoteJobs);
+                console.log('🌍 Parsed JSON remote jobs:', remoteArray);
+            } catch (e) {
+                // Fallback to comma-separated string
+                remoteArray = remoteJobs.split(',').filter(Boolean);
+                console.log('🌍 Split comma-separated remote jobs:', remoteArray);
+            }
+        }
+        
+        if (remoteArray.length > 0) {
+            console.log('🌍 Populating remote countries with:', remoteArray);
+            populateMultiSelect('remote-countries', remoteArray);
+            
+            // Also update formState immediately
+            if (window.formState && window.formState.data) {
+                window.formState.data['remote-countries'] = remoteArray.join(',');
+                console.log('🌍 Updated formState remote-countries:', window.formState.data['remote-countries']);
+            }
+        } else {
+            console.log('⚠️ No remote countries to populate');
+        }
+    } else {
+        console.log('⚠️ No remote_jobs data found in userData');
     }
     
     // Onsite location
@@ -1853,6 +1887,39 @@ function updateMultiSelectHiddenInput(baseId) {
     hiddenInput.value = tags.join(',');
     
     console.log(`Updated ${baseId}:`, hiddenInput.value);
+}
+
+// CRITICAL FIX: Sync all hidden inputs to formState before form submission
+function syncHiddenInputsToFormState() {
+    console.log('🔧 Syncing all hidden inputs to formState...');
+    
+    // List of all hidden input IDs that need syncing
+    const hiddenInputIds = [
+        'remote-countries',
+        'timezones', 
+        'job-titles',
+        'job-types',
+        'seniority-levels',
+        'eligible-countries',
+        'nationalities'
+    ];
+    
+    hiddenInputIds.forEach(inputId => {
+        const hiddenInput = document.getElementById(inputId);
+        if (hiddenInput && window.formState && window.formState.data) {
+            const currentValue = hiddenInput.value;
+            window.formState.data[inputId] = currentValue;
+            
+            if (inputId === 'remote-countries') {
+                console.log(`🌍 Synced ${inputId}:`, {
+                    hiddenInputValue: currentValue,
+                    formStateValue: window.formState.data[inputId]
+                });
+            }
+        }
+    });
+    
+    console.log('✅ Hidden inputs sync complete');
 }
 
 // Helper function to update multi-select input fields (for fields without hidden inputs)
