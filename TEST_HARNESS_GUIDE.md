@@ -323,6 +323,69 @@ If frontend tests pass but data is still lost in production:
    
    Should include proper JSONB handling for remote_jobs.
 
+## Automated Testing
+
+In addition to the interactive test harness, there are automated tests that can be run in CI/CD pipelines:
+
+### Jest API Test
+
+**Location**: `tests/remote-countries-api.test.js`
+
+**Purpose**: Validates the complete API round-trip for remote countries persistence through mocked database interactions.
+
+**Run with**:
+```bash
+npm run test:remote-countries:api
+# or
+npm test -- tests/remote-countries-api.test.js
+```
+
+**Coverage**:
+- ✅ POST /api/wizard/step1 - Save remote countries
+- ✅ GET /api/wizard/data - Retrieve remote countries
+- ✅ Array format handling
+- ✅ Empty array handling
+- ✅ Multiple countries handling
+- ✅ Update scenarios
+- ✅ Full round-trip persistence
+
+### JSdom Test
+
+**Location**: `scripts/e2e-remote-countries-jsdom.js`
+
+**Purpose**: Runs the interactive test harness in a headless environment using JSdom, perfect for CI pipelines.
+
+**Run with**:
+```bash
+npm run test:remote-countries:jsdom
+```
+
+**Features**:
+- Programmatically selects test countries
+- Executes both Frontend Consistency and Mock Round-Trip tests
+- Returns exit code 0 on success, 1 on failure
+- No browser required
+
+**Output**:
+```
+----- JSdom SUMMARY -----
+Frontend Consistency: PASS
+Mock Round-Trip   : PASS
+```
+
+### Continuous Integration
+
+All automated tests are included in the main test suite:
+```bash
+npm test
+```
+
+This ensures that:
+1. Remote countries functionality is validated on every commit
+2. Regressions are caught immediately
+3. Both frontend logic and API endpoints are tested
+4. Multiple data formats are verified
+
 ## Conclusion
 
 The test harness provides a comprehensive validation framework for the remote countries multi-select component. All tests passing indicates that the frontend implementation is solid and any data loss must be occurring in the backend persistence layer.
