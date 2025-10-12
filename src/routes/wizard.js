@@ -114,6 +114,15 @@ router.get('/data', async (req, res) => {
 router.post('/step1', async (req, res) => {
     try {
         const userId = req.user.userId;
+        
+        // 🌍 DETAILED LOGGING: Log raw remoteJobs input
+        logger.info(`🌍 [Step 1] Raw remoteJobs input for user ${userId}:`, {
+            remoteJobsRaw: req.body.remoteJobs,
+            remoteJobsType: typeof req.body.remoteJobs,
+            remoteJobsIsArray: Array.isArray(req.body.remoteJobs),
+            remoteJobsLength: Array.isArray(req.body.remoteJobs) ? req.body.remoteJobs.length : 'N/A'
+        });
+        
         const data = {
             remoteJobs: req.body.remoteJobs || [],
             onsiteLocation: req.body.onsiteLocation || '',
@@ -124,6 +133,13 @@ router.post('/step1', async (req, res) => {
         };
 
         const result = await JobPreferences.upsert(userId, data);
+
+        // 🌍 DETAILED LOGGING: Log stored result
+        logger.info(`🌍 [Step 1] Stored result for user ${userId}:`, {
+            remoteJobsStored: result.remote_jobs,
+            remoteJobsStoredType: typeof result.remote_jobs,
+            remoteJobsStoredIsArray: Array.isArray(result.remote_jobs)
+        });
 
         logger.info(`Step 1 saved for user ${userId}`);
 
