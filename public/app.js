@@ -1247,6 +1247,14 @@ function parseFormData() {
         'eligible-countries': data['eligible-countries'],
         'visa-sponsorship': data['visa-sponsorship']
     });
+    
+    // 🌍 ENHANCED LOGGING: Log remote countries parsing in detail
+    console.log('🌍 parseFormData() - Remote countries parsing:', {
+        rawValue: data['remote-countries'],
+        rawType: typeof data['remote-countries'],
+        parsedArray: parseCommaSeparated(data['remote-countries']),
+        parsedLength: parseCommaSeparated(data['remote-countries']).length
+    });
 
     const parsed = {
         // Step 1 - Fixed field names to match actual form IDs
