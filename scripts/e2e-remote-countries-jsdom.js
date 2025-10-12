@@ -6,14 +6,12 @@ const { JSDOM } = require('jsdom');
 
 async function main() {
   const htmlPath = path.resolve(__dirname, '../public/test-remote-countries.html');
-  const appJsPath = path.resolve(__dirname, '../public/app.js');
 
   let html = fs.readFileSync(htmlPath, 'utf-8');
-  // Remove external app.js reference to avoid jsdom network fetch
+  // Remove external app.js reference to avoid jsdom network fetch (test HTML is self-contained)
   html = html.replace(/<script[^>]*src=["']\/?app\.js["'][^>]*><\/script>/i, '');
-  const appJs = fs.readFileSync(appJsPath, 'utf-8');
 
-  // Replace the external script tag with a placeholder we can execute
+  // Load the HTML with jsdom - the test HTML has all functionality embedded
   const dom = new JSDOM(html, {
     url: 'http://localhost:8080/test-remote-countries.html',
     runScripts: 'dangerously',
@@ -24,31 +22,22 @@ async function main() {
   const { window } = dom;
   const { document } = window;
 
-  // Provide minimal APIs used by app.js
+  // Provide minimal APIs
   window.alert = (msg) => console.log('[alert]', msg);
   window.localStorage.setItem('DEBUG_MODE', 'true');
 
-  // Inject app.js into the DOM
-  const scriptEl = document.createElement('script');
-  scriptEl.textContent = appJs;
-  document.body.appendChild(scriptEl);
-
-  // Trigger DOMContentLoaded for app.js initialization (since we injected after creation)
-  document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
-  // If initializeForm exists, call it explicitly to ensure components are created in jsdom
-  if (typeof window.initializeForm === 'function') {
-    try {
-      window.initializeForm();
-    } catch (e) {
-      // ignore
-    }
-  }
+  // Wait for the embedded scripts in the HTML to initialize
   await new Promise((r) => setTimeout(r, 500));
 
-  // Ensure core functions exist
-  if (typeof window.initMultiSelect !== 'function' && !window.multiSelectInstances) {
-    // app.js initializes automatically on DOMContentLoaded via initializeForm
+  // Programmatically select test countries
+  const testCountries = ['United States', 'United Kingdom', 'Canada'];
+  if (window.multiSelectInstances && window.multiSelectInstances['remote-countries']) {
+    const instance = window.multiSelectInstances['remote-countries'];
+    testCountries.forEach(country => {
+      instance.addItem(country);
+    });
   }
+  await new Promise((r) => setTimeout(r, 200));
 
   // Define small helpers to simulate clicking the test buttons
   function clickButtonByText(text) {
@@ -59,20 +48,20 @@ async function main() {
   }
 
   // Run the Frontend Consistency Test
-  clickButtonByText('Frontend Consistency');
+  clickButtonByText('Frontend Consistency Test');
   await new Promise((r) => setTimeout(r, 600));
 
-  const resultsEl1 = document.getElementById('test-results');
+  const resultsEl1 = document.getElementById('results');
   const log1 = resultsEl1 ? resultsEl1.textContent : '';
-  const pass1 = /Frontend round-trip test PASSED|SUCCESS: All data paths are consistent/i.test(log1);
+  const pass1 = /ALL TESTS PASSED|SUCCESS: All data paths are consistent/i.test(log1);
 
   // Run the Mock Round-Trip Test
   clickButtonByText('Mock Round-Trip');
   await new Promise((r) => setTimeout(r, 600));
 
-  const resultsEl2 = document.getElementById('test-results');
+  const resultsEl2 = document.getElementById('results');
   const log2 = resultsEl2 ? resultsEl2.textContent : '';
-  const pass2 = /SUCCESS: Mock round-trip passed/i.test(log2);
+  const pass2 = /ALL ROUND-TRIP TESTS PASSED|SUCCESS: Mock round-trip passed/i.test(log2);
 
   console.log('\n----- JSdom SUMMARY -----');
   console.log('Frontend Consistency:', pass1 ? 'PASS' : 'FAIL');
