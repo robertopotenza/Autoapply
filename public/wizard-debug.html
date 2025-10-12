@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wizard Debug - Form Data Capture Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        .debug-section { 
+            border: 1px solid #ccc; 
+            padding: 15px; 
+            margin: 10px 0; 
+            border-radius: 5px; 
+        }
+        .field-status { 
+            display: flex; 
+            justify-content: space-between; 
+            padding: 5px; 
+            border-bottom: 1px solid #eee; 
+        }
+        .status-good { color: green; }
+        .status-missing { color: red; }
+        pre { background: #f5f5f5; padding: 10px; border-radius: 3px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Wizard Form Data Capture Debug</h1>
+    
+    <div class="debug-section">
+        <h2>Current Form State Data</h2>
+        <button onclick="refreshFormState()">🔄 Refresh Form State</button>
+        <pre id="formStateDisplay">Loading...</pre>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Field Validation Status</h2>
+        <div id="fieldValidation">Loading...</div>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Database API Response</h2>
+        <button onclick="testAPICall()">📡 Test /api/wizard/data</button>
+        <pre id="apiResponse">Click button to test API</pre>
+    </div>
+    
+    <div class="debug-section">
+        <h2>Parsed Form Data (What gets sent to backend)</h2>
+        <button onclick="showParsedData()">📊 Parse Current Form Data</button>
+        <pre id="parsedDataDisplay">Click button to parse data</pre>
+    </div>
+
+    <script>
+        // Import the wizard form state if available
+        function getFormState() {
+            if (window.parent && window.parent.formState) {
+                return window.parent.formState;
+            }
+            return null;
+        }
+        
+        function refreshFormState() {
+            const formState = getFormState();
+            const display = document.getElementById('formStateDisplay');
+            
+            if (formState) {
+                display.textContent = JSON.stringify(formState.data, null, 2);
+                validateFields(formState.data);
+            } else {
+                display.textContent = 'No form state found. Open this page in the wizard context.';
+            }
+        }
+        
+        function validateFields(data) {
+            const requiredFields = {
+                'seniority-levels': 'Seniority Levels',
+                'timezones': 'Time Zones', 
+                'remote-countries': 'Remote Countries',
+                'job-titles': 'Job Titles',
+                'job-types': 'Job Types',
+                'onsite-region': 'Onsite Region'
+            };
+            
+            const validation = document.getElementById('fieldValidation');
+            validation.innerHTML = '';
+            
+            Object.entries(requiredFields).forEach(([fieldId, label]) => {
+                const div = document.createElement('div');
+                div.className = 'field-status';
+                
+                const value = data[fieldId];
+                const hasValue = value && value.trim() !== '';
+                
+                div.innerHTML = `
+                    <span>${label}:</span>
+                    <span class="${hasValue ? 'status-good' : 'status-missing'}">
+                        ${hasValue ? '✅ ' + value : '❌ Missing'}
+                    </span>
+                `;
+                validation.appendChild(div);
+            });
+        }
+        
+        async function testAPICall() {
+            const display = document.getElementById('apiResponse');
+            display.textContent = 'Making API call...';
+            
+            try {
+                const token = localStorage.getItem('authToken');
+                const response = await fetch('/api/wizard/data', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                display.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                display.textContent = `Error: ${error.message}`;
+            }
+        }
+        
+        function showParsedData() {
+            const formState = getFormState();
+            const display = document.getElementById('parsedDataDisplay');
+            
+            if (!formState) {
+                display.textContent = 'No form state available';
+                return;
+            }
+            
+            // Copy the parseFormData logic from app.js
+            function parseCommaSeparated(value) {
+                if (!value || value.trim() === '') return [];
+                return value.split(',').map(item => item.trim()).filter(item => item);
+            }
+            
+            const data = formState.data;
+            const parsed = {
+                // Step 1
+                remoteJobs: parseCommaSeparated(data['remote-countries']),
+                onsiteLocation: data['onsite-region'] || '',
+                jobTypes: parseCommaSeparated(data['job-types']),
+                jobTitles: parseCommaSeparated(data['job-titles']),
+                seniorityLevels: parseCommaSeparated(data['seniority-levels']),
+                timeZones: parseCommaSeparated(data['timezones'])
+            };
+            
+            display.textContent = JSON.stringify(parsed, null, 2);
+        }
+        
+        // Auto-refresh on load
+        setTimeout(refreshFormState, 500);
+        setInterval(refreshFormState, 2000); // Refresh every 2 seconds
+    </script>
+</body>
+</html>
