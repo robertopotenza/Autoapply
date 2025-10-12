@@ -252,7 +252,7 @@ CREATE INDEX IF NOT EXISTS idx_screening_answers_user_id ON screening_answers(us
 CREATE OR REPLACE VIEW user_complete_profile AS
 SELECT
     u.user_id,
-    u.email,
+    u.email AS account_email,
     u.created_at,
     jp.remote_jobs,
     jp.onsite_location,

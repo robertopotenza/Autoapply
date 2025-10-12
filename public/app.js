@@ -27,6 +27,10 @@ function debugError(...args) {
 
 // Store multi-select instances for programmatic access
 const multiSelectInstances = {};
+// Expose to window for testing/tools that need programmatic control
+if (typeof window !== 'undefined') {
+    window.multiSelectInstances = multiSelectInstances;
+}
 
 // Data for dropdowns
 const countries = [
