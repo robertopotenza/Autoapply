@@ -185,6 +185,7 @@ app.get('/test-deployment', (req, res) => {
 });
 
 // CRITICAL FIX: API Routes MUST come BEFORE static file serving
+const resumesRoutes = require('./routes/resumes');
 app.use('/api/auth', authRoutes);
 app.use('/api/wizard', wizardRoutes);
 app.use('/api/autoapply', autoApplyRouter);
@@ -194,6 +195,7 @@ app.use('/api/diagnostics', diagnosticsRoutes);
 app.use('/api/metrics', metricsRoutes);
 app.use('/api/admin', adminDashboardRoutes);
 app.use('/api/user', userProfileRoutes);
+app.use('/api/resumes', resumesRoutes);
 
 // Serve static files AFTER API routes to prevent conflicts
 app.use(express.static(path.join(__dirname, '../public')));
