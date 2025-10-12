@@ -30,6 +30,39 @@ View tail locally:
 tail -n 50 logs/errors.log
 ```
 
+### Frontend Debug Mode
+
+The frontend wizard (`app.js`) and test harness support a DEBUG_MODE that can be enabled for troubleshooting:
+
+**Enable Debug Mode:**
+```javascript
+// In browser console:
+localStorage.setItem('DEBUG_MODE', 'true');
+// Reload the page
+location.reload();
+```
+
+Or set the global flag before page load:
+```javascript
+window.AUTOAPPLY_DEBUG = true;
+```
+
+**Disable Debug Mode:**
+```javascript
+// In browser console:
+localStorage.removeItem('DEBUG_MODE');
+// Reload the page
+location.reload();
+```
+
+When enabled, DEBUG_MODE shows detailed logging for:
+- Remote countries selection updates
+- Form state synchronization
+- Multi-select field changes
+- Hidden input updates
+
+This is particularly useful when debugging form submission issues or data persistence problems.
+
 ## 🧰 Common Fixes
 
 ### Database connection errors
