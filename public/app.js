@@ -1406,6 +1406,41 @@ function convertUserDataToFormState(userData) {
     
     // userData is now guaranteed to be in flat snake_case format thanks to normalization
     
+    // Helper: activate a pill within the pill-group associated with a specific hidden input
+    function activatePillForHiddenInput(hiddenInputId, value) {
+        const hiddenInput = document.getElementById(hiddenInputId);
+        if (!hiddenInput) {
+            console.warn(`[PILL ACTIVATE] Hidden input not found: #${hiddenInputId}`);
+            return false;
+        }
+        // Find the pill-group adjacent to or within the same form-group as the hidden input
+        let group = null;
+        if (hiddenInput.previousElementSibling && hiddenInput.previousElementSibling.classList && hiddenInput.previousElementSibling.classList.contains('pill-group')) {
+            group = hiddenInput.previousElementSibling;
+        } else {
+            const fg = hiddenInput.closest('.form-group');
+            group = fg ? fg.querySelector('.pill-group') : null;
+        }
+        if (!group) {
+            console.warn(`[PILL ACTIVATE] Pill group not found for hidden input: #${hiddenInputId}`);
+            return false;
+        }
+        // Clear existing selection only within this group
+        group.querySelectorAll('.pill.active').forEach(p => p.classList.remove('active'));
+        const pill = group.querySelector(`.pill[data-value="${value}"]`);
+        if (!pill) {
+            console.warn(`[PILL ACTIVATE] Pill with value "${value}" not found for #${hiddenInputId}`);
+            // Still set the hidden input so data submits correctly
+            hiddenInput.value = value;
+            if (window.formState) window.formState.data[hiddenInputId] = value;
+            return false;
+        }
+        pill.classList.add('active');
+        hiddenInput.value = value;
+        if (window.formState) window.formState.data[hiddenInputId] = value;
+        return true;
+    }
+    
     // Clear all existing pill selections first to ensure clean state
     console.log('🧹 Clearing existing pill selections...');
     document.querySelectorAll('.pill.active').forEach(pill => {
@@ -1539,25 +1574,17 @@ function convertUserDataToFormState(userData) {
     // Cover letter option - activate pill buttons
     if (userData.cover_letter_option) {
         const coverLetterValue = userData.cover_letter_option.toLowerCase();
-        const coverLetterPill = document.querySelector(`.pill[data-value="${coverLetterValue}"]`);
-        const coverLetterGroup = coverLetterPill?.closest('.pill-group');
-        const coverLetterInput = document.getElementById('cover-letter-option');
-        
-        if (coverLetterPill && coverLetterGroup && coverLetterInput) {
-            coverLetterPill.classList.add('active');
-            coverLetterInput.value = coverLetterValue;
-            
-            // Show/hide upload section based on option
-            const uploadSection = document.getElementById('cover-letter-upload-section');
-            if (uploadSection) {
-                if (coverLetterValue === 'upload') {
-                    uploadSection.classList.remove('hidden');
-                } else {
-                    uploadSection.classList.add('hidden');
-                }
+        const success = activatePillForHiddenInput('cover-letter-option', coverLetterValue);
+        // Show/hide upload section based on option
+        const uploadSection = document.getElementById('cover-letter-upload-section');
+        if (uploadSection) {
+            if (coverLetterValue === 'upload') {
+                uploadSection.classList.remove('hidden');
+            } else {
+                uploadSection.classList.add('hidden');
             }
-            console.log(`✅ Set cover letter option: ${userData.cover_letter_option}`);
         }
+        if (success) console.log(`✅ Set cover letter option: ${userData.cover_letter_option}`);
     }
     
     // Step 4: Eligibility information
@@ -1583,13 +1610,7 @@ function convertUserDataToFormState(userData) {
     const availability = userData.availability;
     if (availability) {
         const availabilityValue = availability.toLowerCase();
-        const availabilityPill = document.querySelector(`.pill[data-value="${availabilityValue}"]`);
-        const availabilityGroup = availabilityPill?.closest('.pill-group');
-        const availabilityInput = document.getElementById('availability');
-        
-        if (availabilityPill && availabilityGroup && availabilityInput) {
-            availabilityPill.classList.add('active');
-            availabilityInput.value = availabilityValue;
+        if (activatePillForHiddenInput('availability', availabilityValue)) {
             console.log(`✅ Set availability: ${availability}`);
         }
     }
@@ -1598,13 +1619,7 @@ function convertUserDataToFormState(userData) {
     const visaSponsorship = userData.visa_sponsorship;
     if (visaSponsorship !== null && visaSponsorship !== undefined) {
         const visaValue = visaSponsorship ? 'yes' : 'no';
-        const visaPill = document.querySelector(`.pill[data-value="${visaValue}"]`);
-        const visaGroup = visaPill?.closest('.pill-group');
-        const visaInput = document.getElementById('visa-sponsorship');
-        
-        if (visaPill && visaGroup && visaInput) {
-            visaPill.classList.add('active');
-            visaInput.value = visaValue;
+        if (activatePillForHiddenInput('visa-sponsorship', visaValue)) {
             console.log(`✅ Set visa sponsorship: ${visaValue}`);
         }
     }
@@ -1665,14 +1680,8 @@ function convertUserDataToFormState(userData) {
     // Hybrid preference - activate pill buttons
     if (userData.hybrid_preference) {
         const hybridValue = userData.hybrid_preference.toLowerCase();
-        const hybridPill = document.querySelector(`.pill[data-value="${hybridValue}"]`);
-        const hybridGroup = hybridPill?.closest('.pill-group');
-        const hybridInput = document.getElementById('hybrid-preference');
-        
-        if (hybridPill && hybridGroup && hybridInput) {
-            formState.data['hybrid-preference'] = hybridValue; // Ensure formState is updated
-            hybridPill.classList.add('active');
-            hybridInput.value = hybridValue;
+        if (activatePillForHiddenInput('hybrid-preference', hybridValue)) {
+            if (window.formState) window.formState.data['hybrid-preference'] = hybridValue;
             console.log(`✅ Set hybrid preference: ${userData.hybrid_preference}`);
         }
     }
@@ -1680,13 +1689,7 @@ function convertUserDataToFormState(userData) {
     // Travel - activate pill buttons
     if (userData.travel) {
         const travelValue = userData.travel.toLowerCase();
-        const travelPill = document.querySelector(`.pill[data-value="${travelValue}"]`);
-        const travelGroup = travelPill?.closest('.pill-group');
-        const travelInput = document.getElementById('travel-comfortable');
-        
-        if (travelPill && travelGroup && travelInput) {
-            travelPill.classList.add('active');
-            travelInput.value = travelValue;
+        if (activatePillForHiddenInput('travel-comfortable', travelValue)) {
             console.log(`✅ Set travel: ${userData.travel}`);
         }
     }
@@ -1694,13 +1697,7 @@ function convertUserDataToFormState(userData) {
     // Relocation - activate pill buttons
     if (userData.relocation) {
         const relocationValue = userData.relocation.toLowerCase();
-        const relocationPill = document.querySelector(`.pill[data-value="${relocationValue}"]`);
-        const relocationGroup = relocationPill?.closest('.pill-group');
-        const relocationInput = document.getElementById('relocation-open');
-        
-        if (relocationPill && relocationGroup && relocationInput) {
-            relocationPill.classList.add('active');
-            relocationInput.value = relocationValue;
+        if (activatePillForHiddenInput('relocation-open', relocationValue)) {
             console.log(`✅ Set relocation: ${userData.relocation}`);
         }
     }
@@ -1715,8 +1712,25 @@ function convertUserDataToFormState(userData) {
     
     // Date of birth
     if (userData.date_of_birth) {
-        formData['date-of-birth'] = userData.date_of_birth;
-        console.log('✅ Set date of birth');
+        let dobValue = '';
+        if (typeof userData.date_of_birth === 'string') {
+            if (/^\d{4}-\d{2}-\d{2}$/.test(userData.date_of_birth)) {
+                dobValue = userData.date_of_birth;
+            } else {
+                const d = new Date(userData.date_of_birth);
+                if (!isNaN(d.getTime())) {
+                    dobValue = d.toISOString().slice(0, 10);
+                } else {
+                    dobValue = userData.date_of_birth; // fallback
+                }
+            }
+        } else if (userData.date_of_birth instanceof Date) {
+            dobValue = userData.date_of_birth.toISOString().slice(0, 10);
+        }
+        if (dobValue) {
+            formData['date-of-birth'] = dobValue;
+            console.log('✅ Set date of birth');
+        }
     }
     
     // GPA
@@ -1728,13 +1742,7 @@ function convertUserDataToFormState(userData) {
     // Is adult (18+) - activate pill buttons
     if (userData.is_adult !== null && userData.is_adult !== undefined) {
         const isAdultValue = userData.is_adult ? 'yes' : 'no';
-        const adultPill = document.querySelector(`.pill[data-value="${isAdultValue}"]`);
-        const adultGroup = adultPill?.closest('.pill-group');
-        const adultInput = document.getElementById('age-18');
-        
-        if (adultPill && adultGroup && adultInput) {
-            adultPill.classList.add('active');
-            adultInput.value = isAdultValue;
+        if (activatePillForHiddenInput('age-18', isAdultValue)) {
             console.log(`✅ Set is adult: ${isAdultValue}`);
         }
     }
