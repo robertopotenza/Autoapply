@@ -530,7 +530,7 @@ function initMultiSelect(baseId, options, maxItems = null) {
                 
                 // DEBUG: Log remote countries specifically
                 if (baseId === 'remote-countries') {
-                    console.log('🌍 REMOTE COUNTRIES UPDATE:', {
+                    debugLog('🌍 REMOTE COUNTRIES UPDATE:', {
                         selectedItems: Array.from(selectedItems),
                         hiddenInputValue: hiddenInput.value,
                         formStateValue: window.formState.data[baseId]
@@ -1249,7 +1249,7 @@ function parseFormData() {
     });
     
     // 🌍 ENHANCED LOGGING: Log remote countries parsing in detail
-    console.log('🌍 parseFormData() - Remote countries parsing:', {
+    debugLog('🌍 parseFormData() - Remote countries parsing:', {
         rawValue: data['remote-countries'],
         rawType: typeof data['remote-countries'],
         parsedArray: parseCommaSeparated(data['remote-countries']),
@@ -1532,7 +1532,7 @@ function convertUserDataToFormState(userData) {
     // Remote countries - populate multi-select by directly updating the tags
     const remoteJobs = userData.remote_jobs;
     if (remoteJobs) {
-        console.log('🌍 Processing remote jobs:', {
+        debugLog('🌍 Processing remote jobs:', {
             raw: remoteJobs,
             type: typeof remoteJobs
         });
@@ -1544,28 +1544,28 @@ function convertUserDataToFormState(userData) {
             try {
                 // Try to parse as JSON first (from database)
                 remoteArray = JSON.parse(remoteJobs);
-                console.log('🌍 Parsed JSON remote jobs:', remoteArray);
+                debugLog('🌍 Parsed JSON remote jobs:', remoteArray);
             } catch (e) {
                 // Fallback to comma-separated string
                 remoteArray = remoteJobs.split(',').filter(Boolean);
-                console.log('🌍 Split comma-separated remote jobs:', remoteArray);
+                debugLog('🌍 Split comma-separated remote jobs:', remoteArray);
             }
         }
         
         if (remoteArray.length > 0) {
-            console.log('🌍 Populating remote countries with:', remoteArray);
+            debugLog('🌍 Populating remote countries with:', remoteArray);
             populateMultiSelect('remote-countries', remoteArray);
             
             // Also update formState immediately
             if (window.formState && window.formState.data) {
                 window.formState.data['remote-countries'] = remoteArray.join(',');
-                console.log('🌍 Updated formState remote-countries:', window.formState.data['remote-countries']);
+                debugLog('🌍 Updated formState remote-countries:', window.formState.data['remote-countries']);
             }
         } else {
-            console.log('⚠️ No remote countries to populate');
+            debugLog('⚠️ No remote countries to populate');
         }
     } else {
-        console.log('⚠️ No remote_jobs data found in userData');
+        debugLog('⚠️ No remote_jobs data found in userData');
     }
     
     // Onsite location
@@ -1899,7 +1899,7 @@ function updateMultiSelectHiddenInput(baseId) {
 
 // CRITICAL FIX: Sync all hidden inputs to formState before form submission
 function syncHiddenInputsToFormState() {
-    console.log('🔧 Syncing all hidden inputs to formState...');
+    debugLog('🔧 Syncing all hidden inputs to formState...');
     
     // List of all hidden input IDs that need syncing
     const hiddenInputIds = [
@@ -1919,7 +1919,7 @@ function syncHiddenInputsToFormState() {
             window.formState.data[inputId] = currentValue;
             
             if (inputId === 'remote-countries') {
-                console.log(`🌍 Synced ${inputId}:`, {
+                debugLog(`🌍 Synced ${inputId}:`, {
                     hiddenInputValue: currentValue,
                     formStateValue: window.formState.data[inputId]
                 });
@@ -1927,7 +1927,7 @@ function syncHiddenInputsToFormState() {
         }
     });
     
-    console.log('✅ Hidden inputs sync complete');
+    debugLog('✅ Hidden inputs sync complete');
 }
 
 // Helper function to update multi-select input fields (for fields without hidden inputs)

@@ -284,6 +284,16 @@
     </div>
 
     <script>
+        // Debug Mode Configuration
+        const DEBUG_MODE = localStorage.getItem('DEBUG_MODE') === 'true' || window.AUTOAPPLY_DEBUG === true;
+
+        // Debug logging helper
+        function debugLog(...args) {
+            if (DEBUG_MODE) {
+                console.log(...args);
+            }
+        }
+
         // Mock formState (mimics the real app.js formState)
         const formState = {
             currentStep: 1,
@@ -397,7 +407,7 @@
                     if (window.formState && window.formState.data) {
                         window.formState.data[baseId] = hiddenInput.value;
                         
-                        console.log('🌍 REMOTE COUNTRIES UPDATE:', {
+                        debugLog('🌍 REMOTE COUNTRIES UPDATE:', {
                             selectedItems: Array.from(selectedItems),
                             hiddenInputValue: hiddenInput.value,
                             formStateValue: window.formState.data[baseId]
