@@ -416,9 +416,9 @@
                     document.getElementById('debug-content').textContent = JSON.stringify(readinessData, null, 2);
                 }
 
-                // Calculate completion
-                const isComplete = profileData?.completeness?.complete || false;
+                // Calculate completion based on actual data
                 const completionPercentage = calculateCompletionPercentage(profileData);
+                const isComplete = completionPercentage === 100;
 
                 // Update UI
                 updateCompletionDisplay(completionPercentage, isComplete);
@@ -461,23 +461,20 @@
         }
 
         // Calculate completion percentage
-        function calculateCompletionPercentage(data) {
-            if (!data || !data.profile) return 0;
-            
-            const profile = data.profile;
-            let completedSections = 0;
-            const totalSections = 4;
+        function calculateCompletionPercentage(profile) {
+            if (!profile) return 0;
 
-            // Check each section
-            if (profile.preferences?.job_titles && profile.preferences.job_titles.length > 0) completedSections++;
-            if (profile.preferences?.seniority_levels && profile.preferences.seniority_levels.length > 0) completedSections++;
-            if (profile.personal?.full_name && profile.personal.full_name.trim().length > 0) completedSections++;
-            if (profile.eligibility?.current_job_title && profile.eligibility.current_job_title.length > 0) completedSections++;
+            const totalSections = 4;
+            let completedSections = 0;
+
+            // Check each section with more comprehensive validation
+            if (profile.preferences?.job_titles?.length && profile.preferences?.job_types?.length) completedSections++;
+            if (profile.preferences?.seniority_levels?.length) completedSections++;
+            if (profile.personal?.full_name?.trim() && profile.personal?.email?.trim()) completedSections++;
+            if (profile.eligibility?.expected_salary && profile.eligibility?.availability) completedSections++;
 
             return Math.round((completedSections / totalSections) * 100);
-        }
-
-        // Update completion display
+        }        // Update completion display
         function updateCompletionDisplay(percentage, isComplete) {
             document.getElementById('completion-percentage').textContent = percentage + '%';
             document.getElementById('completion-bar').style.width = percentage + '%';
@@ -492,9 +489,9 @@
         function updateProfileSections(data) {
             debugLog('🔧 Updating profile sections with data:', data);
             
-            // Check if profile is 100% complete
+            // Check if profile is 100% complete based on actual data
             const completionPercentage = calculateCompletionPercentage(data);
-            const overallComplete = data?.completeness?.complete || completionPercentage === 100;
+            const overallComplete = completionPercentage === 100;
             
             debugLog('📊 Completion status:', { 
                 completionPercentage, 
@@ -502,30 +499,30 @@
                 completenessFlag: data?.completeness?.complete 
             });
             
-            // For 100% complete profiles, all sections should show as complete
+            // Check individual section completion based on actual data
             const sections = [
                 {
                     title: 'Work Location & Jobs',
                     description: 'Set your preferred work locations, job types, and job titles',
-                    isComplete: overallComplete,
+                    isComplete: !!(data.preferences?.job_titles?.length && data.preferences?.job_types?.length),
                     editAction: 'editJobPreferences'
                 },
                 {
                     title: 'Seniority & Time Zones',
                     description: 'Select seniority levels and preferred time zones',
-                    isComplete: overallComplete,
+                    isComplete: !!(data.preferences?.seniority_levels?.length),
                     editAction: 'editSeniority'
                 },
                 {
                     title: 'Resume & Contact',
                     description: 'Upload your resume and provide contact information',
-                    isComplete: overallComplete,
+                    isComplete: !!(data.personal?.full_name?.trim() && data.personal?.email?.trim()),
                     editAction: 'editContact'
                 },
                 {
                     title: 'Eligibility Details',
                     description: 'Set work eligibility, visa requirements, and salary expectations',
-                    isComplete: overallComplete,
+                    isComplete: !!(data.eligibility?.expected_salary && data.eligibility?.availability),
                     editAction: 'editEligibility'
                 }
             ];
